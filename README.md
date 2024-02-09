@@ -12,26 +12,24 @@ sudo apt install python3-pip
 
 ## Clone the git repository
 ````bash
-git clone https://github.com/plysytsya/fitnessmanager.git
+git clone https://github.com/plysytsya/turnstile_controller.git
 ````
 
 ## installar virtualenv
 ```
-sudo apt install python3-venv &&
-python3 -m venv /home/pi/myvirtualenv &&
+sudo apt install python3-venv
+```
+```
+python3 -m venv /home/manager/turnstile_controller/venv
 ```
 
 ## activar virtualenv
 ```
-source /home/pi/myvirtualenv/bin/activate
+source /home/manager/turnstile_controller/venv/bin/activate
 ```
 
 ### Install dependencies
 ```bash
-cd fitnessmanager &&
-git checkout develop &&
-git pull origin develop &&
-cd /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller &&
 pip3 install -r requirements.txt
 ```
 
