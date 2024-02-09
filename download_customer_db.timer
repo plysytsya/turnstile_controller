@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Download Customer Database Service every hour
+
+[Timer]
+OnBootSec=0s
+OnCalendar=*-*-* *:00:00
+Persistent=true
+Unit=download_customer_db.service
+
+[Install]
+WantedBy=timers.target

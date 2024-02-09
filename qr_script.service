@@ -1,0 +1,18 @@
+[Unit]
+Description=My qr.py script
+After=network.target
+
+[Service]
+ExecStartPre=/bin/sleep 2
+RestartSec=10
+ExecStart=/home/pi/myvirtualenv/bin/python3 /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/qr.py
+User=pi
+Restart=always
+#ExecStopPost=/usr/bin/python3 /home/pi/restart_msg.py  # This will run when the service is stopped/restarted
+#StandardOutput=append:/home/pi/scan.log
+#StandardError=append:/home/pi/scan_error.log
+WorkingDirectory=/home/pi
+
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+# install opencv like this:
+# first install the c++ binary: sudo apt-get install libopencv-dev
+# then install python bindings: sudo apt-get install python3-opencv
+requests
+rpi-lcd
+unidecode
+python-dotenv
+evdev
+RPi.GPIO

@@ -1,0 +1,15 @@
+[Unit]
+Description=Download Customer Database Service
+
+[Service]
+Type=simple
+ExecStart=/home/pi/myvirtualenv/bin/python3 /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/download_customer_db.py
+User=pi
+WorkingDirectory=/home/pi
+StandardOutput=journal
+StandardError=journal
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
