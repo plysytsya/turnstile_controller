@@ -2,7 +2,7 @@ from evdev import InputDevice, list_devices
 
 
 def find_qr_device():
-    device_name_substrings = ["TMC HIDKeyBoard", "Megahunt", "YOKO HID GUM", "TMC HIDKeyBoard"]
+    device_name_substrings = ["TMC HIDKeyBoard", "Megahunt", "YOKO HID GUM", "TMC HIDKeyBoard", "WCM HIDKeyBoard"]
     devices = [InputDevice(path) for path in list_devices()]
     for device in devices:
         print(device)
