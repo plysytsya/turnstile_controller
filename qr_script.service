@@ -3,7 +3,7 @@ Description=My qr.py script
 After=network.target
 
 [Service]
-ExecStartPre=/bin/sleep 2
+#ExecStartPre=/bin/sleep 2
 RestartSec=10
 ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/qr.py
 User=manager
