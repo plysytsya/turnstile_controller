@@ -59,7 +59,7 @@ sudo apt-get install -y i2c-tools libi2c-dev
 
 1. **Copy the service file to the systemd directory**:
 ```bash
-sudo cp /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/qr_script.service /etc/systemd/system/
+sudo cp /home/manager/turnstile_controller/qr_script.service /etc/systemd/system/
 ```
 
 2. **Reload systemd to read the new configuration**:
@@ -93,8 +93,8 @@ sudo systemctl reset-failed
 
 ## Activate cronjob (systemd-scheduled) for downloading customer db in case of internet outage:
 ```bash
-sudo cp /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/download_customer_db.service /etc/systemd/system/
-sudo cp /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/download_customer_db.timer /etc/systemd/system/
+sudo cp /home/manager/turnstile_controller/download_customer_db.service /etc/systemd/system/
+sudo cp /home/manager/turnstile_controller/download_customer_db.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable download_customer_db.service
 sudo systemctl enable download_customer_db.timer

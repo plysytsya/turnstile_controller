@@ -1,7 +1,7 @@
 .PHONY: install-qr uninstall-qr install-cronjob watch-cronjob trigger-cronjob list-services
 
 install-qr:
-	sudo cp /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/qr_script.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/qr_script.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable qr_script
 	sudo systemctl start qr_script
@@ -15,8 +15,8 @@ uninstall-qr:
 	sudo systemctl reset-failed
 
 install-cronjob:
-	sudo cp /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/download_customer_db.service /etc/systemd/system/
-	sudo cp /home/pi/fitnessmanager/fitnessmanager_api/turnstile_controller/download_customer_db.timer /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/download_customer_db.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/download_customer_db.timer /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable download_customer_db.service
 	sudo systemctl enable download_customer_db.timer
