@@ -11,7 +11,7 @@ Restart=always
 #ExecStopPost=/usr/bin/python3 /home/pi/restart_msg.py  # This will run when the service is stopped/restarted
 #StandardOutput=append:/home/pi/scan.log
 #StandardError=append:/home/pi/scan_error.log
-WorkingDirectory=/home/pi
+WorkingDirectory=/home/
 
 
 [Install]
