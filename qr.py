@@ -11,7 +11,7 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 
-from find_device import find_qr_device
+from find_device import find_qr_devices
 from lcd_controller import LCDController
 from keymap import KEYMAP
 
@@ -64,16 +64,20 @@ reconnect_qr_reader()
 # Initialize the InputDevice
 timeout_end_time = time.time() + 300  # 5 minutes from now
 
+
+devices = []
 while time.time() < timeout_end_time:
     try:
-        dev = InputDevice(find_qr_device())
-        logging.info("Successfully connected to the QR code scanner.")
-        lcd_controller.display("Conectado al", "escaneador QR")
-        break  # Exit the loop since we've successfully connected
+        device_paths = find_qr_devices()
+        for device_path in device_paths:
+            devices.append(InputDevice(device_path))
+        logging.info("Successfully connected to the QR code scanners.")
+        lcd_controller.display("Conectado a los", "escaneadores QR")
+        break
     except FileNotFoundError:
-        logging.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
+        logging.warning("Failed to connect to the QR code scanners. Retrying in 15 seconds...")
         lcd_controller.display("Fallo al conectar", "Cambia USB en 15s")
-        time.sleep(15)  # Wait for 15 seconds before retrying
+        time.sleep(15)
 
 # If we get to this point and `dev` is not defined, we've exhausted our retries
 if "dev" not in locals():
@@ -301,6 +305,7 @@ if __name__ == "__main__":
     logging.info("using %s seconds for the relay", TOGGLE_DURATION)
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
+        loop.run_until_complete(asyncio.gather(*(keyboard_event_loop(dev) for dev in devices), main_loop()))
     except KeyboardInterrupt:
         logging.warning("Received exit signal.")
+
