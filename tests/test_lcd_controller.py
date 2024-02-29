@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from .lcd_controller import LCDController
+from ..lcd_controller import LCDController
 
 
 @pytest.fixture
