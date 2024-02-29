@@ -23,8 +23,8 @@ def test_display_on_two_lcds(lcd_25, lcd_27):
     mock_lcd_instance2 = lcd_27.lcd
 
     # Display text on both LCDs
-    lcd_25.display("hello1", "line2-1")
-    lcd_27.display("hello2", "line2-2")
+    lcd_25.display("hello1", "line2-1", timeout=2)
+    lcd_27.display("hello2", "line2-2", timeout=2)
 
     # Verify that the text method was called with the expected arguments
     mock_lcd_instance1.text.assert_any_call("hello1", 1)
@@ -35,3 +35,10 @@ def test_display_on_two_lcds(lcd_25, lcd_27):
     # Verify that the clear method was called
     assert mock_lcd_instance1.clear.call_count == 1
     assert mock_lcd_instance2.clear.call_count == 1
+
+    # Test scrolling functionality by sending longer text
+    long_text = "This is a long text that should scroll"
+    lcd_25.display(long_text, long_text, timeout=5)
+
+    # Assuming scrolling happens, verify text method was called multiple times
+    # This part depends on how the scrolling is implemented
