@@ -7,8 +7,8 @@ LCD20 = LCDController(use_lcd=True, lcd_address=0x20)
 
 
 def main():
-    LCD20.display("hello1", "line2-1", timeout=2)
-    LCD27.display("hello2", "line2-2", timeout=2)
+    LCD20.display("hello1", "line2-1", timeout=10)
+    LCD27.display("hello2", "line2-2", timeout=10)
 
 
 if __name__ == "__main__":
