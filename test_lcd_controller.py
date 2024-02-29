@@ -1,7 +1,5 @@
 # lcd_controller_test.py
 
-import pytest
-
 from lcd_controller import LCDController
 
 LCD25 = LCDController(use_lcd=True, lcd_address=25)
@@ -14,4 +12,4 @@ def main():
 
 
 if __name__ == "__main__":
-    pytest.main()
+    main()
