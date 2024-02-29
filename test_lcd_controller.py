@@ -2,12 +2,12 @@
 
 from lcd_controller import LCDController
 
-LCD25 = LCDController(use_lcd=True, lcd_address=25)
-LCD27 = LCDController(use_lcd=True, lcd_address=27)
+LCD27 = LCDController(use_lcd=True, lcd_address=0x27)
+LCD20 = LCDController(use_lcd=True, lcd_address=0x20)
 
 
 def main():
-    LCD25.display("hello1", "line2-1", timeout=2)
+    LCD20.display("hello1", "line2-1", timeout=2)
     LCD27.display("hello2", "line2-2", timeout=2)
 
 
