@@ -41,7 +41,9 @@ RELAY_PIN_QR_READER = 22
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
-lcd_controller = LCDController(USE_LCD)
+lcd_controller1 = LCDController(USE_LCD, lcd_address=0x27)
+lcd_controller2 = LCDController(USE_LCD, lcd_address=0x3F)
+
 
 
 def reconnect_qr_reader():
@@ -308,4 +310,3 @@ if __name__ == "__main__":
         loop.run_until_complete(asyncio.gather(*(keyboard_event_loop(dev) for dev in devices), main_loop()))
     except KeyboardInterrupt:
         logging.warning("Received exit signal.")
-

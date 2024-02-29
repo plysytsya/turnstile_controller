@@ -6,12 +6,12 @@ from unidecode import unidecode
 
 
 class LCDController:
-    def __init__(self, use_lcd, max_char_count=16, scroll_delay=0.5):
+    def __init__(self, use_lcd, max_char_count=16, scroll_delay=0.5, lcd_address=None):
         self.use_lcd = use_lcd
         self.max_char_count = max_char_count
         self.scroll_delay = scroll_delay
         if use_lcd:
-            self.lcd = LCD()
+            self.lcd = LCD(lcd_address)
 
     def scroll_text(self, line: str) -> list[str]:
         line_length = len(line)
