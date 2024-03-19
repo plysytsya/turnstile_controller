@@ -84,6 +84,8 @@ while time.time() < timeout_end_time:
         for device in found_devices:
             direction = USB_PORT_MAP[device.phys]
             devices[direction] = InputDevice(device.path)
+            devices[direction].direction = direction
+            devices[direction].lcd_controller = LCD_CONTROLLER_A if direction == "A" else LCD_CONTROLLER_B
             logging.info("Successfully connected to the QR code reader %s.", direction)
             if direction == "A":
                 LCD_CONTROLLER_A.display("Conectado al", "escaner QR")
@@ -328,6 +330,6 @@ if __name__ == "__main__":
     logging.info("using %s seconds for the relays", TOGGLE_DURATION)
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(asyncio.gather(*(keyboard_event_loop(dev) for dev in devices), main_loop()))
+        loop.run_until_complete(asyncio.gather(*(keyboard_event_loop(dev) for dev in devices.values()), main_loop()))
     except KeyboardInterrupt:
         logging.warning("Received exit signal.")
