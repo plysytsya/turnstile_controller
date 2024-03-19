@@ -10,14 +10,13 @@ def find_qr_devices():
         print(device)
         if any(name.lower() in device.name.lower() for name in device_name_substrings):
             print("Found device", device)
-            found_devices.append(device.path)
+            found_devices.append(device)
 
     if not found_devices:
         print("Could not find the QR device!")
         exit(1)
 
     return found_devices
-
 
 
 if __name__ == "__main__":

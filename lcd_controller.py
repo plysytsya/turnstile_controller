@@ -3,6 +3,7 @@ import time
 from rpi_lcd import LCD
 import logging
 from unidecode import unidecode
+import threading
 
 
 class LCDController:
@@ -21,7 +22,7 @@ class LCDController:
         scroll_positions = line_length - self.max_char_count + 1
         return [line[i: i + self.max_char_count] for i in range(scroll_positions)]
 
-    def display(self, line1: str, line2: str, timeout=None) -> None:
+    def display(self, line1: str, line2: str, timeout=2) -> None:
         if not self.use_lcd:
             logging.info(line1)
             logging.info(line2)
@@ -38,3 +39,30 @@ class LCDController:
             if timeout is not None:
                 time.sleep(timeout - self.scroll_delay)
                 self.lcd.clear()
+
+
+def display_on_multiple_lcds(line1: str, line2: str, controllers: list[LCDController], timeout=2) -> None:
+    """
+    Display text on multiple LCD controllers simultaneously using threading.
+
+    Args:
+        line1 (str): The first line of text to display.
+        line2 (str): The second line of text to display.
+        controllers (list[LCDController]): A list of LCDController instances.
+        timeout (int, optional): How long to display the message for. Defaults to 2 seconds.
+    """
+
+    def display_thread(controller: LCDController):
+        """Thread target function to display text on a single controller."""
+        controller.display(line1, line2, timeout)
+
+    threads = []
+    for controller in controllers:
+        # Create a new thread for each controller's display method
+        thread = threading.Thread(target=display_thread, args=(controller,))
+        threads.append(thread)
+        thread.start()
+
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
