@@ -11,7 +11,7 @@ import requests
 from dotenv import load_dotenv
 from evdev import InputDevice, categorize, KeyEvent
 
-from find_device import find_qr_device
+from find_device import find_qr_devices
 from keymap import KEYMAP
 from lcd_controller import LCDController
 
@@ -47,12 +47,14 @@ timeout_end_time = time.time() + 300  # 5 minutes from now
 
 while time.time() < timeout_end_time:
     try:
-        dev = InputDevice(find_qr_device())
+        dev = InputDevice(find_qr_devices())
         logging.info("Successfully connected to the QR code scanner.")
         lcd_controller.display("Conectado al", "escaneador QR")
         break  # Exit the loop since we've successfully connected
     except FileNotFoundError:
-        logging.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
+        logging.warning(
+            "Failed to connect to the QR code scanner. Retrying in 15 seconds..."
+        )
         lcd_controller.display("Fallo al conectar", "Cambia USB en 15s")
         time.sleep(15)  # Wait for 15 seconds before retrying
 
@@ -68,7 +70,9 @@ shared_list = []
 def log_unsuccessful_request(response):
     endpoint = response.url  # Get the URL from the response object
     log_message = "\n".join(response.text.split("\n")[-4:])
-    logging.info(f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}")
+    logging.info(
+        f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}"
+    )
 
 
 def toggle_relay(duration: float = 1.0, toggles: int = 1):
@@ -109,7 +113,9 @@ def unpack_barcode(barcode_data):
         login_data = json.loads(barcode_data)
         return login_data["customer_uuid"], login_data["timestamp"]
     except Exception as e:
-        lcd_controller.display("codigo", "QR invalido", timeout=2)  # Displays "Invalid QR Code" in Spanish
+        lcd_controller.display(
+            "codigo", "QR invalido", timeout=2
+        )  # Displays "Invalid QR Code" in Spanish
         logging.error(f"Error unpacking barcode: {e}")
         lcd_controller.display("Escanea", "codigo QR")
         return None, None
@@ -275,8 +281,17 @@ async def main_loop():
         await asyncio.sleep(1)  # 1-second delay to avoid busy-waiting
 
 
-def run(direction, entrance_uuid, relay_pin_door, i2c_address, use_lcd, login_credentials, num_relay_toggles=1,
-        toggle_duration=1.0):
+def run(
+    direction,
+    entrance_uuid,
+    relay_pin_door,
+    i2c_address,
+    use_lcd,
+    qr_reader,
+    login_credentials,
+    num_relay_toggles=1,
+    toggle_duration=1.0,
+):
     global DIRECTION, ENTRANCE_UUID, RELAY_PIN_DOOR, TOGGLES, DURATION, I2CADDRESS, USE_LCD, HOSTNAME, USERNAME, PASSWORD
     DIRECTION = direction
     ENTRANCE_UUID = entrance_uuid

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 from multiprocessing import Process
@@ -9,7 +10,7 @@ from i2cdetect import detect_i2c_device_b
 from qr import run
 
 devices = find_qr_devices()
-directions_usb_lookup = json.loads(
+usb_direction_lookup = json.loads(
     Path(Path(__file__).parent / "usb_port_map.json").read_text()
 )
 load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
@@ -17,8 +18,16 @@ load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 processes = []
 
 for device in devices:
-    direction = directions_usb_lookup.get(device.path)
+    direction = usb_direction_lookup.get(device.path)
     lcd_address = 0x27 if direction == "A" else detect_i2c_device_b(1)
+    usb_devices = find_qr_devices()
+    qr_reader = None
+    for usb_device in usb_devices:
+        if usb_direction_lookup[usb_devices.path] == direction:
+            qr_reader = usb_device
+            break
+    if qr_reader is None:
+        logging.warning(f"Could not find QR reader for direction {direction}")
     relay_pin = (
         os.getenv("RELAY_PIN_A") if direction == "A" else os.getenv("RELAY_PIN_B")
     )
@@ -28,18 +37,22 @@ for device in devices:
         else os.getenv("ENTRANCE_UUID_B")
     )
 
-    p = Process(target=run, kwargs={
-        "direction": direction,
-        "entrance_uuid": entrance_uuid,
-        "relay_pin_door": relay_pin,
-        "i2c_address": lcd_address,
-        "use_lcd": True,
-        "login_credentials": {
-            "hostname": os.getenv("HOSTNAME"),
-            "username": os.getenv("USERNAME"),
-            "password": os.getenv("PASSWORD"),
+    p = Process(
+        target=run,
+        kwargs={
+            "direction": direction,
+            "entrance_uuid": entrance_uuid,
+            "relay_pin_door": relay_pin,
+            "i2c_address": lcd_address,
+            "use_lcd": True,
+            "qr_reader": qr_reader,
+            "login_credentials": {
+                "hostname": os.getenv("HOSTNAME"),
+                "username": os.getenv("USERNAME"),
+                "password": os.getenv("PASSWORD"),
+            },
         },
-    })
+    )
     p.start()
     processes.append(p)
 
