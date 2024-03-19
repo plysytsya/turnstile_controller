@@ -26,7 +26,8 @@ def initialize_hardware(qr_device_path, relay_pin):
     try:
         GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
     except ValueError:
-        breakpoint()
+        logging.error("Invalid relay pin %s. Please check the relay pin number.", relay_pin)
+
     # Initialize the InputDevice
     timeout_end_time = time.time() + 300  # 5 minutes from now
     while time.time() < timeout_end_time:
