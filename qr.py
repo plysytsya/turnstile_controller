@@ -20,10 +20,8 @@ logging.basicConfig(level=logging.INFO)
 jwt_token = None
 
 
-def initialize_hardware(qr_device_path):
-    global relay_pin, dev
+def initialize_hardware(qr_device_path, relay_pin):
     # Initialize Relay
-    relay_pin = RELAY_PIN_DOOR
     GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
     GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
     # Initialize the InputDevice
@@ -290,7 +288,7 @@ def run(
     global lcd_controller
     lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
 
-    initialize_hardware(qr_reader.path)
+    initialize_hardware(qr_reader.path, relay_pin_door)
 
     logging.info("initializing ENTRACE_UUID: %s", entrance_uuid)
     logging.info("using relay pin %s for the door", relay_pin_door)
