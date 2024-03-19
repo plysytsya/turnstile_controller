@@ -128,6 +128,7 @@ def toggle_relay(duration: float = 1.0, toggles: int = 1):
 async def keyboard_event_loop(device):
     global shared_list
     output_string = ""
+    breakpoint()
     display_on_multiple_lcds("Escanea", "codigo QR...")
 
     async for event in device.async_read_loop():
@@ -253,6 +254,7 @@ def verify_customer(customer_uuid, timestamp):
         "Authorization": f"Bearer {jwt_token}",
         "Content-Type": "application/json",
     }
+
 
     response = get_valid_response(url, headers, payload, customer_uuid)
 
