@@ -23,7 +23,10 @@ jwt_token = None
 def initialize_hardware(qr_device_path, relay_pin):
     # Initialize Relay
     GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
-    GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
+    try:
+        GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
+    except ValueError:
+        breakpoint()
     # Initialize the InputDevice
     timeout_end_time = time.time() + 300  # 5 minutes from now
     while time.time() < timeout_end_time:
