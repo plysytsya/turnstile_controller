@@ -2,7 +2,7 @@ from lcd_controller import LCDController
 import threading
 
 LCD27 = LCDController(use_lcd=True, lcd_address=0x27)
-LCD20 = LCDController(use_lcd=True, lcd_address=0x20)
+LCD20 = LCDController(use_lcd=True, lcd_address=0x25)
 
 def display_on_lcd20():
     LCD20.display("hello1", "line2-1", timeout=10)
