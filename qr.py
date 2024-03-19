@@ -299,6 +299,8 @@ def run(
     logging.info("using %s toggles for the relay", num_relay_toggles)
     logging.info("using %s seconds for the relay", toggle_duration)
     loop = asyncio.get_event_loop()
+
+    dev = InputDevice(qr_reader.path)
     try:
         loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
     except KeyboardInterrupt:
