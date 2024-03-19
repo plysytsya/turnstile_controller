@@ -36,7 +36,6 @@ for device in devices:
         if direction == "A"
         else os.getenv("ENTRANCE_UUID_B")
     )
-    breakpoint()
 
     p = Process(
         target=run,
