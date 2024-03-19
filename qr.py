@@ -43,8 +43,14 @@ GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(RELAY_PIN_DOOR_A, GPIO.OUT)  # Set pin as an output pin
 GPIO.setup(RELAY_PIN_DOOR_B, GPIO.OUT)
 
-LCD_CONTROLLER_A = LCDController(USE_LCD, lcd_address=int(os.environ["LCD_ADDRESS_A"], 16))
-LCD_CONTROLLER_B = LCDController(USE_LCD, lcd_address=int(os.environ["LCD_ADDRESS_B"], 16))
+DETECTED_I2C_DEVICES = i2cdetect(1)
+if not DETECTED_I2C_DEVICES:
+    raise RuntimeError("No I2C devices detected. Please check your connections.")
+LCD_ADDRESS_A = 0x27
+LCD_ADDRESS_B = int([address for address in DETECTED_I2C_DEVICES if address != "0x27"][0], 16)
+
+LCD_CONTROLLER_A = LCDController(USE_LCD, lcd_address=LCD_ADDRESS_A)
+LCD_CONTROLLER_B = LCDController(USE_LCD, lcd_address=LCD_ADDRESS_B)
 
 USB_PORT_MAP = json.loads((pathlib.Path(__file__).parent / 'usb_port_map.json').read_text())
 
