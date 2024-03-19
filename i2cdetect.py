@@ -9,9 +9,8 @@ def i2cdetect(bus_number):
         try:
             bus.read_byte(device)
             devices.append(hex(device))
-        except Exception as e:
-            logging.exception(e)
-            logging.error("NO LCD-DISPLAY FOUND")
+        except:
+            pass  # No device at that address
     return devices
 
 
