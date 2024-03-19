@@ -1,20 +1,19 @@
-import asyncio
 import json
+import asyncio
 import logging
 import os
 import pathlib
 import time
 
-import RPi.GPIO as GPIO
 import evdev
+from evdev import InputDevice, categorize, KeyEvent
 import requests
 from dotenv import load_dotenv
-from evdev import InputDevice, categorize, KeyEvent
+import RPi.GPIO as GPIO
 
-from find_device import find_qr_devices
+from find_device import find_qr_device
+from lcd_controller import LCDController
 from keymap import KEYMAP
-from lcd_controller import LCDController, display_on_multiple_lcds
-from i2cdetect import i2cdetect
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,32 +30,21 @@ DIRECTION = os.getenv("DIRECTION")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 
 USE_LCD = int(os.getenv("USE_LCD", 1))
-USE_2_QR_READERS = int(os.getenv("USE_2_QR_READERS", 1))
 
-RELAY_PIN_DOOR_A = int(os.getenv("RELAY_PIN_DOOR", 24))
-RELAY_PIN_DOOR_B = int(os.getenv("RELAY_PIN_DOOR", 25))
+RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 24))
 NUM_RELAY_TOGGLES = int(os.getenv("TOGGLES", 1))
 TOGGLE_DURATION = float(os.getenv("DURATION", 1.0))
 
 # Initialize Relay
-RELAY_PIN_QR_READER = 22  # In case QR reader needs restart
+relay_pin = RELAY_PIN_DOOR
+RELAY_PIN_QR_READER = 22
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
-GPIO.setup(RELAY_PIN_DOOR_A, GPIO.OUT)  # Set pin as an output pin
-GPIO.setup(RELAY_PIN_DOOR_B, GPIO.OUT)
+GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
-DETECTED_I2C_DEVICES = i2cdetect(1)
-if not DETECTED_I2C_DEVICES:
-    raise RuntimeError("No I2C devices detected. Please check your connections.")
-LCD_ADDRESS_A = 0x27
-LCD_ADDRESS_B = int([address for address in DETECTED_I2C_DEVICES if address != "0x27"][0], 16)
-
-LCD_CONTROLLER_A = LCDController(USE_LCD, lcd_address=LCD_ADDRESS_A)
-LCD_CONTROLLER_B = LCDController(USE_LCD, lcd_address=LCD_ADDRESS_B)
-
-USB_PORT_MAP = json.loads((pathlib.Path(__file__).parent / 'usb_port_map.json').read_text())
+lcd_controller = LCDController(USE_LCD)
 
 
-def reconnect_qr_reader(lcd_controller):
+def reconnect_qr_reader():
     GPIO.setup(RELAY_PIN_QR_READER, GPIO.OUT)  # set up pin as an output pin
 
     logging.info("Attempting to reconnect the QR scanner via relay...")
@@ -71,42 +59,26 @@ def reconnect_qr_reader(lcd_controller):
     time.sleep(3)
 
 
-reconnect_qr_reader(LCD_CONTROLLER_A)
-reconnect_qr_reader(LCD_CONTROLLER_B)
+reconnect_qr_reader()
 
-# Initialize the QR Readers
+# Initialize the InputDevice
 timeout_end_time = time.time() + 300  # 5 minutes from now
 
-devices = {}
 while time.time() < timeout_end_time:
     try:
-        found_devices = find_qr_devices()
-        for device in found_devices:
-            direction = USB_PORT_MAP[device.phys]
-            devices[direction] = InputDevice(device.path)
-            devices[direction].direction = direction
-            devices[direction].lcd_controller = LCD_CONTROLLER_A if direction == "A" else LCD_CONTROLLER_B
-            logging.info("Successfully connected to the QR code reader %s.", direction)
-            if direction == "A":
-                LCD_CONTROLLER_A.display("Conectado al", "escaner QR")
-            elif direction == "B":
-                LCD_CONTROLLER_B.display("Conectado al", "escaner QR")
-        if (USE_2_QR_READERS and len(devices) == 2) or (not USE_2_QR_READERS and len(devices) == 1):
-            break
-        break
+        dev = InputDevice(find_qr_device())
+        logging.info("Successfully connected to the QR code scanner.")
+        lcd_controller.display("Conectado al", "escaneador QR")
+        break  # Exit the loop since we've successfully connected
     except FileNotFoundError:
-        logging.warning("Failed to connect to the QR code scanners. Retrying in 15 seconds...")
-        display_on_multiple_lcds(
-            "Fallo al conectar", "Cambia USB en 15s", [LCD_CONTROLLER_A, LCD_CONTROLLER_B]
-        )
-        time.sleep(15)
+        logging.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
+        lcd_controller.display("Fallo al conectar", "Cambia USB en 15s")
+        time.sleep(15)  # Wait for 15 seconds before retrying
 
 # If we get to this point and `dev` is not defined, we've exhausted our retries
 if "dev" not in locals():
     logging.error("Failed to connect to the QR code scanner after multiple attempts.")
-    display_on_multiple_lcds(
-        "No se pudo conectar", "Verifica USB", [LCD_CONTROLLER_A, LCD_CONTROLLER_B]
-    )
+    lcd_controller.display("No se pudo conectar", "Verifica USB")
 
 # List to hold decoded QR data
 shared_list = []
@@ -128,8 +100,7 @@ def toggle_relay(duration: float = 1.0, toggles: int = 1):
 async def keyboard_event_loop(device):
     global shared_list
     output_string = ""
-    breakpoint()
-    display_on_multiple_lcds("Escanea", "codigo QR...")
+    lcd_controller.display("Escanea", "codigo QR...")
 
     async for event in device.async_read_loop():
         if event.type == evdev.ecodes.EV_KEY:
@@ -255,7 +226,6 @@ def verify_customer(customer_uuid, timestamp):
         "Content-Type": "application/json",
     }
 
-
     response = get_valid_response(url, headers, payload, customer_uuid)
 
     if response is None:
@@ -326,12 +296,11 @@ async def main_loop():
 
 if __name__ == "__main__":
     logging.info("initializing ENTRACE_UUID: %s", ENTRANCE_UUID)
-    logging.info("using relay pin %s for the door", RELAY_PIN_DOOR_A)
-    logging.info("using relay pin %s for the door", RELAY_PIN_DOOR_B)
-    logging.info("using %s toggles for the relays", NUM_RELAY_TOGGLES)
-    logging.info("using %s seconds for the relays", TOGGLE_DURATION)
+    logging.info("using relay pin %s for the door", RELAY_PIN_DOOR)
+    logging.info("using %s toggles for the relay", NUM_RELAY_TOGGLES)
+    logging.info("using %s seconds for the relay", TOGGLE_DURATION)
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(asyncio.gather(*(keyboard_event_loop(dev) for dev in devices.values()), main_loop()))
+        loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
     except KeyboardInterrupt:
         logging.warning("Received exit signal.")
