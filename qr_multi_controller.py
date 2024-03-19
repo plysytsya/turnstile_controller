@@ -18,9 +18,8 @@ load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 processes = []
 
 for device in devices:
-    direction = usb_direction_lookup.get(device.path)
+    direction = usb_direction_lookup.get(device.phys)
     lcd_address = "0x27" if direction == "A" else detect_i2c_device_b(1)
-    breakpoint()
     usb_devices = find_qr_devices()
     qr_reader = None
     for usb_device in usb_devices:
