@@ -20,31 +20,31 @@ logging.basicConfig(level=logging.INFO)
 jwt_token = None
 
 
-# Initialize Relay
-relay_pin = RELAY_PIN_DOOR
-GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
-GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
+def initialize_hardware():
+    global relay_pin, dev
+    # Initialize Relay
+    relay_pin = RELAY_PIN_DOOR
+    GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
+    GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
+    # Initialize the InputDevice
+    timeout_end_time = time.time() + 300  # 5 minutes from now
+    while time.time() < timeout_end_time:
+        try:
+            dev = InputDevice(find_qr_devices())
+            logging.info("Successfully connected to the QR code scanner.")
+            lcd_controller.display("Conectado al", "escaneador QR")
+            break  # Exit the loop since we've successfully connected
+        except FileNotFoundError:
+            logging.warning(
+                "Failed to connect to the QR code scanner. Retrying in 15 seconds..."
+            )
+            lcd_controller.display("Fallo al conectar", "Cambia USB en 15s")
+            time.sleep(15)  # Wait for 15 seconds before retrying
+    # If we get to this point and `dev` is not defined, we've exhausted our retries
+    if "dev" not in locals():
+        logging.error("Failed to connect to the QR code scanner after multiple attempts.")
+        lcd_controller.display("No se pudo conectar", "Verifica USB")
 
-# Initialize the InputDevice
-timeout_end_time = time.time() + 300  # 5 minutes from now
-
-while time.time() < timeout_end_time:
-    try:
-        dev = InputDevice(find_qr_devices())
-        logging.info("Successfully connected to the QR code scanner.")
-        lcd_controller.display("Conectado al", "escaneador QR")
-        break  # Exit the loop since we've successfully connected
-    except FileNotFoundError:
-        logging.warning(
-            "Failed to connect to the QR code scanner. Retrying in 15 seconds..."
-        )
-        lcd_controller.display("Fallo al conectar", "Cambia USB en 15s")
-        time.sleep(15)  # Wait for 15 seconds before retrying
-
-# If we get to this point and `dev` is not defined, we've exhausted our retries
-if "dev" not in locals():
-    logging.error("Failed to connect to the QR code scanner after multiple attempts.")
-    lcd_controller.display("No se pudo conectar", "Verifica USB")
 
 # List to hold decoded QR data
 shared_list = []
@@ -289,6 +289,8 @@ def run(
 
     global lcd_controller
     lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
+
+    initialize_hardware()
 
     logging.info("initializing ENTRACE_UUID: %s", entrance_uuid)
     logging.info("using relay pin %s for the door", relay_pin_door)
