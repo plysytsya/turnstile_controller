@@ -43,8 +43,8 @@ GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(RELAY_PIN_DOOR_A, GPIO.OUT)  # Set pin as an output pin
 GPIO.setup(RELAY_PIN_DOOR_B, GPIO.OUT)
 
-LCD_CONTROLLER_A = LCDController(USE_LCD, lcd_address=os.environ["LCD_ADDRESS_A"])
-LCD_CONTROLLER_B = LCDController(USE_LCD, lcd_address=os.environ["LCD_ADDRESS_B"])
+LCD_CONTROLLER_A = LCDController(USE_LCD, lcd_address=int(os.environ["LCD_ADDRESS_A"]))
+LCD_CONTROLLER_B = LCDController(USE_LCD, lcd_address=int(os.environ["LCD_ADDRESS_B"]))
 
 USB_PORT_MAP = json.loads((pathlib.Path(__file__).parent / 'usb_port_map.json').read_text())
 

@@ -16,6 +16,8 @@ uninstall-qr:
 	sudo systemctl daemon-reload
 	sudo systemctl reset-failed
 
+restart-qr: uninstall-qr install-qr
+
 # Instalar el cronjob para descargar la base de datos del cliente
 install-cronjob:
 	sudo cp /home/manager/turnstile_controller/download_customer_db.service /etc/systemd/system/
@@ -57,3 +59,6 @@ logs-qr:
 
 logs-cronjob:
 	journalctl -u download_customer_db.service -f
+
+venv:
+    source ~/turnstile_controller/venv/bin/activate
