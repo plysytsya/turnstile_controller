@@ -14,6 +14,7 @@ from evdev import InputDevice, categorize, KeyEvent
 from find_device import find_qr_devices
 from keymap import KEYMAP
 from lcd_controller import LCDController, display_on_multiple_lcds
+from i2cdetect import i2cdetect
 
 logging.basicConfig(level=logging.INFO)
 
