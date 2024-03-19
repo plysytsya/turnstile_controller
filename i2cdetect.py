@@ -1,5 +1,4 @@
 import smbus2
-import logging
 
 
 def i2cdetect(bus_number):
@@ -12,6 +11,12 @@ def i2cdetect(bus_number):
         except:
             pass  # No device at that address
     return devices
+
+
+def detect_i2c_device_b(bus_number):
+    devices = i2cdetect(bus_number)
+    if len(devices) == 1 and "0x27" in devices:
+        return int([dev for dev in devices if dev != "0x27"][0], 16)
 
 
 if __name__ == "__main__":

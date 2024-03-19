@@ -1,19 +1,19 @@
-import json
 import asyncio
+import json
 import logging
 import os
 import pathlib
 import time
 
+import RPi.GPIO as GPIO
 import evdev
-from evdev import InputDevice, categorize, KeyEvent
 import requests
 from dotenv import load_dotenv
-import RPi.GPIO as GPIO
+from evdev import InputDevice, categorize, KeyEvent
 
 from find_device import find_qr_device
-from lcd_controller import LCDController
 from keymap import KEYMAP
+from lcd_controller import LCDController
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,15 +22,14 @@ load_dotenv()
 jwt_token = None
 
 # Fetch global variables from environment
-ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
 HOSTNAME = os.getenv("HOSTNAME")
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 DIRECTION = os.getenv("DIRECTION")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 
+ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
 USE_LCD = int(os.getenv("USE_LCD", 1))
-
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 24))
 NUM_RELAY_TOGGLES = int(os.getenv("TOGGLES", 1))
 TOGGLE_DURATION = float(os.getenv("DURATION", 1.0))
@@ -41,8 +40,7 @@ relay_pin = RELAY_PIN_DOOR
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
-lcd_controller = LCDController(USE_LCD)
-
+lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
 
 # Initialize the InputDevice
 timeout_end_time = time.time() + 300  # 5 minutes from now
@@ -275,6 +273,31 @@ async def main_loop():
             lcd_controller.display("Verificando", "QR...")
             verify_customer(qr_data["customer-uuid"], qr_data["timestamp"])
         await asyncio.sleep(1)  # 1-second delay to avoid busy-waiting
+
+
+def run(direction, entrance_uuid, relay_pin_door, i2c_address, use_lcd, login_credentials, num_relay_toggles=1,
+        toggle_duration=1.0):
+    global DIRECTION, ENTRANCE_UUID, RELAY_PIN_DOOR, TOGGLES, DURATION, I2CADDRESS, USE_LCD, HOSTNAME, USERNAME, PASSWORD
+    DIRECTION = direction
+    ENTRANCE_UUID = entrance_uuid
+    RELAY_PIN_DOOR = str(relay_pin_door)
+    TOGGLES = str(num_relay_toggles)
+    DURATION = str(toggle_duration)
+    I2CADDRESS = str(i2c_address)
+    USE_LCD = str(use_lcd)
+    HOSTNAME = login_credentials["hostname"]
+    USERNAME = login_credentials["username"]
+    PASSWORD = login_credentials["password"]
+
+    logging.info("initializing ENTRACE_UUID: %s", entrance_uuid)
+    logging.info("using relay pin %s for the door", relay_pin_door)
+    logging.info("using %s toggles for the relay", num_relay_toggles)
+    logging.info("using %s seconds for the relay", toggle_duration)
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
+    except KeyboardInterrupt:
+        logging.warning("Received exit signal.")
 
 
 if __name__ == "__main__":
