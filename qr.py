@@ -45,7 +45,7 @@ def initialize_hardware(qr_device_path, relay_pin):
     # If we get to this point and `dev` is not defined, we've exhausted our retries
     if "dev" not in locals():
         logging.error("Failed to connect to the QR code scanner after multiple attempts.")
-        lcd_controller.display("No se pudo conectar", "Verifica USB")
+        lcd_controller.display("No lector QR", "Verifica USB")
 
 
 # List to hold decoded QR data
