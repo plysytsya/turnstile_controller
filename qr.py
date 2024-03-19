@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 jwt_token = None
 
 
-def initialize_hardware():
+def initialize_hardware(qr_device_path):
     global relay_pin, dev
     # Initialize Relay
     relay_pin = RELAY_PIN_DOOR
@@ -30,7 +30,7 @@ def initialize_hardware():
     timeout_end_time = time.time() + 300  # 5 minutes from now
     while time.time() < timeout_end_time:
         try:
-            dev = InputDevice(find_qr_devices())
+            dev = InputDevice(qr_device_path)
             logging.info("Successfully connected to the QR code scanner.")
             lcd_controller.display("Conectado al", "escaneador QR")
             break  # Exit the loop since we've successfully connected
@@ -290,7 +290,7 @@ def run(
     global lcd_controller
     lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
 
-    initialize_hardware()
+    initialize_hardware(qr_reader.path)
 
     logging.info("initializing ENTRACE_UUID: %s", entrance_uuid)
     logging.info("using relay pin %s for the door", relay_pin_door)
