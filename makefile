@@ -61,4 +61,4 @@ logs-cronjob:
 	journalctl -u download_customer_db.service -f
 
 venv:
-    source ~/turnstile_controller/venv/bin/activate
+	@source ~/turnstile_controller/venv/bin/activate
