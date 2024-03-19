@@ -80,10 +80,9 @@ timeout_end_time = time.time() + 300  # 5 minutes from now
 devices = {}
 while time.time() < timeout_end_time:
     try:
-        devices = find_qr_devices()
-        for device in devices:
+        found_devices = find_qr_devices()
+        for device in found_devices:
             direction = USB_PORT_MAP[device.phys]
-            breakpoint()
             devices[direction] = InputDevice(device.path)
             logging.info("Successfully connected to the QR code reader %s.", direction)
             if direction == "A":
