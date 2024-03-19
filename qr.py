@@ -281,7 +281,7 @@ def run(
     RELAY_PIN_DOOR = str(relay_pin_door)
     TOGGLES = str(num_relay_toggles)
     DURATION = str(toggle_duration)
-    I2C_ADDRESS = int(i2c_address, 16)
+    I2C_ADDRESS = int(i2c_address, 16) if isinstance(i2c_address, str) else i2c_address
     USE_LCD = str(use_lcd)
     HOSTNAME = login_credentials["hostname"]
     USERNAME = login_credentials["username"]
