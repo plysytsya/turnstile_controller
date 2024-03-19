@@ -70,6 +70,7 @@ def toggle_relay(duration: float = 1.0, toggles: int = 1):
 async def keyboard_event_loop(device):
     global shared_list
     output_string = ""
+    logging.info("Starting keyboard event loop.")
     lcd_controller.display("Escanea", "codigo QR...")
 
     async for event in device.async_read_loop():
@@ -291,6 +292,7 @@ def run(
 
     global lcd_controller
     lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
+    logging.info("Initializing LCD controller on address %s", I2C_ADDRESS)
 
     initialize_hardware(qr_reader.path, relay_pin_door)
 
