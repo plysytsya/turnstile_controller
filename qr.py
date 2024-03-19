@@ -17,8 +17,6 @@ from lcd_controller import LCDController
 
 logging.basicConfig(level=logging.INFO)
 
-load_dotenv()
-
 jwt_token = None
 
 # Fetch global variables from environment
