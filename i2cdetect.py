@@ -13,3 +13,7 @@ def i2cdetect(bus_number):
             logging.exception(e)
             logging.error("NO LCD-DISPLAY FOUND")
     return devices
+
+
+if __name__ == "__main__":
+    print(i2cdetect(1))
