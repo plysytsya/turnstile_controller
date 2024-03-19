@@ -24,7 +24,7 @@ def initialize_hardware(qr_device_path, relay_pin):
     # Initialize Relay
     GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
     try:
-        GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
+        GPIO.setup(int(relay_pin), GPIO.OUT)  # Set pin as an output pin
     except ValueError:
         logging.error("Invalid relay pin %s. Please check the relay pin number.", relay_pin)
 
