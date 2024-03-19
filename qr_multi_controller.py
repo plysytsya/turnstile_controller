@@ -23,7 +23,7 @@ for device in devices:
     usb_devices = find_qr_devices()
     qr_reader = None
     for usb_device in usb_devices:
-        if usb_direction_lookup[usb_devices.path] == direction:
+        if usb_direction_lookup[usb_device.path] == direction:
             qr_reader = usb_device
             break
     if qr_reader is None:
