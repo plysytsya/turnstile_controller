@@ -19,26 +19,11 @@ logging.basicConfig(level=logging.INFO)
 
 jwt_token = None
 
-# Fetch global variables from environment
-HOSTNAME = os.getenv("HOSTNAME")
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
-DIRECTION = os.getenv("DIRECTION")
-JWT_TOKEN = os.getenv("JWT_TOKEN")
-
-ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
-USE_LCD = int(os.getenv("USE_LCD", 1))
-RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 24))
-NUM_RELAY_TOGGLES = int(os.getenv("TOGGLES", 1))
-TOGGLE_DURATION = float(os.getenv("DURATION", 1.0))
-I2C_ADDRESS = int(os.getenv("I2CADDRESS"), 16)
 
 # Initialize Relay
 relay_pin = RELAY_PIN_DOOR
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
-
-lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
 
 # Initialize the InputDevice
 timeout_end_time = time.time() + 300  # 5 minutes from now
@@ -296,11 +281,14 @@ def run(
     RELAY_PIN_DOOR = str(relay_pin_door)
     TOGGLES = str(num_relay_toggles)
     DURATION = str(toggle_duration)
-    I2CADDRESS = str(i2c_address)
+    I2C_ADDRESS = str(i2c_address)
     USE_LCD = str(use_lcd)
     HOSTNAME = login_credentials["hostname"]
     USERNAME = login_credentials["username"]
     PASSWORD = login_credentials["password"]
+
+    global lcd_controller
+    lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
 
     logging.info("initializing ENTRACE_UUID: %s", entrance_uuid)
     logging.info("using relay pin %s for the door", relay_pin_door)
