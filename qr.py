@@ -34,32 +34,15 @@ USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 24))
 NUM_RELAY_TOGGLES = int(os.getenv("TOGGLES", 1))
 TOGGLE_DURATION = float(os.getenv("DURATION", 1.0))
+I2C_ADDRESS = int(os.getenv("I2CADDRESS"), 16)
 
 # Initialize Relay
 relay_pin = RELAY_PIN_DOOR
-RELAY_PIN_QR_READER = 22
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
 lcd_controller = LCDController(USE_LCD)
 
-
-def reconnect_qr_reader():
-    GPIO.setup(RELAY_PIN_QR_READER, GPIO.OUT)  # set up pin as an output pin
-
-    logging.info("Attempting to reconnect the QR scanner via relay...")
-    lcd_controller.display("Reconectando", "escaner QR...")
-
-    GPIO.output(RELAY_PIN_QR_READER, GPIO.HIGH)  # turn relay on
-    time.sleep(1)  # Wait for 1 second
-    GPIO.output(RELAY_PIN_QR_READER, GPIO.LOW)  # turn relay off
-
-    logging.info("Reconnection attempt via relay completed.")
-    lcd_controller.display("Intento de", "reconexión hecho")
-    time.sleep(3)
-
-
-reconnect_qr_reader()
 
 # Initialize the InputDevice
 timeout_end_time = time.time() + 300  # 5 minutes from now
