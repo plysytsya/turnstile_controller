@@ -11,7 +11,6 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 
-from find_device import find_qr_device
 from lcd_controller import LCDController
 from keymap import KEYMAP
 
