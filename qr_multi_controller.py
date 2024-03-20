@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import subprocess
 from pathlib import Path
 from multiprocessing import Process
 import dotenv
@@ -37,25 +38,20 @@ for device in devices:
         else os.getenv("ENTRANCE_UUID_B")
     )
 
-    p = Process(
-        target=run,
-        kwargs={
-            "direction": direction,
-            "entrance_uuid": entrance_uuid,
-            "relay_pin_door": relay_pin,
-            "i2c_address": lcd_address,
-            "use_lcd": True,
-            "qr_reader": qr_reader,
-            "login_credentials": {
-                "hostname": os.getenv("HOSTNAME"),
-                "username": os.getenv("USERNAME"),
-                "password": os.getenv("PASSWORD"),
-            },
-        },
-    )
-    p.start()
+    # Define the environment variables
+    env = os.environ.copy()
+    env["LCD_I2C_ADDRESS"] = lcd_address
+    env["RELAY_PIN"] = relay_pin
+    env["ENTRANCE_UUID"] = entrance_uuid
+    env["QR_USB_DEVICE_PATH"] = qr_reader.path
+
+    # Define the command
+    cmd = ["python", "qr.py"]
+
+    # Run the command in a subprocess
+    p = subprocess.Popen(cmd, env=env)
     processes.append(p)
 
 # Wait for all processes to finish
 for p in processes:
-    p.join()
+    p.wait()
