@@ -8,7 +8,6 @@ import dotenv
 
 from find_device import find_qr_devices
 from i2cdetect import detect_i2c_device_b
-from qr import run
 
 devices = find_qr_devices()
 usb_direction_lookup = json.loads(
