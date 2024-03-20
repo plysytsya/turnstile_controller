@@ -267,6 +267,7 @@ def get_valid_response(url, headers, payload, customer_uuid):
         return _find_customer_in_cache(customer_uuid) or post_request(url, headers, payload)
 
     if response is None or response.status_code not in (200, 401, 403):
+        logging.error(f"Invalid response: {response.json()}. status code: {response.status_code}")
         handle_server_response(None)
         if response:
             log_unsuccessful_request(response)
