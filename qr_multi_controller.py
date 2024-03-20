@@ -51,6 +51,15 @@ for device in devices:
     p = subprocess.Popen(cmd, env=env)
     processes.append(p)
 
-# Wait for all processes to finish
-for p in processes:
-    p.wait()
+
+try:
+    # Your existing code here...
+
+    # Wait for all processes to finish
+    for p in processes:
+        p.wait()
+
+except KeyboardInterrupt:
+    # On keyboard interrupt, terminate all subprocesses
+    for p in processes:
+        p.terminate()
