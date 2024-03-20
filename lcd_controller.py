@@ -1,9 +1,9 @@
+import logging
+import threading
 import time
 
 from rpi_lcd import LCD
-import logging
 from unidecode import unidecode
-import threading
 
 
 class LCDController:
@@ -13,6 +13,12 @@ class LCDController:
         self.scroll_delay = scroll_delay
         if use_lcd:
             self.lcd = LCD(lcd_address)
+
+    def clear(self):
+        if self.use_lcd:
+            self.lcd.clear()
+        else:
+            logging.info("Clearing display")
 
     def scroll_text(self, line: str) -> list[str]:
         line_length = len(line)
