@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import subprocess
+import sys
+
 import dotenv
 from pathlib import Path
 
@@ -48,7 +50,7 @@ for device in devices:
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
 
     # Define the command
-    cmd = ["python", str(current_dir / "qr.py")]
+    cmd = [sys.executable, str(current_dir / "qr.py")]
 
     # Run the command in a subprocess
     p = subprocess.Popen(cmd, env=env)
