@@ -5,7 +5,7 @@ After=network.target
 [Service]
 #ExecStartPre=/bin/sleep 2
 RestartSec=10
-ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/qr.py
+ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/qr_multi_controller.py
 User=manager
 Restart=always
 #ExecStopPost=/usr/bin/python3 /home/pi/restart_msg.py  # This will run when the service is stopped/restarted
