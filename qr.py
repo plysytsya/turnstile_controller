@@ -1,52 +1,84 @@
-import asyncio
 import json
+import asyncio
 import logging
 import os
 import pathlib
 import time
 
-import RPi.GPIO as GPIO
 import evdev
+from evdev import InputDevice, categorize, KeyEvent
 import requests
 from dotenv import load_dotenv
-from evdev import InputDevice, categorize, KeyEvent
+import RPi.GPIO as GPIO
 
-from find_device import find_qr_devices
-from keymap import KEYMAP
+from find_device import find_qr_device
 from lcd_controller import LCDController
+from keymap import KEYMAP
 
 logging.basicConfig(level=logging.INFO)
 
+load_dotenv()
+
 jwt_token = None
 
+# Fetch global variables from environment
+ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
+HOSTNAME = os.getenv("HOSTNAME")
+USERNAME = os.getenv("USERNAME")
+PASSWORD = os.getenv("PASSWORD")
+DIRECTION = os.getenv("DIRECTION")
+JWT_TOKEN = os.getenv("JWT_TOKEN")
 
-def initialize_hardware(qr_device_path, relay_pin):
-    # Initialize Relay
-    GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
+USE_LCD = int(os.getenv("USE_LCD", 1))
+
+RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 24))
+NUM_RELAY_TOGGLES = int(os.getenv("TOGGLES", 1))
+TOGGLE_DURATION = float(os.getenv("DURATION", 1.0))
+
+# Initialize Relay
+relay_pin = RELAY_PIN_DOOR
+RELAY_PIN_QR_READER = 22
+GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
+GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
+
+lcd_controller = LCDController(USE_LCD)
+
+
+def reconnect_qr_reader():
+    GPIO.setup(RELAY_PIN_QR_READER, GPIO.OUT)  # set up pin as an output pin
+
+    logging.info("Attempting to reconnect the QR scanner via relay...")
+    lcd_controller.display("Reconectando", "escaner QR...")
+
+    GPIO.output(RELAY_PIN_QR_READER, GPIO.HIGH)  # turn relay on
+    time.sleep(1)  # Wait for 1 second
+    GPIO.output(RELAY_PIN_QR_READER, GPIO.LOW)  # turn relay off
+
+    logging.info("Reconnection attempt via relay completed.")
+    lcd_controller.display("Intento de", "reconexión hecho")
+    time.sleep(3)
+
+
+reconnect_qr_reader()
+
+# Initialize the InputDevice
+timeout_end_time = time.time() + 300  # 5 minutes from now
+
+while time.time() < timeout_end_time:
     try:
-        GPIO.setup(int(relay_pin), GPIO.OUT)  # Set pin as an output pin
-    except ValueError:
-        logging.error("Invalid relay pin %s. Please check the relay pin number.", relay_pin)
+        dev = InputDevice(find_qr_device())
+        logging.info("Successfully connected to the QR code scanner.")
+        lcd_controller.display("Conectado al", "escaneador QR")
+        break  # Exit the loop since we've successfully connected
+    except FileNotFoundError:
+        logging.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
+        lcd_controller.display("Fallo al conectar", "Cambia USB en 15s")
+        time.sleep(15)  # Wait for 15 seconds before retrying
 
-    # Initialize the InputDevice
-    timeout_end_time = time.time() + 300  # 5 minutes from now
-    while time.time() < timeout_end_time:
-        try:
-            dev = InputDevice(qr_device_path)
-            logging.info("Successfully connected to the QR code scanner.")
-            lcd_controller.display("Conectado al", "escaneador QR")
-            break  # Exit the loop since we've successfully connected
-        except FileNotFoundError:
-            logging.warning(
-                "Failed to connect to the QR code scanner. Retrying in 15 seconds..."
-            )
-            lcd_controller.display("Fallo al conectar", "Cambia USB en 15s")
-            time.sleep(15)  # Wait for 15 seconds before retrying
-    # If we get to this point and `dev` is not defined, we've exhausted our retries
-    if "dev" not in locals():
-        logging.error("Failed to connect to the QR code scanner after multiple attempts.")
-        lcd_controller.display("No lector QR", "Verifica USB")
-
+# If we get to this point and `dev` is not defined, we've exhausted our retries
+if "dev" not in locals():
+    logging.error("Failed to connect to the QR code scanner after multiple attempts.")
+    lcd_controller.display("No se pudo conectar", "Verifica USB")
 
 # List to hold decoded QR data
 shared_list = []
@@ -55,9 +87,7 @@ shared_list = []
 def log_unsuccessful_request(response):
     endpoint = response.url  # Get the URL from the response object
     log_message = "\n".join(response.text.split("\n")[-4:])
-    logging.info(
-        f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}"
-    )
+    logging.info(f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}")
 
 
 def toggle_relay(duration: float = 1.0, toggles: int = 1):
@@ -70,7 +100,6 @@ def toggle_relay(duration: float = 1.0, toggles: int = 1):
 async def keyboard_event_loop(device):
     global shared_list
     output_string = ""
-    logging.info("Starting keyboard event loop.")
     lcd_controller.display("Escanea", "codigo QR...")
 
     async for event in device.async_read_loop():
@@ -99,9 +128,7 @@ def unpack_barcode(barcode_data):
         login_data = json.loads(barcode_data)
         return login_data["customer_uuid"], login_data["timestamp"]
     except Exception as e:
-        lcd_controller.display(
-            "codigo", "QR invalido", timeout=2
-        )  # Displays "Invalid QR Code" in Spanish
+        lcd_controller.display("codigo", "QR invalido", timeout=2)  # Displays "Invalid QR Code" in Spanish
         logging.error(f"Error unpacking barcode: {e}")
         lcd_controller.display("Escanea", "codigo QR")
         return None, None
@@ -265,48 +292,6 @@ async def main_loop():
             lcd_controller.display("Verificando", "QR...")
             verify_customer(qr_data["customer-uuid"], qr_data["timestamp"])
         await asyncio.sleep(1)  # 1-second delay to avoid busy-waiting
-
-
-def run(
-    direction,
-    entrance_uuid,
-    relay_pin_door,
-    i2c_address,
-    use_lcd,
-    qr_reader,
-    login_credentials,
-    num_relay_toggles=1,
-    toggle_duration=1.0,
-):
-    global DIRECTION, ENTRANCE_UUID, RELAY_PIN_DOOR, TOGGLES, DURATION, I2CADDRESS, USE_LCD, HOSTNAME, USERNAME, PASSWORD
-    DIRECTION = direction
-    ENTRANCE_UUID = entrance_uuid
-    RELAY_PIN_DOOR = str(relay_pin_door)
-    TOGGLES = str(num_relay_toggles)
-    DURATION = str(toggle_duration)
-    I2C_ADDRESS = int(i2c_address, 16) if isinstance(i2c_address, str) else i2c_address
-    USE_LCD = str(use_lcd)
-    HOSTNAME = login_credentials["hostname"]
-    USERNAME = login_credentials["username"]
-    PASSWORD = login_credentials["password"]
-
-    global lcd_controller
-    lcd_controller = LCDController(USE_LCD, lcd_address=I2C_ADDRESS)
-    logging.info("Initializing LCD controller on address %s", I2C_ADDRESS)
-
-    initialize_hardware(qr_reader.path, relay_pin_door)
-
-    logging.info("initializing ENTRACE_UUID: %s", entrance_uuid)
-    logging.info("using relay pin %s for the door", relay_pin_door)
-    logging.info("using %s toggles for the relay", num_relay_toggles)
-    logging.info("using %s seconds for the relay", toggle_duration)
-    loop = asyncio.get_event_loop()
-
-    dev = InputDevice(qr_reader.path)
-    try:
-        loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
-    except KeyboardInterrupt:
-        logging.warning("Received exit signal.")
 
 
 if __name__ == "__main__":
