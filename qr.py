@@ -41,7 +41,7 @@ RELAY_PIN_QR_READER = 22
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
-lcd_controller = LCDController(USE_LCD)
+lcd_controller = LCDController(USE_LCD, lcd_address=0x27)
 
 
 def reconnect_qr_reader():
