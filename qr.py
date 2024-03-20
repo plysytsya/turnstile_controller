@@ -28,6 +28,7 @@ USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 DIRECTION = os.getenv("DIRECTION")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
+QR_DEVICE_PATH = os.getenv("QR_DEVICE_PATH")
 
 USE_LCD = int(os.getenv("USE_LCD", 1))
 
@@ -66,7 +67,7 @@ timeout_end_time = time.time() + 300  # 5 minutes from now
 
 while time.time() < timeout_end_time:
     try:
-        dev = InputDevice(find_qr_device())
+        dev = InputDevice(QR_DEVICE_PATH)
         logging.info("Successfully connected to the QR code scanner.")
         lcd_controller.display("Conectado al", "escaneador QR")
         break  # Exit the loop since we've successfully connected
