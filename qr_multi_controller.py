@@ -2,12 +2,15 @@ import json
 import logging
 import os
 import subprocess
-from pathlib import Path
-from multiprocessing import Process
 import dotenv
+from pathlib import Path
 
 from find_device import find_qr_devices
 from i2cdetect import detect_i2c_device_b
+
+# Get the directory of the current file
+current_dir = Path(__file__).parent
+
 
 devices = find_qr_devices()
 usb_direction_lookup = json.loads(
@@ -45,7 +48,7 @@ for device in devices:
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
 
     # Define the command
-    cmd = ["python", "qr.py"]
+    cmd = ["python", str(current_dir / "qr.py")]
 
     # Run the command in a subprocess
     p = subprocess.Popen(cmd, env=env)
