@@ -180,7 +180,7 @@ def open_door_and_greet(first_name):
 
 def load_customers_cache():
     script_path = pathlib.Path(__file__).parent
-    cache_file_path = script_path / "customer.json"
+    cache_file_path = script_path / "customers.json"
     if cache_file_path.exists():
         with cache_file_path.open() as cache_file:
             return json.load(cache_file)
