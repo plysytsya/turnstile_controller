@@ -10,6 +10,9 @@ from pathlib import Path
 from find_device import find_qr_devices
 from i2cdetect import detect_i2c_device_b
 
+logging.basicConfig(level=logging.INFO)
+
+
 # Get the directory of the current file
 current_dir = Path(__file__).parent
 
@@ -53,6 +56,7 @@ for device in devices:
     cmd = [sys.executable, str(current_dir / "qr.py")]
 
     # Run the command in a subprocess
+    logging.info(f"Initializing with envvars: {env}")
     p = subprocess.Popen(cmd, env=env)
     processes.append(p)
 
