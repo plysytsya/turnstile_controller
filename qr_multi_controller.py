@@ -39,7 +39,6 @@ for device in devices:
     relay_pin = (
         os.getenv("RELAY_PIN_A") if direction == "A" else os.getenv("RELAY_PIN_B")
     )
-    breakpoint()
     entrance_uuid = (
         os.getenv("ENTRANCE_UUID_A")
         if direction == "A"

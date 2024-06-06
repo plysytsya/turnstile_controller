@@ -31,7 +31,7 @@ RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
 LCD_I2C_ADDRESS = int(os.getenv("LCD_I2C_ADDRESS", 0x27), 16)
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
-logging.info("using relay pin %s for the door", RELAY_PIN_DOOR)
+logging.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
 # Initialize Relay
 relay_pin = RELAY_PIN_DOOR
