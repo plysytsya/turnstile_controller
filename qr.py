@@ -27,7 +27,7 @@ PASSWORD = os.getenv("PASSWORD")
 DIRECTION = os.getenv("DIRECTION")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
-RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 24))
+RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
 LCD_I2C_ADDRESS = int(os.getenv("LCD_I2C_ADDRESS", 0x27), 16)
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
