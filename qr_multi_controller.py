@@ -45,7 +45,7 @@ for device in devices:
     # Define the environment variables
     env = os.environ.copy()
     env["LCD_I2C_ADDRESS"] = lcd_address
-    env["RELAY_PIN"] = relay_pin
+    env["RELAY_PIN_DOOR"] = relay_pin
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
 
