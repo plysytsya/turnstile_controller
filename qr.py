@@ -173,6 +173,7 @@ def handle_server_response(status_code, first_name=None):
 
 def open_door_and_greet(first_name):
     logging.info(f"Hola {first_name}")
+    logging.info(f"Opening door...with win {RELAY_PIN_DOOR}")
     toggle_relay()
     display_on_lcd("Hola", first_name, timeout=2)
     display_on_lcd("Escanea", "codigo QR")
