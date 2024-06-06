@@ -108,6 +108,7 @@ def log_unsuccessful_request(response):
 
 
 def toggle_relay(duration=1):
+    logging.info(f"Toggling relay PIN {relay_pin}")
     GPIO.output(relay_pin, GPIO.HIGH)
     time.sleep(duration)
     GPIO.output(relay_pin, GPIO.LOW)
