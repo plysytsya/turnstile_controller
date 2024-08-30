@@ -32,11 +32,15 @@ RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
 LCD_I2C_ADDRESS = int(os.getenv("LCD_I2C_ADDRESS", 0x27), 16)
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
-logging.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
+logging.info(
+    "using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION
+)
 
 # Initialize Relay
 relay_pin = RELAY_PIN_DOOR
-RELAY_PIN_QR_READER = 22  # Hopefully we never again have to use a relay to restart the qr reader
+RELAY_PIN_QR_READER = (
+    22  # Hopefully we never again have to use a relay to restart the qr reader
+)
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
@@ -93,7 +97,9 @@ while time.time() < timeout_end_time:
         display_on_lcd("Conectado al", "escaneador QR")
         break  # Exit the loop since we've successfully connected
     except FileNotFoundError:
-        logging.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
+        logging.warning(
+            "Failed to connect to the QR code scanner. Retrying in 15 seconds..."
+        )
         display_on_lcd("Fallo al conectar", "Cambia USB en 15s")
         time.sleep(15)  # Wait for 15 seconds before retrying
 
@@ -109,7 +115,9 @@ shared_list = []
 def log_unsuccessful_request(response):
     endpoint = response.url  # Get the URL from the response object
     log_message = "\n".join(response.text.split("\n")[-4:])
-    logging.info(f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}")
+    logging.info(
+        f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}"
+    )
 
 
 def toggle_relay(duration=1):
@@ -150,7 +158,9 @@ def unpack_barcode(barcode_data):
         login_data = json.loads(barcode_data)
         return login_data["customer_uuid"], login_data["timestamp"]
     except Exception as e:
-        display_on_lcd("codigo", "QR invalido", timeout=2)  # Displays "Invalid QR Code" in Spanish
+        display_on_lcd(
+            "codigo", "QR invalido", timeout=2
+        )  # Displays "Invalid QR Code" in Spanish
         logging.error(f"Error unpacking barcode: {e}")
         display_on_lcd("Escanea", "codigo QR")
         return None, None
@@ -200,7 +210,7 @@ customers_cache = load_customers_cache()
 def post_request(url, headers, payload, retries=60, sleep_duration=10):
     for i in range(retries):
         try:
-            response = requests.post(url, headers=headers, data=payload)
+            response = requests.post(url, headers=headers, json=payload)
             return response
         except requests.exceptions.RequestException as e:
             logging.warning(f"Internet connection error: {e}. Retrying...")
@@ -216,10 +226,12 @@ def send_entrance_log(url, headers, payload, retries=60, sleep_duration=10):
     payload["uuid"] = _uuid
     for i in range(retries):
         try:
-            response = requests.put(url, headers=headers, data=payload)
+            response = requests.put(url, headers=headers, json=payload)
             return response
         except requests.exceptions.RequestException as e:
-            logging.warning(f"Internet connection error when sending entrance-log: {e}. Retrying...")
+            logging.warning(
+                f"Internet connection error when sending entrance-log: {e}. Retrying..."
+            )
             time.sleep(sleep_duration)  # sleep for 10 seconds before retrying
     return None
 
@@ -258,14 +270,12 @@ def verify_customer(customer_uuid, timestamp):
     global jwt_token
 
     url = f"{HOSTNAME}/verify_customer/"
-    payload = json.dumps(
-        {
-            "customer_uuid": customer_uuid,
-            "entrance_uuid": ENTRANCE_UUID,
-            "direction": DIRECTION,
-            "timestamp": timestamp,
-        }
-    )
+    payload = {
+        "customer_uuid": customer_uuid,
+        "entrance_uuid": ENTRANCE_UUID,
+        "direction": DIRECTION,
+        "timestamp": timestamp,
+    }
 
     headers = {
         "Authorization": f"Bearer {jwt_token}",
