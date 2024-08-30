@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import time
+import uuid
 
 import evdev
 from evdev import InputDevice, categorize, KeyEvent
@@ -206,6 +207,29 @@ def post_request(url, headers, payload, retries=60, sleep_duration=10):
     return None
 
 
+def send_entrance_log(url, headers, payload, retries=60, sleep_duration=10):
+    _uuid = generate_uuid_from_string(str(payload))
+    payload["uuid"] = _uuid
+    for i in range(retries):
+        try:
+            response = requests.put(url, headers=headers, data=payload)
+            return response
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Internet connection error when sending entrance-log: {e}. Retrying...")
+            time.sleep(sleep_duration)  # sleep for 10 seconds before retrying
+    return None
+
+
+def generate_uuid_from_string(input_string):
+    # Use a predefined namespace (e.g., UUID namespace for DNS)
+    namespace = uuid.NAMESPACE_DNS
+
+    # Generate a UUID using UUID5, which is based on the SHA-1 hash of a namespace and a name (your string)
+    generated_uuid = uuid.uuid5(namespace, input_string)
+
+    return str(generated_uuid)
+
+
 def login():
     global jwt_token
     if jwt_token:
@@ -263,26 +287,33 @@ def verify_customer(customer_uuid, timestamp):
 
 
 def get_valid_response(url, headers, payload, customer_uuid):
-    try:
-        response = post_request(url, headers, payload, retries=5)
-    except requests.exceptions.RequestException:
-        return _find_customer_in_cache(customer_uuid) or post_request(url, headers, payload)
-
-    if response is None or response.status_code not in (200, 401, 403):
-        logging.error(f"Invalid response: {response} {response.text}")
-        handle_server_response(None)
-        if response:
-            log_unsuccessful_request(response)
+    status_code, customer = _find_customer_in_cache(customer_uuid)
+    if status_code == "UserExists":
+        open_door_and_greet(customer["first_name"])
+        payload["response_code"] = status_code
+        send_entrance_log(f"{HOSTNAME}/api/entrance-log/", headers, payload, retries=15)
         return None
-    return response
+    else:
+        response = post_request(url, headers, payload, retries=5)
+
+        if response is None or response.status_code not in (200, 401, 403):
+            logging.error(f"Invalid response: {response} {response.text}")
+            handle_server_response(None)
+            if response:
+                log_unsuccessful_request(response)
+            return None
+        return response
 
 
 def _find_customer_in_cache(customer_uuid):
-    for customer in customers_cache:
-        if customer["customer_uuid"] == customer_uuid and customer["active_membership"]:
+    customer = customers_cache.get(customer_uuid)
+    if customer:
+        if customer["active_membership"]:
             logging.info(f"Found customer {customer_uuid} in cache.")
-            return open_door_and_greet(customer["first_name"])
-    return None
+            return "UserExists", customer
+        else:
+            return "MembershipInactive", None
+    return "UserDoesNotExist", None
 
 
 def refresh_token():

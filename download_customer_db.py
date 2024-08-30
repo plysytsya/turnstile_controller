@@ -51,7 +51,7 @@ def get_customers():
         log_unsuccessful_request(response)
         return None
 
-    return response.json()
+    return {customer["customer_uuid"] for customer in response.json()}
 
 
 def make_request(method, url, headers=None, payload=None, retries=60, sleep_duration=10):
