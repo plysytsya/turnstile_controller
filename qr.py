@@ -227,6 +227,10 @@ def send_entrance_log(url, headers, payload, retries=60, sleep_duration=10):
     for i in range(retries):
         try:
             response = requests.put(url, headers=headers, json=payload)
+            if response.status_code == 200:
+                logging.info(f"Entrance log sent successfully: {payload}")
+            else:
+                logging.error(f"Failed to send entrance log: {response.text}")
             return response
         except requests.exceptions.RequestException as e:
             logging.warning(
