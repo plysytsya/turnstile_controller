@@ -256,7 +256,7 @@ def login():
         return jwt_token
 
     url = f"{HOSTNAME}/api/token/"
-    payload = json.dumps({"email": USERNAME, "password": PASSWORD})
+    payload = {"email": USERNAME, "password": PASSWORD}
     headers = {"Content-Type": "application/json"}
 
     response = post_request(url, headers, payload)
@@ -349,6 +349,8 @@ def handle_keyboard_interrupt(vs):
 
 async def main_loop():
     global shared_list
+
+    login()
 
     while True:
         if shared_list:
