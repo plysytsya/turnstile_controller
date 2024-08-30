@@ -42,7 +42,11 @@ GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
 if USE_LCD:
     # Initialize LCD
-    lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS)
+    try:
+        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS)
+    except Exception as e:
+        logging.exception(f"Error initializing LCD. Continuing without LCD: {e}")
+        USE_LCD = False
 
 
 def scroll_text(line, max_char_count=16, delay=0.2):
