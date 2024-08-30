@@ -1,9 +1,9 @@
 [Unit]
-Description=Run Download Customer Database Service every hour
+Description=Run Download Customer Database Service every 15 minutes and on startup
 
 [Timer]
 OnBootSec=0s
-OnCalendar=*-*-* *:00:00
+OnCalendar=*:00/15
 Persistent=true
 Unit=download_customer_db.service
 
