@@ -201,7 +201,7 @@ def load_customers_cache():
     if cache_file_path.exists():
         with cache_file_path.open() as cache_file:
             return json.load(cache_file)
-    return []
+    return {}
 
 
 customers_cache = load_customers_cache()
