@@ -309,7 +309,7 @@ def get_valid_response(url, headers, payload, customer_uuid):
     if status_code == "UserExists":
         open_door_and_greet(customer["first_name"])
         payload["response_code"] = status_code
-        send_entrance_log(f"{HOSTNAME}/api/entrance-log/", headers, payload, retries=15)
+        send_entrance_log(url, headers, payload, retries=15)
         return None
     else:
         response = post_request(url, headers, payload, retries=5)
