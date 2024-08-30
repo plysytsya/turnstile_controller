@@ -22,7 +22,7 @@ restart-qr: uninstall-qr install-qr
 install-cronjob:
 	sudo cp /home/manager/turnstile_controller/download_customer_db.service /etc/systemd/system/
 	sudo cp /home/manager/turnstile_controller/download_customer_db.timer /etc/systemd/system/
-	sudo systemctl daemon-reload
+	sudo systemctl daemon-reload  # Reload systemd manager configuration
 	sudo systemctl enable download_customer_db.service
 	sudo systemctl enable download_customer_db.timer
 	sudo systemctl start download_customer_db.timer
