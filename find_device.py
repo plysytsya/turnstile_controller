@@ -7,9 +7,16 @@ def find_qr_devices():
     found_devices = []
 
     for device in devices:
-        print(device)
+        print(f"Device: {device.name}")
+
+        # Extracting device IDs
+        vendor_id = device.info.vendor
+        product_id = device.info.product
+
+        print(f"Vendor ID: {hex(vendor_id)}, Product ID: {hex(product_id)}")
+
         if any(name.lower() in device.name.lower() for name in device_name_substrings):
-            print("Found device", device)
+            print("Found device:", device)
             found_devices.append(device)
 
     if not found_devices:
@@ -20,6 +27,6 @@ def find_qr_devices():
 
 
 if __name__ == "__main__":
-    device_path = find_qr_devices()
-    if device_path:
-        print("Device path:", device_path)
+    found_devices = find_qr_devices()
+    if found_devices:
+        print("Device paths:", [device.path for device in found_devices])
