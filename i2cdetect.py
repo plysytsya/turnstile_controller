@@ -13,7 +13,7 @@ def i2cdetect(bus_number):
     return devices
 
 
-def detect_i2c_device_b(bus_number):
+def detect_i2c_device_not_27(bus_number):
     devices = i2cdetect(bus_number)
     if len(devices) == 2 and "0x27" in devices:
         return [dev for dev in devices if dev != "0x27"][0]

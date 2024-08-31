@@ -8,9 +8,15 @@ import dotenv
 from pathlib import Path
 
 from find_device import find_qr_devices
-from i2cdetect import detect_i2c_device_b
+from i2cdetect import detect_i2c_device_not_27
 
 logging.basicConfig(level=logging.INFO)
+
+EXTENDED_USB_DEVICE_DIRECTION = "B"
+DISPLAY_X27_DIRECTION = "B"
+
+UNEXTENDED_USB_DEVICE_DIRECTION = "A"
+DISPAY_NOT_X27_DIRECTION = "A"
 
 
 # Get the directory of the current file
@@ -25,25 +31,17 @@ load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 
 processes = []
 
-for device in devices:
-    direction = usb_direction_lookup.get(device.phys)
-    lcd_address = "0x27" if direction == "A" else detect_i2c_device_b(1)
-    usb_devices = find_qr_devices()
-    qr_reader = None
-    for usb_device in usb_devices:
-        if usb_direction_lookup[usb_device.phys] == direction:
-            qr_reader = usb_device
-            break
-    if qr_reader is None:
-        logging.warning(f"Could not find QR reader for direction {direction}")
-    relay_pin = (
-        os.getenv("RELAY_PIN_A") if direction == "A" else os.getenv("RELAY_PIN_B")
-    )
-    entrance_uuid = (
-        os.getenv("ENTRANCE_UUID_A")
-        if direction == "A"
-        else os.getenv("ENTRANCE_UUID_B")
-    )
+for qr_reader in devices:
+    if qr_reader.is_extended:
+        direction = EXTENDED_USB_DEVICE_DIRECTION
+        lcd_address = DISPLAY_X27_DIRECTION
+        entrance_uuid = os.getenv("ENTRANCE_UUID_B")
+        relay_pin = os.getenv("RELAY_PIN_B")
+    else:
+        direction = UNEXTENDED_USB_DEVICE_DIRECTION
+        lcd_address = detect_i2c_device_not_27(1)
+        entrance_uuid = os.getenv("ENTRANCE_UUID_A")
+        relay_pin = os.getenv("RELAY_PIN_A")
 
     # Define the environment variables
     env = os.environ.copy()
@@ -62,9 +60,6 @@ for device in devices:
 
 
 try:
-    # Your existing code here...
-
-    # Wait for all processes to finish
     for p in processes:
         p.wait()
 
