@@ -13,10 +13,9 @@ from i2cdetect import detect_i2c_device_not_27
 logging.basicConfig(level=logging.INFO)
 
 EXTENDED_USB_DEVICE_DIRECTION = "B"
-DISPLAY_X27_DIRECTION = "B"
+DISPLAY_X27_DIRECTION = "0x27"
 
 UNEXTENDED_USB_DEVICE_DIRECTION = "A"
-DISPAY_NOT_X27_DIRECTION = "A"
 
 
 # Get the directory of the current file
@@ -49,8 +48,6 @@ for qr_reader in devices:
     env["RELAY_PIN_DOOR"] = relay_pin
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
-
-    logging.info(f"Setting environment variables: {env}")
 
     # Define the command
     cmd = [sys.executable, str(current_dir / "qr.py")]
