@@ -48,6 +48,7 @@ for qr_reader in devices:
     env["RELAY_PIN_DOOR"] = relay_pin
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
+    env["DIRECTION"] = direction
 
     # Define the command
     cmd = [sys.executable, str(current_dir / "qr.py")]
