@@ -161,3 +161,5 @@ cython_debug/
 .env # virtualenv
 env/
 venv/
+
+customers.json
