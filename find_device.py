@@ -1,22 +1,28 @@
+import re
+
 from evdev import InputDevice, list_devices
 
 
 def find_qr_devices():
-    device_name_substrings = ["TMC HIDKeyBoard", "Megahunt", "YOKO HID GUM", "TMC HIDKeyBoard", "WCM HIDKeyBoard"]
+    device_name_substrings = [
+        "TMC HIDKeyBoard",
+        "Megahunt",
+        "YOKO HID GUM",
+        "TMC HIDKeyBoard",
+        "WCM HIDKeyBoard",
+    ]
     devices = [InputDevice(path) for path in list_devices()]
     found_devices = []
 
     for device in devices:
         print(f"Device: {device.name}")
 
-        # Extracting device IDs
-        vendor_id = device.info.vendor
-        product_id = device.info.product
-
-        print(f"Vendor ID: {hex(vendor_id)}, Product ID: {hex(product_id)}")
-
         if any(name.lower() in device.name.lower() for name in device_name_substrings):
             print("Found device:", device)
+            is_extended = is_usb_extended_device(device)
+            if is_extended:
+                print(f"{device.path} is connected to usb-extender")
+            device.is_extended = is_extended
             found_devices.append(device)
 
     if not found_devices:
@@ -24,6 +30,26 @@ def find_qr_devices():
         exit(1)
 
     return found_devices
+
+
+def is_usb_extended_device(device: InputDevice) -> bool:
+    """
+    Determines if the USB device has an extended device path.
+
+    Args:
+        device (evdev.device.InputDevice): The input device to check.
+
+    Returns:
+        bool: True if the device has an extended device path, False otherwise.
+    """
+    # The device.phys property contains the physical path of the device
+    phys = device.phys
+
+    # Regex to match the extended USB path pattern
+    extended_pattern = re.compile(r"usb-\d+\.\d+\.\d+/")
+
+    # Return True if the pattern matches, otherwise return False
+    return bool(extended_pattern.search(phys))
 
 
 if __name__ == "__main__":
