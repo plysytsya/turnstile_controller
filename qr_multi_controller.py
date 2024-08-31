@@ -50,6 +50,8 @@ for qr_reader in devices:
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
 
+    logging.info(f"Setting environment variables: {env}")
+
     # Define the command
     cmd = [sys.executable, str(current_dir / "qr.py")]
 
