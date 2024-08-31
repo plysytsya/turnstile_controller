@@ -221,13 +221,13 @@ def load_customers_cache():
 customers_cache = load_customers_cache()
 
 
-def post_request(url, headers, payload, retries=60, sleep_duration=10):
+def post_request(url, headers, payload, retries=10, sleep_duration=10):
     for i in range(retries):
         try:
             response = requests.post(url, headers=headers, json=payload)
             return response
         except requests.exceptions.RequestException as e:
-            logger.warning(f"Internet connection error: {e}. Retrying...")
+            logger.warning(f"Eerror: {e}. Retrying...")
             display_on_lcd("No internet", "Reintentando...")
             time.sleep(sleep_duration)  # sleep for 10 seconds before retrying
     logger.error("Exhausted all retries. Check your internet connection.")
@@ -328,13 +328,13 @@ def get_valid_response(url, headers, payload, customer_uuid):
     else:
         response = post_request(url, headers, payload, retries=5)
 
-        if response is None or response.status_code not in (200, 401, 403):
-            logger.error(f"Invalid response: {response} {response.text}")
-            handle_server_response(None)
-            if response:
-                log_unsuccessful_request(response)
-            return None
-        return response
+    if response is None or response.status_code not in (200, 401, 403):
+        logger.error(f"Invalid response: {response} {response.headers}")
+        handle_server_response(None)
+        if response:
+            log_unsuccessful_request(response)
+        return None
+    return response
 
 
 def _find_customer_in_cache(customer_uuid):
