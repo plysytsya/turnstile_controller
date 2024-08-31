@@ -191,7 +191,7 @@ def handle_server_response(status_code, first_name=None):
 
 def open_door_and_greet(first_name):
     greet_word = "Hola" if DIRECTION == "B" else "Adios"
-    logger.info(f"{greet_word} {first_name}")
+    logger.info(f"{greet_word}, {first_name}!")
     logger.info(f"Opening door...with win {RELAY_PIN_DOOR}")
     toggle_relay()
     display_on_lcd(f"{greet_word}", first_name, timeout=2)
