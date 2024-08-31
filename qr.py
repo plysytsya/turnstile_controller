@@ -48,8 +48,9 @@ if USE_LCD:
     # Initialize LCD
     try:
         lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS)
+        logging.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:
-        logging.exception(f"Error initializing LCD. Continuing without LCD: {e}")
+        logging.warning(f"Error initializing LCD. Continuing without LCD: {e}")
         USE_LCD = False
 
 
