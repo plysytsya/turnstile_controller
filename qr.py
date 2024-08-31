@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import pathlib
+import threading
 import time
 import uuid
 
@@ -192,10 +193,19 @@ def handle_server_response(status_code, first_name=None):
 def open_door_and_greet(first_name):
     greet_word = "Hola" if DIRECTION == "B" else "Adios"
     logger.info(f"{greet_word}, {first_name}!")
-    logger.info(f"Opening door...with win {RELAY_PIN_DOOR}")
-    toggle_relay()
+    logger.info(f"Opening door...with pin {RELAY_PIN_DOOR}")
+
+    # Start a new thread to toggle the relay
+    relay_thread = threading.Thread(target=toggle_relay)
+    relay_thread.start()
+
+    # Continue with the display updates in the main thread
     display_on_lcd(f"{greet_word}", first_name, timeout=2)
     display_on_lcd("Escanea", "codigo QR")
+
+    # Optionally, wait for the relay thread to finish if necessary
+    # relay_thread.join()
+
     return True
 
 
@@ -225,7 +235,7 @@ def post_request(url, headers, payload, retries=60, sleep_duration=10):
     return None
 
 
-def send_entrance_log(url, headers, payload, retries=60, sleep_duration=10):
+def send_entrance_log(url, headers, payload, retries=3, sleep_duration=5):
     _uuid = generate_uuid_from_string(str(payload))
     payload["uuid"] = _uuid
     for i in range(retries):
