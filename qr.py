@@ -51,7 +51,10 @@ if USE_LCD:
         lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS)
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:
-        logger.warning(f"Error initializing LCD direction {DIRECTION}. Continuing without LCD: {e}")
+        logger.exception(
+            f"Error initializing LCD direction {DIRECTION} on "
+            f"address {LCD_I2C_ADDRESS}. Continuing without LCD: {e}"
+        )
         USE_LCD = False
 
 
@@ -117,9 +120,7 @@ shared_list = []
 def log_unsuccessful_request(response):
     endpoint = response.url  # Get the URL from the response object
     log_message = "\n".join(response.text.split("\n")[-4:])
-    logger.info(
-        f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}"
-    )
+    logger.info(f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}")
 
 
 def toggle_relay(duration=1):
