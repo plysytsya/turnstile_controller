@@ -340,7 +340,7 @@ def get_valid_response(url, headers, payload, customer_uuid):
 def _find_customer_in_cache(customer_uuid):
     customer = customers_cache.get(customer_uuid)
     if customer:
-        if customer["active_membership"]:
+        if customer["active_membership"] or customer["is_staff"]:
             logger.info(f"Found customer {customer_uuid} in cache.")
             return "UserExists", customer
         else:
