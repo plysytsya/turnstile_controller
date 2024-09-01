@@ -17,7 +17,7 @@ uninstall-qr:
 	sudo systemctl reset-failed
 
 restart-qr:
-    sudo systemctl restart qr_script.service
+	sudo systemctl restart qr_script.service
 
 # Instalar el cronjob para descargar la base de datos del cliente
 install-cronjob:
