@@ -44,8 +44,14 @@ PASSWORD = os.getenv("PASSWORD")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
+
 if USE_LCD:
-    LCD_I2C_ADDRESS = int(os.getenv("LCD_I2C_ADDRESS", 0x27), 16)
+    try:
+        LCD_I2C_ADDRESS = int(os.getenv("LCD_I2C_ADDRESS", 0x27), 16)
+    except Exception as e:
+        logger.warning(f"Error parsing LCD I2C address: {e}. Continuing without")
+        USE_LCD = False
+
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
 logger.info(
