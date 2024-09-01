@@ -49,13 +49,14 @@ for qr_reader in devices:
         entrance_uuid = os.getenv("ENTRANCE_UUID_A")
         relay_pin = os.getenv("RELAY_PIN_A")
 
-    # Ensure lcd_address is not None
-    if lcd_address is None:
+    env = os.environ.copy()
+
+    if lcd_address:
+        env["LCD_I2C_ADDRESS"] = lcd_address
+    else:
         logger.warning("LCD address is None. Skipping this device.")
 
     # Define the environment variables
-    env = os.environ.copy()
-    env["LCD_I2C_ADDRESS"] = lcd_address
     env["RELAY_PIN_DOOR"] = relay_pin
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
