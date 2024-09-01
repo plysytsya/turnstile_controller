@@ -39,7 +39,6 @@ processes = []
 
 for qr_reader in devices:
     if qr_reader.is_extended:
-        logger.info(f"Device {qr_reader} is connected to usb-extender. {qr_reader.is_extended}")
         direction = EXTENDED_USB_DEVICE_DIRECTION
         lcd_address = DISPLAY_X27_DIRECTION
         entrance_uuid = os.getenv("ENTRANCE_UUID_B")
@@ -52,8 +51,7 @@ for qr_reader in devices:
 
     # Ensure lcd_address is not None
     if lcd_address is None:
-        logger.error("LCD address is None. Skipping this device.")
-        continue
+        logger.warning("LCD address is None. Skipping this device.")
 
     # Define the environment variables
     env = os.environ.copy()
@@ -67,7 +65,8 @@ for qr_reader in devices:
     cmd = [sys.executable, str(current_dir / "qr.py")]
 
     # Run the command in a subprocess
-    logger.info(f"Initializing with envvars: {env}")
+
+    logging.warning(f"Starging subprocess {direction} with env-vars: {env}")
     p = subprocess.Popen(cmd, env=env)
     processes.append(p)
 
