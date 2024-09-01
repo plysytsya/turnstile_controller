@@ -1,3 +1,8 @@
+# Step 1: Install the systemd-python package
+# You can install it using pip:
+# pip install systemd-python
+
+# Step 2: Import the necessary modules
 import json
 import logging
 import os
@@ -6,21 +11,23 @@ import sys
 
 import dotenv
 from pathlib import Path
+from systemd.journal import JournalHandler  # Import JournalHandler
 
 from find_device import find_qr_devices
 from i2cdetect import detect_i2c_device_not_27
 
+# Step 3: Configure logging to use JournalHandler
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+logger.addHandler(JournalHandler())
 
 EXTENDED_USB_DEVICE_DIRECTION = "B"
 DISPLAY_X27_DIRECTION = "0x27"
 
 UNEXTENDED_USB_DEVICE_DIRECTION = "A"
 
-
 # Get the directory of the current file
 current_dir = Path(__file__).parent
-
 
 devices = find_qr_devices()
 usb_direction_lookup = json.loads(
@@ -42,10 +49,14 @@ for qr_reader in devices:
         entrance_uuid = os.getenv("ENTRANCE_UUID_A")
         relay_pin = os.getenv("RELAY_PIN_A")
 
+    # Ensure lcd_address is not None
+    if lcd_address is None:
+        logger.error("LCD address is None. Skipping this device.")
+        continue
+
     # Define the environment variables
     env = os.environ.copy()
-    if lcd_address:
-        env["LCD_I2C_ADDRESS"] = lcd_address
+    env["LCD_I2C_ADDRESS"] = lcd_address
     env["RELAY_PIN_DOOR"] = relay_pin
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
@@ -55,10 +66,9 @@ for qr_reader in devices:
     cmd = [sys.executable, str(current_dir / "qr.py")]
 
     # Run the command in a subprocess
-    logging.info(f"Initializing with envvars: {env}")
+    logger.info(f"Initializing with envvars: {env}")
     p = subprocess.Popen(cmd, env=env)
     processes.append(p)
-
 
 try:
     for p in processes:
@@ -68,3 +78,4 @@ except KeyboardInterrupt:
     # On keyboard interrupt, terminate all subprocesses
     for p in processes:
         p.terminate()
+        
