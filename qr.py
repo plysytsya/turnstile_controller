@@ -19,13 +19,19 @@ from systemd.journal import JournalHandler
 
 DIRECTION = os.getenv("DIRECTION")
 
-logger = logging.getLogger(f"qr-{DIRECTION}")
+
+class DirectionFilter(logging.Filter):
+    def filter(self, record):
+        record.msg = f"{DIRECTION} - {record.msg}"
+        return True
+
+
+logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
+journal_handler.addFilter(DirectionFilter())
+logger.addHandler(journal_handler)
 
-# Create a custom log format that includes the DIRECTION
-formatter = logging.Formatter(f'%(asctime)s - {DIRECTION} - %(message)s')
-journal_handler.setFormatter(formatter)
 
 load_dotenv()
 
