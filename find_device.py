@@ -4,7 +4,6 @@ import re
 
 from evdev import InputDevice, list_devices
 
-# Define a custom logging filte
 
 # Set up the logger
 logger = logging.getLogger("qr_logger")
@@ -27,7 +26,7 @@ def find_qr_devices():
         logger.info(f"Device: {device.name}")
 
         if any(name.lower() in device.name.lower() for name in device_name_substrings):
-            logger.info("Found device:", device)
+            logger.info(f"Found device: {device}")
             is_extended = is_usb_extended_device(device)
             if is_extended:
                 logger.info(f"{device.path} is connected to usb-extender")
@@ -64,4 +63,4 @@ def is_usb_extended_device(device: InputDevice) -> bool:
 if __name__ == "__main__":
     found_devices = find_qr_devices()
     if found_devices:
-        logger.info("Device paths:", [device.path for device in found_devices])
+        logger.info(f"Device paths: {[device.path for device in found_devices]}")
