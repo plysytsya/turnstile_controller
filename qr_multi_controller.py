@@ -39,6 +39,7 @@ processes = []
 
 for qr_reader in devices:
     if qr_reader.is_extended:
+        logger.info(f"Device {qr_reader} is connected to usb-extender. {qr_reader.is_extended}")
         direction = EXTENDED_USB_DEVICE_DIRECTION
         lcd_address = DISPLAY_X27_DIRECTION
         entrance_uuid = os.getenv("ENTRANCE_UUID_B")
