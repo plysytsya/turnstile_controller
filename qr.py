@@ -17,7 +17,9 @@ from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
 
-logger = logging.getLogger(__name__)
+DIRECTION = os.getenv("DIRECTION")
+
+logger = logging.getLogger(f"qr-{DIRECTION}")
 logger.setLevel(logging.INFO)
 logger.addHandler(JournalHandler())
 
@@ -29,7 +31,6 @@ ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
 HOSTNAME = os.getenv("HOSTNAME")
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
-DIRECTION = os.getenv("DIRECTION")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
