@@ -16,6 +16,9 @@ uninstall-qr:
 	sudo systemctl daemon-reload
 	sudo systemctl reset-failed
 
+restart-qr:
+    sudo systemctl restart qr_script.service
+
 restart-qr: uninstall-qr install-qr
 
 # Instalar el cronjob para descargar la base de datos del cliente
