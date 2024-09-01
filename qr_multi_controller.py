@@ -78,4 +78,3 @@ except KeyboardInterrupt:
     # On keyboard interrupt, terminate all subprocesses
     for p in processes:
         p.terminate()
-        

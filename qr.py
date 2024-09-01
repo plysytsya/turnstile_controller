@@ -15,9 +15,11 @@ import RPi.GPIO as GPIO
 
 from keymap import KEYMAP
 from lcd_controller import LCDController
+from systemd.journal import JournalHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+logger.addHandler(JournalHandler())
 
 load_dotenv()
 
