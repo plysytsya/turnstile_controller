@@ -1,6 +1,15 @@
+import logging
+from systemd.journal import JournalHandler
 import re
 
 from evdev import InputDevice, list_devices
+
+# Define a custom logging filte
+
+# Set up the logger
+logger = logging.getLogger("qr_logger")
+logger.setLevel(logging.INFO)
+journal_handler = JournalHandler()
 
 
 def find_qr_devices():
@@ -15,18 +24,18 @@ def find_qr_devices():
     found_devices = []
 
     for device in devices:
-        print(f"Device: {device.name}")
+        logger.info(f"Device: {device.name}")
 
         if any(name.lower() in device.name.lower() for name in device_name_substrings):
-            print("Found device:", device)
+            logger.info("Found device:", device)
             is_extended = is_usb_extended_device(device)
             if is_extended:
-                print(f"{device.path} is connected to usb-extender")
+                logger.info(f"{device.path} is connected to usb-extender")
             device.is_extended = is_extended
             found_devices.append(device)
 
     if not found_devices:
-        print("Could not find the QR device!")
+        logger.info("Could not find the QR device!")
         exit(1)
 
     return found_devices
@@ -55,4 +64,4 @@ def is_usb_extended_device(device: InputDevice) -> bool:
 if __name__ == "__main__":
     found_devices = find_qr_devices()
     if found_devices:
-        print("Device paths:", [device.path for device in found_devices])
+        logger.info("Device paths:", [device.path for device in found_devices])
