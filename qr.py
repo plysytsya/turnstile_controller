@@ -21,7 +21,11 @@ DIRECTION = os.getenv("DIRECTION")
 
 logger = logging.getLogger(f"qr-{DIRECTION}")
 logger.setLevel(logging.INFO)
-logger.addHandler(JournalHandler())
+journal_handler = JournalHandler()
+
+# Create a custom log format that includes the DIRECTION
+formatter = logging.Formatter(f'%(asctime)s - {DIRECTION} - %(message)s')
+journal_handler.setFormatter(formatter)
 
 load_dotenv()
 
