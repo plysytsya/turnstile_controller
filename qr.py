@@ -44,6 +44,7 @@ PASSWORD = os.getenv("PASSWORD")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
+RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
 
 if USE_LCD:
     try:
@@ -144,7 +145,7 @@ def log_unsuccessful_request(response):
     logger.info(f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}")
 
 
-def toggle_relay(duration=1):
+def toggle_relay(duration=RELAY_TOGGLE_DURATION):
     logger.info(f"Toggling relay PIN {relay_pin}")
     GPIO.output(relay_pin, GPIO.HIGH)
     time.sleep(duration)

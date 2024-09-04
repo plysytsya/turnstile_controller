@@ -9,3 +9,4 @@ evdev
 RPi.GPIO
 pytest
 smbus2
+systemd-python

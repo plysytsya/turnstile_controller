@@ -61,6 +61,8 @@ for qr_reader in devices:
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
     env["DIRECTION"] = direction
+    if os.getenv("RELAY_TOGGLE_DURATION"):
+        env["RELAY_TOGGLE_DURATION"] = os.getenv("RELAY_TOGGLE_DURATION")
 
     # Define the command
     cmd = [sys.executable, str(current_dir / "qr.py")]
