@@ -19,6 +19,7 @@ from systemd.journal import JournalHandler
 
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
+MAGIC_TIMESTAMP = 1725628212
 
 
 class DirectionFilter(logging.Filter):
@@ -329,6 +330,9 @@ def verify_customer(customer_uuid, timestamp):
         display_on_lcd("Escanea", "codigo QR")
         return
 
+    if timestamp == MAGIC_TIMESTAMP:  # update the magic timestamp after check to create a proper entrance-log
+        payload["timestamp"] = int(time.time())
+
     response = get_valid_response(url, headers, payload, customer_uuid)
 
     if response is None:
@@ -350,7 +354,7 @@ def verify_customer(customer_uuid, timestamp):
 def is_valid_timestamp(timestamp: int):
     """Timestamp can't be older than 10 seconds"""
     timestamp = int(timestamp)
-    if timestamp == 1725628212:  # magic timestamp for card users which are an exception
+    if timestamp == MAGIC_TIMESTAMP:  # magic timestamp for card users which are an exception
         return True
     current_time = int(time.time())
     if current_time - timestamp > 10:
