@@ -367,6 +367,7 @@ def get_valid_response(url, headers, payload, customer_uuid):
         return None
     else:
         response = post_request(url, headers, payload, retries=5)
+        logger.info(f"Response: {response}")
 
     if response is None or response.status_code not in (200, 401, 403):
         logger.error(f"Invalid response: {response} {response.headers}")
