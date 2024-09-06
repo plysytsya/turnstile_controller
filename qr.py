@@ -350,7 +350,7 @@ def verify_customer(customer_uuid, timestamp):
 def is_valid_timestamp(timestamp: int):
     """Timestamp can't be older than 10 seconds"""
     timestamp = int(timestamp)
-    if timestamp == 1725377645:  # magic timestamp for card users which are an exception
+    if timestamp == 1725628212:  # magic timestamp for card users which are an exception
         return True
     current_time = int(time.time())
     if current_time - timestamp > 10:
