@@ -18,6 +18,7 @@ from lcd_controller import LCDController
 from systemd.journal import JournalHandler
 
 DIRECTION = os.getenv("DIRECTION")
+ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 
 
 class DirectionFilter(logging.Filter):
@@ -212,7 +213,10 @@ def handle_server_response(status_code, first_name=None):
 
 
 def open_door_and_greet(first_name):
-    greet_word = "Hola" if DIRECTION == "B" else "Adios"
+    if ENTRANCE_DIRECTION == DIRECTION:
+        greet_word = "Hola"
+    else:
+        greet_word = "Adios"
     logger.info(f"{greet_word}, {first_name}!")
     logger.info(f"Opening door...with pin {RELAY_PIN_DOOR}")
 
