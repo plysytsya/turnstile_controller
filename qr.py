@@ -196,9 +196,6 @@ def handle_server_response(status_code, first_name=None):
     if status_code == "UserExists":
         return open_door_and_greet(first_name)
 
-    elif status_code == "TimestampExpired":
-        display_on_lcd("Error", "QR vencido", timeout=2)
-
     elif status_code == "MembershipInactive":
         display_on_lcd("Membresía", "inactiva", timeout=2)
 
@@ -325,6 +322,12 @@ def verify_customer(customer_uuid, timestamp):
         "Content-Type": "application/json",
     }
 
+    if not is_valid_timestamp(timestamp):
+        display_on_lcd("Error", "QR vencido", timeout=2)
+        payload["response_code"] = "TimestampExpired"
+        send_entrance_log(url, headers, payload)
+        return
+
     response = get_valid_response(url, headers, payload, customer_uuid)
 
     if response is None:
@@ -341,6 +344,17 @@ def verify_customer(customer_uuid, timestamp):
     first_name = json_response.get("first_name")
 
     return handle_server_response(status_code, first_name)
+
+
+def is_valid_timestamp(timestamp: int):
+    """Timestamp can't be older than 10 seconds"""
+    timestamp = int(timestamp)
+    if timestamp == 1725377645:  # magic timestamp for card users which are an exception
+        return True
+    current_time = int(time.time())
+    if current_time - timestamp > 10:
+        return False
+    return True
 
 
 def get_valid_response(url, headers, payload, customer_uuid):
