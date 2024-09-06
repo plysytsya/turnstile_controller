@@ -357,7 +357,7 @@ def is_valid_timestamp(timestamp: int):
     if timestamp == MAGIC_TIMESTAMP:  # magic timestamp for card users which are an exception
         return True
     current_time = int(time.time())
-    if current_time - timestamp > 10:
+    if current_time - timestamp > 60:
         return False
     return True
 
