@@ -326,6 +326,7 @@ def verify_customer(customer_uuid, timestamp):
         display_on_lcd("Error", "QR vencido", timeout=2)
         payload["response_code"] = "TimestampExpired"
         send_entrance_log(url, headers, payload)
+        display_on_lcd("Escanea", "codigo QR")
         return
 
     response = get_valid_response(url, headers, payload, customer_uuid)
