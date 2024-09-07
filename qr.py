@@ -241,9 +241,6 @@ def load_customers_cache():
     return {}
 
 
-customers_cache = load_customers_cache()
-
-
 def post_request(url, headers, payload, retries=10, sleep_duration=10):
     for i in range(retries):
         try:
@@ -383,7 +380,7 @@ def get_valid_response(url, headers, payload, customer_uuid):
 
 
 def _find_customer_in_cache(customer_uuid):
-    customer = customers_cache.get(customer_uuid)
+    customer = load_customers_cache()
     if customer:
         if customer["active_membership"] or customer["is_staff"]:
             logger.info(f"Found customer {customer_uuid} in cache.")
