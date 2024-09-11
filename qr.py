@@ -74,6 +74,7 @@ if USE_LCD:
     # Initialize LCD
     try:
         lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS)
+        lcd.display("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:
         logger.exception(
@@ -99,23 +100,6 @@ def display_on_lcd(line1, line2, timeout=None):
     else:
         lcd.display(line1, line2, timeout)
 
-
-def reconnect_qr_reader():
-    GPIO.setup(RELAY_PIN_QR_READER, GPIO.OUT)  # set up pin as an output pin
-
-    logger.info("Attempting to reconnect the QR scanner via relay...")
-    display_on_lcd("Reconectando", "escaner QR...")
-
-    GPIO.output(RELAY_PIN_QR_READER, GPIO.HIGH)  # turn relay on
-    time.sleep(1)  # Wait for 1 second
-    GPIO.output(RELAY_PIN_QR_READER, GPIO.LOW)  # turn relay off
-
-    logger.info("Reconnection attempt via relay completed.")
-    display_on_lcd("Intento de", "reconexión hecho")
-    time.sleep(3)
-
-
-reconnect_qr_reader()
 
 # Initialize the InputDevice
 timeout_end_time = time.time() + 300  # 5 minutes from now
@@ -181,6 +165,7 @@ async def keyboard_event_loop(device):
                             logger.error("Invalid JSON data.")
                             output_string = ""
     except OSError as e:
+        lcd.display("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
