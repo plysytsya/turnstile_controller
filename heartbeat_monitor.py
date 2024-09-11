@@ -75,9 +75,7 @@ if __name__ == "__main__":
                 HEARTBEAT_FILENAMES[1]
             )
 
-        if heartbeat_status:
-            logger.info("All devices are alive.")
-        else:
+        if not heartbeat_status:
             logger.warning("One or more devices are not alive.")
             restart_service()
         time.sleep(20)
