@@ -51,12 +51,13 @@ def _is_alive(filepath: pathlib.Path) -> bool:
 
 def restart_service():
     """Restart the given systemd service."""
-    logger.warning(f"Restarting service {SERVICE_TO_RESTART}...")
+    logging.warning("Restarting service qr_script.service...")
     try:
-        subprocess.run(["systemctl", "restart", SERVICE_TO_RESTART], check=True)
-        logger.warning(f"Service {SERVICE_TO_RESTART} restarted successfully.")
+        # Use sudo to restart the service
+        subprocess.run(["sudo", "systemctl", "restart", "qr_script.service"], check=True)
+        logging.warning("Service qr_script.service restarted successfully.")
     except subprocess.CalledProcessError as e:
-        logger.exception(f"Failed to restart service {SERVICE_TO_RESTART}: {e}")
+        logging.exception(f"Failed to restart service qr_script.service: {e}")
 
 
 if __name__ == "__main__":
