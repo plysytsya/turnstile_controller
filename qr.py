@@ -405,7 +405,7 @@ async def heartbeat():
             timestamp = int(time.time())
             heartbeat_data = {
                 "timestamp": timestamp,
-                "direction": ENTRANCE_DIRECTION
+                "direction": DIRECTION
             }
 
             # Write to the file
@@ -413,7 +413,6 @@ async def heartbeat():
             with heartbeat_file.open("w") as f:
                 json.dump(heartbeat_data, f)
 
-            logger.info(f"Heartbeat written to {HEARTBEAT_FILE_PATH} with data: {heartbeat_data}")
         except Exception as e:
             logger.error(f"Failed to write heartbeat: {e}")
 
