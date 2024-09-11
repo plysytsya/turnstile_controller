@@ -76,9 +76,14 @@ for qr_reader in devices:
 
 try:
     for p in processes:
-        p.wait()
+        ret_code = p.wait()  # Wait for each subprocess to finish and get the return code
+        if ret_code != 0:
+            # If any subprocess exits with a non-zero code, exit the main process with the same code
+            logger.error(f"Subprocess {p.pid} exited with code {ret_code}. Exiting main process.")
+            sys.exit(ret_code)
 
 except KeyboardInterrupt:
     # On keyboard interrupt, terminate all subprocesses
+    logger.warning("Keyboard interrupt detected. Terminating all subprocesses.")
     for p in processes:
         p.terminate()
