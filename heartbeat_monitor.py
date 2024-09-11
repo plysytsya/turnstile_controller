@@ -61,7 +61,7 @@ def restart_service():
 
 if __name__ == "__main__":
     while True:
-        if IS_BIDIRECT == "1":
+        if IS_BIDIRECT:
             heartbeat_status = all(_is_alive(filename) for filename in HEARTBEAT_FILENAMES)
         else:
             heartbeat_status = _is_alive(HEARTBEAT_FILENAMES[0]) or _is_alive(
