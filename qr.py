@@ -38,6 +38,8 @@ journal_handler = JournalHandler()
 journal_handler.addFilter(DirectionFilter())
 logger.addHandler(journal_handler)
 
+logger.info(f"Starting QR script. My direction is {DIRECTION}")
+
 
 load_dotenv()
 
