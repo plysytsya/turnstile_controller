@@ -79,5 +79,5 @@ if __name__ == "__main__":
             logger.info("All devices are alive.")
         else:
             logger.warning("One or more devices are not alive.")
-            exit(1)
+            restart_service()
         time.sleep(20)
