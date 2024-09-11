@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import pathlib
+import sys
 import threading
 import time
 import uuid
@@ -159,25 +160,29 @@ async def keyboard_event_loop(device):
     output_string = ""
     display_on_lcd("Escanea", "codigo QR...")
 
-    async for event in device.async_read_loop():
-        if event.type == evdev.ecodes.EV_KEY:
-            categorized_event = categorize(event)
-            if categorized_event.keystate == KeyEvent.key_up:
-                keycode = categorized_event.keycode
-                character = KEYMAP.get(keycode, "")
+    try:
+        async for event in device.async_read_loop():
+            if event.type == evdev.ecodes.EV_KEY:
+                categorized_event = categorize(event)
+                if categorized_event.keystate == KeyEvent.key_up:
+                    keycode = categorized_event.keycode
+                    character = KEYMAP.get(keycode, "")
 
-                if character:
-                    output_string += character
+                    if character:
+                        output_string += character
 
-                if keycode == "KEY_ENTER":
-                    try:
-                        output_string = "{" + output_string.lstrip("{")
-                        qr_dict = json.loads(output_string)
-                        shared_list.append(qr_dict)
-                        output_string = ""
-                    except json.JSONDecodeError:
-                        logger.error("Invalid JSON data.")
-                        output_string = ""
+                    if keycode == "KEY_ENTER":
+                        try:
+                            output_string = "{" + output_string.lstrip("{")
+                            qr_dict = json.loads(output_string)
+                            shared_list.append(qr_dict)
+                            output_string = ""
+                        except json.JSONDecodeError:
+                            logger.error("Invalid JSON data.")
+                            output_string = ""
+    except OSError as e:
+        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
+        sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
 
 def unpack_barcode(barcode_data):
