@@ -1,9 +1,9 @@
+# sudo apt-get install python3-dbus
 import json
 import logging
 import dbus
 import os
 import pathlib
-import subprocess
 import time
 
 from dotenv import load_dotenv
