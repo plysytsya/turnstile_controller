@@ -21,6 +21,9 @@ from systemd.journal import JournalHandler
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 MAGIC_TIMESTAMP = 1725628212
+current_dir = pathlib.Path(__file__).parent
+HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{ENTRANCE_DIRECTION}.json"
+HEARTBEAT_INTERVAL = 30
 
 
 class DirectionFilter(logging.Filter):
@@ -396,9 +399,23 @@ def handle_keyboard_interrupt(vs):
 
 async def heartbeat():
     while True:
-        logger.info("System heartbeat")
-        # Optionally toggle a GPIO pin or send a network request
-        await asyncio.sleep(30)  # Heartbeat every 60 seconds
+        try:
+            timestamp = int(time.time())
+            heartbeat_data = {
+                "timestamp": timestamp,
+                "direction": ENTRANCE_DIRECTION
+            }
+
+            # Write to the file
+            heartbeat_file = pathlib.Path(HEARTBEAT_FILE_PATH)
+            with heartbeat_file.open("w") as f:
+                json.dump(heartbeat_data, f)
+
+            logger.info(f"Heartbeat written to {HEARTBEAT_FILE_PATH} with data: {heartbeat_data}")
+        except Exception as e:
+            logger.error(f"Failed to write heartbeat: {e}")
+
+        await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 
 async def main_loop():

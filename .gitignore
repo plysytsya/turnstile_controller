@@ -163,3 +163,4 @@ env/
 venv/
 
 customers.json
+heartbeat-*.json
