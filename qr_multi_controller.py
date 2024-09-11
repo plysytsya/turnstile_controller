@@ -11,7 +11,7 @@ import sys
 
 import dotenv
 from pathlib import Path
-from systemd.journal import JournalHandler  # Import JournalHandler
+from systemd.journal import JournalHandler
 
 from find_device import find_qr_devices
 from i2cdetect import detect_i2c_device_not_27
