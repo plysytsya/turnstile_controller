@@ -398,7 +398,7 @@ async def heartbeat():
     while True:
         logger.info("System heartbeat")
         # Optionally toggle a GPIO pin or send a network request
-        await asyncio.sleep(60)  # Heartbeat every 60 seconds
+        await asyncio.sleep(30)  # Heartbeat every 60 seconds
 
 
 async def main_loop():
