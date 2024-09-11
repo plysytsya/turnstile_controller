@@ -51,19 +51,30 @@ def _is_alive(filepath: pathlib.Path) -> bool:
 
 def restart_service():
     """Restart the given systemd service."""
-    logging.warning("Restarting service qr_script.service...")
+    logging.warning("Attempting to restart service qr_script.service...")
     try:
         # Use sudo to restart the service
-        subprocess.run(["sudo", "systemctl", "restart", "qr_script.service"], check=True)
-        logging.warning("Service qr_script.service restarted successfully.")
+        result = subprocess.run(
+            ["sudo", "systemctl", "restart", "qr_script.service"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        logging.warning(
+            f"Service qr_script.service restarted successfully: {result.stdout}"
+        )
     except subprocess.CalledProcessError as e:
-        logging.exception(f"Failed to restart service qr_script.service: {e}")
+        logging.exception(
+            f"Failed to restart service qr_script.service: {e}, stderr: {e.stderr}"
+        )
 
 
 if __name__ == "__main__":
     while True:
         if IS_BIDIRECT:
-            heartbeat_status = all(_is_alive(filename) for filename in HEARTBEAT_FILENAMES)
+            heartbeat_status = all(
+                _is_alive(filename) for filename in HEARTBEAT_FILENAMES
+            )
         else:
             heartbeat_status = _is_alive(HEARTBEAT_FILENAMES[0]) or _is_alive(
                 HEARTBEAT_FILENAMES[1]
