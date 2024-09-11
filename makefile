@@ -1,4 +1,4 @@
-.PHONY: install-qr uninstall-qr install-cronjob watch-cronjob trigger-cronjob list-services
+.PHONY: install-qr uninstall-qr install-heartbeat uninstall-heartbeat restart-heartbeat logs-heartbeat install-cronjob watch-cronjob trigger-cronjob list-services
 
 # Instalar el script QR como un servicio
 install-qr:
@@ -18,6 +18,29 @@ uninstall-qr:
 
 restart-qr:
 	sudo systemctl restart qr_script.service
+
+# Instalar el servicio de monitoreo de latidos (Heartbeat Monitor)
+install-heartbeat:
+	sudo cp /home/manager/turnstile_controller/heartbeat-monitor.service /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable heartbeat-monitor
+	sudo systemctl start heartbeat-monitor
+	sudo systemctl status heartbeat-monitor
+
+# Desinstalar el servicio de monitoreo de latidos (Heartbeat Monitor)
+uninstall-heartbeat:
+	sudo systemctl stop heartbeat-monitor
+	sudo systemctl disable heartbeat-monitor
+	sudo rm /etc/systemd/system/heartbeat-monitor.service
+	sudo systemctl daemon-reload
+	sudo systemctl reset-failed
+
+restart-heartbeat:
+	sudo systemctl restart heartbeat-monitor.service
+
+# Observar el registro del Heartbeat Monitor en tiempo real
+logs-heartbeat:
+	journalctl -u heartbeat-monitor -f
 
 # Instalar el cronjob para descargar la base de datos del cliente
 install-cronjob:

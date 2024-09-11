@@ -1,0 +1,15 @@
+[Unit]
+Description=Heartbeat Monitor for QR Script
+After=network.target
+
+[Service]
+# Execute the Heartbeat Monitor script
+ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/heartbeat_monitor.py
+
+User=manager
+Restart=always
+RestartSec=10
+WorkingDirectory=/home/manager/turnstile_controller/
+
+[Install]
+WantedBy=multi-user.target

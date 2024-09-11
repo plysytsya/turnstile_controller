@@ -3,7 +3,6 @@ Description=My qr.py script
 After=network.target
 
 [Service]
-ExecStartPre=/bin/bash -c '/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/heartbeat_monitor.py &'
 RestartSec=10
 ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/qr_multi_controller.py
 User=manager

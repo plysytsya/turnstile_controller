@@ -22,6 +22,7 @@ HEARTBEAT_FILENAMES = [
     CURRENT_DIR / "heartbeat-B.json",
 ]
 MAX_HEARTBEAT_DELAY = 60
+SLEEP_INTERVAL = 20
 SERVICE_TO_RESTART = "qr_script.service"
 
 logger.info(
@@ -59,15 +60,17 @@ def restart_service():
 
 
 if __name__ == "__main__":
-    if IS_BIDIRECT == "1":
-        heartbeat_status = all(_is_alive(filename) for filename in HEARTBEAT_FILENAMES)
-    else:
-        heartbeat_status = _is_alive(HEARTBEAT_FILENAMES[0]) or _is_alive(
-            HEARTBEAT_FILENAMES[1]
-        )
+    while True:
+        if IS_BIDIRECT == "1":
+            heartbeat_status = all(_is_alive(filename) for filename in HEARTBEAT_FILENAMES)
+        else:
+            heartbeat_status = _is_alive(HEARTBEAT_FILENAMES[0]) or _is_alive(
+                HEARTBEAT_FILENAMES[1]
+            )
 
-    if heartbeat_status:
-        logger.info("All devices are alive.")
-    else:
-        logger.warning("One or more devices are not alive.")
-        exit(1)
+        if heartbeat_status:
+            logger.info("All devices are alive.")
+        else:
+            logger.warning("One or more devices are not alive.")
+            exit(1)
+        time.sleep(20)
