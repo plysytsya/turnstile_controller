@@ -394,6 +394,13 @@ def handle_keyboard_interrupt(vs):
     exit()
 
 
+async def heartbeat():
+    while True:
+        logger.info("System heartbeat")
+        # Optionally toggle a GPIO pin or send a network request
+        await asyncio.sleep(60)  # Heartbeat every 60 seconds
+
+
 async def main_loop():
     global shared_list
 
@@ -411,6 +418,6 @@ async def main_loop():
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
+        loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
