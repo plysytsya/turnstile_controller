@@ -23,7 +23,7 @@ ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
 HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
-HEARTBEAT_INTERVAL = 30
+HEARTBEAT_INTERVAL = 15
 
 
 class DirectionFilter(logging.Filter):
