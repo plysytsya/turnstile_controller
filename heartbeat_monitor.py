@@ -71,9 +71,10 @@ if __name__ == "__main__":
                 _is_alive(filename) for filename in HEARTBEAT_FILENAMES
             )
         else:
-            heartbeat_status = _is_alive(HEARTBEAT_FILENAMES[0]) or _is_alive(
-                HEARTBEAT_FILENAMES[1]
-            )
+            a_alive = _is_alive(HEARTBEAT_FILENAMES[0])
+            b_alive = _is_alive(HEARTBEAT_FILENAMES[1])
+            heartbeat_status = a_alive or b_alive
+            logger.info(f"live A: {a_alive}, live B: {b_alive}")
 
         if not heartbeat_status:
             logger.warning("One or more devices are not alive.")
