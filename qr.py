@@ -141,7 +141,8 @@ def toggle_relay(duration=RELAY_TOGGLE_DURATION):
     logger.info(f"Toggling relay PIN {relay_pin}")
     GPIO.output(relay_pin, GPIO.HIGH)
     time.sleep(duration)
-    GPIO.output(relay_pin, GPIO.LOW)
+    for i in range(10):
+        GPIO.output(relay_pin, GPIO.LOW)
 
 
 async def keyboard_event_loop(device):
