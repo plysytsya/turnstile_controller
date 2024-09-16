@@ -15,7 +15,7 @@ logger.addHandler(journal_handler)
 
 load_dotenv()
 
-IS_BIDIRECT = bool(os.getenv("IS_BIDIRECT"))
+IS_BIDIRECT = os.getenv("IS_BIDIRECT").lower() in ("true", "1", "yes")
 CURRENT_DIR = pathlib.Path(__file__).parent
 HEARTBEAT_FILENAMES = [
     CURRENT_DIR / "heartbeat-A.json",
