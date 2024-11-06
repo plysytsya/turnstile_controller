@@ -18,6 +18,7 @@ def find_qr_devices():
         "YOKO HID GUM",
         "TMC HIDKeyBoard",
         "WCM HIDKeyBoard",
+        "vc4-hdmi"
     ]
     devices = [InputDevice(path) for path in list_devices()]
     found_devices = []
