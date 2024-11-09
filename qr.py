@@ -21,6 +21,7 @@ from systemd.journal import JournalHandler
 
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
+ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
 MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
 HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
@@ -39,10 +40,11 @@ journal_handler = JournalHandler()
 journal_handler.addFilter(DirectionFilter())
 logger.addHandler(journal_handler)
 
-# Stream handler (for stdout)
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-logger.addHandler(stream_handler)
+if ENABLE_STREAM_HANDLER:
+    # Stream handler (for stdout)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    logger.addHandler(stream_handler)
 
 # Example log message
 logger.info(f"Starting QR script. My direction is {DIRECTION}")
