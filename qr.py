@@ -423,7 +423,6 @@ async def keyboard_event_loop(device):
 
 async def serial_device_event_loop():
     global shared_list
-    output_string = ""
     display_on_lcd("Escanea", "codigo QR...")
 
     try:
@@ -484,7 +483,6 @@ async def main_loop():
         if shared_list:
             qr_data = shared_list.pop(0)
             logger.info(f"Received QR data: {qr_data}")
-            display_on_lcd("Verificando", "QR...")
             verify_customer(qr_data["customer_uuid"], qr_data["timestamp"])
         await asyncio.sleep(0.1)  # 1-second delay to avoid busy-waiting
 
