@@ -66,15 +66,11 @@ if USE_LCD:
 
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
-logger.info(
-    "using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION
-)
+logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
 # Initialize Relay
 relay_pin = RELAY_PIN_DOOR
-RELAY_PIN_QR_READER = (
-    22  # Hopefully we never again have to use a relay to restart the qr reader
-)
+RELAY_PIN_QR_READER = 22  # Hopefully we never again have to use a relay to restart the qr reader
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
@@ -106,15 +102,16 @@ def init_qr_device():
     timeout_end_time = time.time() + 300  # 5 minutes from now
     while time.time() < timeout_end_time:
         try:
-            dev = InputDevice(QR_USB_DEVICE_PATH) if IS_SERIAL_DEVICE else serial.Serial(QR_USB_DEVICE_PATH,
-                                                                                         baudrate=9600, timeout=0.1)
+            dev = (
+                serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.1)
+                if IS_SERIAL_DEVICE
+                else InputDevice(QR_USB_DEVICE_PATH)
+            )
             logger.info("Successfully connected to the QR code scanner.")
             display_on_lcd("Conectado al", "escaneador QR")
             break  # Exit the loop since we've successfully connected
         except FileNotFoundError:
-            logger.warning(
-                "Failed to connect to the QR code scanner. Retrying in 15 seconds..."
-            )
+            logger.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
             display_on_lcd("Fallo al conectar", "Cambia USB en 15s")
             time.sleep(15)  # Wait for 15 seconds before retrying
     # If we get to this point and `dev` is not defined, we've exhausted our retries
@@ -149,9 +146,7 @@ def unpack_barcode(barcode_data):
         login_data = json.loads(barcode_data)
         return login_data["customer_uuid"], login_data["timestamp"]
     except Exception as e:
-        display_on_lcd(
-            "codigo", "QR invalido", timeout=2
-        )  # Displays "Invalid QR Code" in Spanish
+        display_on_lcd("codigo", "QR invalido", timeout=2)  # Displays "Invalid QR Code" in Spanish
         logger.error(f"Error unpacking barcode: {e}")
         display_on_lcd("Escanea", "codigo QR")
         return None, None
@@ -231,9 +226,7 @@ def send_entrance_log(url, headers, payload, retries=3, sleep_duration=5):
                 logger.error(f"Failed to send entrance log: {response.text}")
             return response
         except requests.exceptions.RequestException as e:
-            logger.warning(
-                f"Internet connection error when sending entrance-log: {e}. Retrying..."
-            )
+            logger.warning(f"Internet connection error when sending entrance-log: {e}. Retrying...")
             time.sleep(sleep_duration)  # sleep for 10 seconds before retrying
     return None
 
@@ -372,10 +365,7 @@ async def heartbeat():
     while True:
         try:
             timestamp = int(time.time())
-            heartbeat_data = {
-                "timestamp": timestamp,
-                "direction": DIRECTION
-            }
+            heartbeat_data = {"timestamp": timestamp, "direction": DIRECTION}
 
             # Write to the file
             heartbeat_file = pathlib.Path(HEARTBEAT_FILE_PATH)
@@ -428,13 +418,13 @@ async def serial_device_event_loop(serial_device):
         while True:
             # Read data from the serial port
             if serial_device.in_waiting > 0:
-                data = serial_device.readline().decode('utf-8').strip()
+                data = serial_device.readline().decode("utf-8").strip()
                 if data:
                     logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
                     except json.JSONDecodeError:
-                        if not data.isnumeric():
+                        if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
                             display_on_lcd("Escanea", "codigo QR...")
                             raise ValueError("Invalid data.")
@@ -449,12 +439,14 @@ async def serial_device_event_loop(serial_device):
         logger.error(f"Error: {e}")
     finally:
         # Ensure the serial connection is closed if it was opened
-        if 'ser' in locals() and serial_device.is_open:
+        if "ser" in locals() and serial_device.is_open:
             serial_device.close()
+
 
 def hash_uuid(input_string) -> str:
     # Use uuid5 with a standard namespace (NAMESPACE_DNS) for consistent hashing
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, input_string))
+
 
 async def main_loop():
     global shared_list
