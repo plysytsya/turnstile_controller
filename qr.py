@@ -439,7 +439,7 @@ async def serial_device_event_loop():
                             display_on_lcd("datos invalidos", "", timeout=2)
                             display_on_lcd("Escanea", "codigo QR...")
                             raise ValueError("Invalid data.")
-                        qr_dict = {"customer-uuid": hash_uuid(data), "timestamp": int(time.time())}
+                        qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
                         shared_list.append(qr_dict)
                 await asyncio.sleep(0.1)
@@ -483,7 +483,7 @@ async def main_loop():
             qr_data = shared_list.pop(0)
             logger.info(f"Received QR data: {qr_data}")
             display_on_lcd("Verificando", "QR...")
-            verify_customer(qr_data["customer-uuid"], qr_data["timestamp"])
+            verify_customer(qr_data["customer_uuid"], qr_data["timestamp"])
         await asyncio.sleep(0.1)  # 1-second delay to avoid busy-waiting
 
 
