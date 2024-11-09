@@ -13,6 +13,7 @@ from evdev import InputDevice, categorize, KeyEvent
 import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
+import serial
 
 from keymap import KEYMAP
 from lcd_controller import LCDController
