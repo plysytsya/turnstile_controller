@@ -446,10 +446,6 @@ async def serial_device_event_loop():
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except serial.SerialException as e:
         logger.error(f"Error: {e}")
-    finally:
-        # Ensure the serial connection is closed if it was opened
-        if "ser" in locals() and serial_device.is_open:
-            serial_device.close()
 
 
 def read_serial_device(device_name):
