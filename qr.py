@@ -39,6 +39,12 @@ journal_handler = JournalHandler()
 journal_handler.addFilter(DirectionFilter())
 logger.addHandler(journal_handler)
 
+# Stream handler (for stdout)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+logger.addHandler(stream_handler)
+
+# Example log message
 logger.info(f"Starting QR script. My direction is {DIRECTION}")
 
 
