@@ -442,6 +442,7 @@ async def serial_device_event_loop():
                         qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
                         shared_list.append(qr_dict)
+                await asyncio.sleep(0.1)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
