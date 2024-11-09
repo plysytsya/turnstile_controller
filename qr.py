@@ -439,6 +439,7 @@ async def serial_device_event_loop():
                             display_on_lcd("Escanea", "codigo QR...")
                             raise ValueError("Invalid data.")
                         qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
+                    logger.info(f"Created QR dict: {qr_dict}")
                     shared_list.append(qr_dict)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
