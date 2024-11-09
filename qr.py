@@ -115,7 +115,11 @@ def init_qr_device():
             )
             logger.info("Successfully connected to the QR code scanner.")
             display_on_lcd("Conectado al", "escaneador QR")
-            break  # Exit the loop since we've successfully connected
+
+            if IS_SERIAL_DEVICE:
+                # we were just testing the serial connection
+                dev.close()
+            return dev
         except FileNotFoundError:
             logger.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
             display_on_lcd("Fallo al conectar", "Cambia USB en 15s")
@@ -415,17 +419,17 @@ async def keyboard_event_loop(device):
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
 
-async def serial_device_event_loop(serial_device):
+async def serial_device_event_loop():
     global shared_list
     output_string = ""
     display_on_lcd("Escanea", "codigo QR...")
 
     try:
-        while True:
-            # Read data from the serial port
-            if serial_device.in_waiting > 0:
-                data = serial_device.readline().decode("utf-8").strip()
-                if data:
+        with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.1) as ser:
+            while True:
+                # Read data from the serial port
+                if ser.in_waiting > 0:
+                    data = ser.readline().decode('utf-8').strip()
                     logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
@@ -436,7 +440,6 @@ async def serial_device_event_loop(serial_device):
                             raise ValueError("Invalid data.")
                         qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
                     shared_list.append(qr_dict)
-
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
@@ -447,6 +450,23 @@ async def serial_device_event_loop(serial_device):
         # Ensure the serial connection is closed if it was opened
         if "ser" in locals() and serial_device.is_open:
             serial_device.close()
+
+
+def read_serial_device(device_name):
+    # Find the QR device
+
+    try:
+        # Open the serial connection
+        with serial.Serial(device_name, baudrate=9600, timeout=0.1) as ser:
+            print(f"Reading from {device_name}...")
+            while True:
+                # Read data from the serial port
+                if ser.in_waiting > 0:
+                    data = ser.readline().decode('utf-8').strip()
+                    if data:
+                        print(f"Received: {data}")
+    except serial.SerialException as e:
+        print(f"Error: {e}")
 
 
 def hash_uuid(input_string) -> str:
@@ -473,7 +493,7 @@ if __name__ == "__main__":
     dev = init_qr_device()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(dev), main_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), main_loop(), heartbeat()))
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
     except KeyboardInterrupt:
