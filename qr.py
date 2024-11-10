@@ -434,7 +434,7 @@ async def main_loop():
             logger.info(f"Received QR data: {qr_data}")
             #display_on_lcd("Verificando", "QR...")
             verify_customer(qr_data["customer-uuid"], qr_data["timestamp"])
-        await asyncio.sleep(0.2)  # 1-second delay to avoid busy-waiting
+        await asyncio.sleep(0.1)  # 1-second delay to avoid busy-waiting
 
 
 if __name__ == "__main__":
