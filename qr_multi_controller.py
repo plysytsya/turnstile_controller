@@ -7,6 +7,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 
 import dotenv
 from pathlib import Path
@@ -75,6 +76,7 @@ for qr_reader in devices:
     env_without_none_values = {k: v for k, v in env.items() if v is not None}
     p = subprocess.Popen(cmd, env=env_without_none_values)
     processes.append(p)
+    time.sleep(2)
 
 try:
     for p in processes:
