@@ -62,6 +62,7 @@ PASSWORD = os.getenv("PASSWORD")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
+RELAY_PIN_DISPLAY = int(os.getenv("RELAY_PIN_DISPLAY")) if os.getenv("RELAY_PIN_DISPLAY") else None
 RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
@@ -86,7 +87,7 @@ GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 if USE_LCD:
     # Initialize LCD
     try:
-        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE)
+        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE, relay_pin=RELAY_PIN_DISPLAY)
         lcd.display("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:

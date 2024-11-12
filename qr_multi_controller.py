@@ -44,12 +44,14 @@ for qr_reader in devices:
         direction = EXTENDED_USB_DEVICE_DIRECTION
         lcd_address = DISPLAY_X27_DIRECTION
         entrance_uuid = os.getenv("ENTRANCE_UUID_B")
-        relay_pin = os.getenv("RELAY_PIN_B")
+        relay_pin = os.getenv("RELAY_PIN_B", 10)
+        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_B", 20)
     else:
         direction = UNEXTENDED_USB_DEVICE_DIRECTION
         lcd_address = detect_i2c_device_not_27(1)
         entrance_uuid = os.getenv("ENTRANCE_UUID_A")
-        relay_pin = os.getenv("RELAY_PIN_A")
+        relay_pin = os.getenv("RELAY_PIN_A", 24)
+        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_A", 21)
 
     env = os.environ.copy()
 
@@ -64,6 +66,7 @@ for qr_reader in devices:
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
     env["IS_SERIAL_DEVICE"] = str(isinstance(qr_reader, SerialDevice))
     env["DIRECTION"] = direction
+    env["RELAY_PIN_DISPLAY"] = display_relay_pin
     if os.getenv("RELAY_TOGGLE_DURATION"):
         env["RELAY_TOGGLE_DURATION"] = os.getenv("RELAY_TOGGLE_DURATION")
 
