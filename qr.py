@@ -448,7 +448,7 @@ async def serial_device_event_loop():
         lcd.display("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
-    except serial.SerialException as e:
+    except (serial.SerialException, Exception) as e:
         logger.error(f"Error: {e}")
 
 
