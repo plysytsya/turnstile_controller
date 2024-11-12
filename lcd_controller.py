@@ -60,7 +60,7 @@ class LCDController:
                 time.sleep(timeout - self.scroll_delay)
                 self.lcd.clear()
                 if self.dark_mode and self.relay_pin:
-                    GPIO.output(self.relay_pin, GPIO.HIGH)
+                    GPIO.output(self.relay_pin, GPIO.LOW)
 
 
 def display_on_multiple_lcds(line1: str, line2: str, controllers: list[LCDController], timeout=2) -> None:
