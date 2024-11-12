@@ -12,6 +12,7 @@ class LCDController:
         self.use_lcd = use_lcd
         self.max_char_count = max_char_count
         self.scroll_delay = scroll_delay
+        self.lcd_address = lcd_address
         if use_lcd:
             self.lcd = LCD(lcd_address)
         self.dark_mode = dark_mode
@@ -63,6 +64,7 @@ class LCDController:
                 self.lcd.clear()
                 if self.dark_mode and self.relay_pin:
                     GPIO.output(self.relay_pin, GPIO.LOW)
+                    self.lcd = LCD(self.lcd_address)
 
 
 def display_on_multiple_lcds(line1: str, line2: str, controllers: list[LCDController], timeout=2) -> None:
