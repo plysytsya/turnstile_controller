@@ -439,7 +439,9 @@ async def serial_device_event_loop():
                         if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
                             display_on_lcd("Escanea", "codigo QR...")
-                            raise ValueError("Invalid data.")
+                            logger.warning(f"Invalid JSON data: {data}")
+                            await asyncio.sleep(0.1)
+                            continue
                         qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
                         shared_list.append(qr_dict)
