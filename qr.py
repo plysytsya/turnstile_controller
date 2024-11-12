@@ -196,7 +196,7 @@ def open_door_and_greet(first_name):
     relay_thread.start()
 
     # Continue with the display updates in the main thread
-    display_on_lcd(f"{greet_word}", first_name, timeout=2)
+    display_on_lcd(f"{greet_word}", first_name, timeout=3)
     display_on_lcd("Escanea", "codigo QR")
 
     # Optionally, wait for the relay thread to finish if necessary
