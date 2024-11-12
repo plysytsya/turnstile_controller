@@ -22,6 +22,7 @@ from systemd.journal import JournalHandler
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
+DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
 MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
 HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
@@ -85,7 +86,7 @@ GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 if USE_LCD:
     # Initialize LCD
     try:
-        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS)
+        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE)
         lcd.display("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:

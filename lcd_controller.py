@@ -7,12 +7,13 @@ from unidecode import unidecode
 
 
 class LCDController:
-    def __init__(self, use_lcd, max_char_count=16, scroll_delay=0.5, lcd_address=None):
+    def __init__(self, use_lcd, max_char_count=16, scroll_delay=0.5, lcd_address=None, dark_mode=False):
         self.use_lcd = use_lcd
         self.max_char_count = max_char_count
         self.scroll_delay = scroll_delay
         if use_lcd:
             self.lcd = LCD(lcd_address)
+        self.dark_mode = dark_mode
 
     def clear(self):
         if self.use_lcd:
@@ -29,6 +30,10 @@ class LCDController:
         return [line[i: i + self.max_char_count] for i in range(scroll_positions)]
 
     def display(self, line1: str, line2: str, timeout=2) -> None:
+        if self.dark_mode and timeout is None:
+            # Don't display continuous text in dark mode
+            return
+
         if not self.use_lcd:
             logging.info(line1)
             logging.info(line2)
