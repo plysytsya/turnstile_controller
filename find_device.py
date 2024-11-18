@@ -34,8 +34,7 @@ def find_qr_devices():
             found_devices.append(device)
 
     if not found_devices:
-        logger.info("Could not find the QR device!")
-        exit(1)
+        return []
 
     return found_devices
 

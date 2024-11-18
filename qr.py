@@ -13,6 +13,7 @@ from evdev import InputDevice, categorize, KeyEvent
 import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
+import serial
 
 from keymap import KEYMAP
 from lcd_controller import LCDController
@@ -20,6 +21,8 @@ from systemd.journal import JournalHandler
 
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
+ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
+DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
 MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
 HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
@@ -38,6 +41,13 @@ journal_handler = JournalHandler()
 journal_handler.addFilter(DirectionFilter())
 logger.addHandler(journal_handler)
 
+if ENABLE_STREAM_HANDLER:
+    # Stream handler (for stdout)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    logger.addHandler(stream_handler)
+
+# Example log message
 logger.info(f"Starting QR script. My direction is {DIRECTION}")
 
 
@@ -52,8 +62,10 @@ PASSWORD = os.getenv("PASSWORD")
 JWT_TOKEN = os.getenv("JWT_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
+RELAY_PIN_DISPLAY = int(os.getenv("RELAY_PIN_DISPLAY")) if os.getenv("RELAY_PIN_DISPLAY") else None
 RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
+IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
 
 if USE_LCD:
     try:
@@ -64,22 +76,18 @@ if USE_LCD:
 
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
-logger.info(
-    "using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION
-)
+logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
 # Initialize Relay
 relay_pin = RELAY_PIN_DOOR
-RELAY_PIN_QR_READER = (
-    22  # Hopefully we never again have to use a relay to restart the qr reader
-)
+RELAY_PIN_QR_READER = 22  # Hopefully we never again have to use a relay to restart the qr reader
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
 if USE_LCD:
     # Initialize LCD
     try:
-        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS)
+        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE, relay_pin=RELAY_PIN_DISPLAY)
         lcd.display("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:
@@ -90,15 +98,6 @@ if USE_LCD:
         USE_LCD = False
 
 
-def scroll_text(line, max_char_count=16, delay=0.2):
-    line_length = len(line)
-    if line_length <= max_char_count:
-        return [line]
-
-    scroll_positions = line_length - max_char_count + 1
-    return [line[i : i + max_char_count] for i in range(scroll_positions)]
-
-
 def display_on_lcd(line1, line2, timeout=None):
     if not USE_LCD:
         logger.info(line1)
@@ -107,26 +106,34 @@ def display_on_lcd(line1, line2, timeout=None):
         lcd.display(line1, line2, timeout)
 
 
-# Initialize the InputDevice
-timeout_end_time = time.time() + 300  # 5 minutes from now
+def init_qr_device():
+    global dev
+    # Initialize the InputDevice
+    timeout_end_time = time.time() + 300  # 5 minutes from now
+    while time.time() < timeout_end_time:
+        try:
+            dev = (
+                serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.1)
+                if IS_SERIAL_DEVICE
+                else InputDevice(QR_USB_DEVICE_PATH)
+            )
+            logger.info("Successfully connected to the QR code scanner.")
+            display_on_lcd("Conectado al", "escaneador QR")
 
-while time.time() < timeout_end_time:
-    try:
-        dev = InputDevice(QR_USB_DEVICE_PATH)
-        logger.info("Successfully connected to the QR code scanner.")
-        display_on_lcd("Conectado al", "escaneador QR")
-        break  # Exit the loop since we've successfully connected
-    except FileNotFoundError:
-        logger.warning(
-            "Failed to connect to the QR code scanner. Retrying in 15 seconds..."
-        )
-        display_on_lcd("Fallo al conectar", "Cambia USB en 15s")
-        time.sleep(15)  # Wait for 15 seconds before retrying
+            if IS_SERIAL_DEVICE:
+                # we were just testing the serial connection
+                dev.close()
+            return dev
+        except FileNotFoundError:
+            logger.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
+            display_on_lcd("Fallo al conectar", "Cambia USB en 15s")
+            time.sleep(15)  # Wait for 15 seconds before retrying
+    # If we get to this point and `dev` is not defined, we've exhausted our retries
+    if "dev" not in locals():
+        logger.error("Failed to connect to the QR code scanner after multiple attempts.")
+        display_on_lcd("No se pudo conectar", "Verifica USB")
+    return dev
 
-# If we get to this point and `dev` is not defined, we've exhausted our retries
-if "dev" not in locals():
-    logger.error("Failed to connect to the QR code scanner after multiple attempts.")
-    display_on_lcd("No se pudo conectar", "Verifica USB")
 
 # List to hold decoded QR data
 shared_list = []
@@ -148,45 +155,12 @@ def toggle_relay(duration=RELAY_TOGGLE_DURATION, open_n_times=OPEN_N_TIMES):
         GPIO.output(relay_pin, GPIO.LOW)
 
 
-async def keyboard_event_loop(device):
-    global shared_list
-    output_string = ""
-    display_on_lcd("Escanea", "codigo QR...")
-
-    try:
-        async for event in device.async_read_loop():
-            if event.type == evdev.ecodes.EV_KEY:
-                categorized_event = categorize(event)
-                if categorized_event.keystate == KeyEvent.key_up:
-                    keycode = categorized_event.keycode
-                    character = KEYMAP.get(keycode, "")
-
-                    if character:
-                        output_string += character
-
-                    if keycode == "KEY_ENTER":
-                        try:
-                            output_string = "{" + output_string.lstrip("{")
-                            qr_dict = json.loads(output_string)
-                            shared_list.append(qr_dict)
-                            output_string = ""
-                        except json.JSONDecodeError:
-                            logger.error("Invalid JSON data.")
-                            output_string = ""
-    except OSError as e:
-        lcd.display("No coneccion con", "lector, reinicio")
-        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
-        sys.exit(1)  # Exit with non-zero code to signal failure to systemd
-
-
 def unpack_barcode(barcode_data):
     try:
         login_data = json.loads(barcode_data)
         return login_data["customer_uuid"], login_data["timestamp"]
     except Exception as e:
-        display_on_lcd(
-            "codigo", "QR invalido", timeout=2
-        )  # Displays "Invalid QR Code" in Spanish
+        display_on_lcd("codigo", "QR invalido", timeout=2)  # Displays "Invalid QR Code" in Spanish
         logger.error(f"Error unpacking barcode: {e}")
         display_on_lcd("Escanea", "codigo QR")
         return None, None
@@ -222,7 +196,7 @@ def open_door_and_greet(first_name):
     relay_thread.start()
 
     # Continue with the display updates in the main thread
-    display_on_lcd(f"{greet_word}", first_name, timeout=2)
+    display_on_lcd(f"{greet_word}", first_name, timeout=3)
     display_on_lcd("Escanea", "codigo QR")
 
     # Optionally, wait for the relay thread to finish if necessary
@@ -266,9 +240,7 @@ def send_entrance_log(url, headers, payload, retries=3, sleep_duration=5):
                 logger.error(f"Failed to send entrance log: {response.text}")
             return response
         except requests.exceptions.RequestException as e:
-            logger.warning(
-                f"Internet connection error when sending entrance-log: {e}. Retrying..."
-            )
+            logger.warning(f"Internet connection error when sending entrance-log: {e}. Retrying...")
             time.sleep(sleep_duration)  # sleep for 10 seconds before retrying
     return None
 
@@ -407,10 +379,7 @@ async def heartbeat():
     while True:
         try:
             timestamp = int(time.time())
-            heartbeat_data = {
-                "timestamp": timestamp,
-                "direction": DIRECTION
-            }
+            heartbeat_data = {"timestamp": timestamp, "direction": DIRECTION}
 
             # Write to the file
             heartbeat_file = pathlib.Path(HEARTBEAT_FILE_PATH)
@@ -423,6 +392,92 @@ async def heartbeat():
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 
+async def keyboard_event_loop(device):
+    global shared_list
+    output_string = ""
+    display_on_lcd("Escanea", "codigo QR...")
+
+    try:
+        async for event in device.async_read_loop():
+            if event.type == evdev.ecodes.EV_KEY:
+                categorized_event = categorize(event)
+                if categorized_event.keystate == KeyEvent.key_up:
+                    keycode = categorized_event.keycode
+                    character = KEYMAP.get(keycode, "")
+
+                    if character:
+                        output_string += character
+
+                    if keycode == "KEY_ENTER":
+                        try:
+                            output_string = "{" + output_string.lstrip("{")
+                            qr_dict = json.loads(output_string)
+                            shared_list.append(qr_dict)
+                            output_string = ""
+                        except json.JSONDecodeError:
+                            logger.error("Invalid JSON data.")
+                            output_string = ""
+    except OSError as e:
+        lcd.display("No coneccion con", "lector, reinicio")
+        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
+        sys.exit(1)  # Exit with non-zero code to signal failure to systemd
+
+
+async def serial_device_event_loop():
+    global shared_list
+    display_on_lcd("Escanea", "codigo QR...")
+
+    try:
+        with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.1) as ser:
+            while True:
+                # Read data from the serial port
+                if ser.in_waiting > 0:
+                    data = ser.readline().decode('utf-8').strip()
+                    logger.info(f"Received: {data}")
+                    try:
+                        qr_dict = json.loads(data)
+                        shared_list.append(qr_dict)
+                    except json.JSONDecodeError:
+                        if len(data) > 15:
+                            display_on_lcd("datos invalidos", "", timeout=2)
+                            display_on_lcd("Escanea", "codigo QR...")
+                            logger.warning(f"Invalid JSON data: {data}")
+                            await asyncio.sleep(0.1)
+                            continue
+                        qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
+                        logger.info(f"Created QR dict: {qr_dict}")
+                        shared_list.append(qr_dict)
+                await asyncio.sleep(0.1)
+    except OSError as e:
+        lcd.display("No coneccion con", "lector, reinicio")
+        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
+        sys.exit(1)  # Exit with non-zero code to signal failure to systemd
+    except (serial.SerialException, Exception) as e:
+        logger.error(f"Error: {e}")
+
+
+def read_serial_device(device_name):
+    # Find the QR device
+
+    try:
+        # Open the serial connection
+        with serial.Serial(device_name, baudrate=9600, timeout=0.1) as ser:
+            print(f"Reading from {device_name}...")
+            while True:
+                # Read data from the serial port
+                if ser.in_waiting > 0:
+                    data = ser.readline().decode('utf-8').strip()
+                    if data:
+                        print(f"Received: {data}")
+    except serial.SerialException as e:
+        print(f"Error: {e}")
+
+
+def hash_uuid(input_string) -> str:
+    # Use uuid5 with a standard namespace (NAMESPACE_DNS) for consistent hashing
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, input_string))
+
+
 async def main_loop():
     global shared_list
 
@@ -432,14 +487,18 @@ async def main_loop():
         if shared_list:
             qr_data = shared_list.pop(0)
             logger.info(f"Received QR data: {qr_data}")
-            #display_on_lcd("Verificando", "QR...")
-            verify_customer(qr_data["customer-uuid"], qr_data["timestamp"])
+            customer = qr_data.get("customer-uuid", qr_data.get("customer_uuid"))
+            verify_customer(customer, qr_data["timestamp"])
         await asyncio.sleep(0.1)  # 1-second delay to avoid busy-waiting
 
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
+    dev = init_qr_device()
     try:
-        loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
+        if IS_SERIAL_DEVICE:
+            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), main_loop(), heartbeat()))
+        else:
+            loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")

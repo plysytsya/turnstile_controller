@@ -3,17 +3,18 @@
 # pip install systemd-python
 
 # Step 2: Import the necessary modules
-import json
 import logging
 import os
 import subprocess
 import sys
+import time
 
 import dotenv
 from pathlib import Path
 from systemd.journal import JournalHandler
 
 from find_device import find_qr_devices
+from serial_reader import find_serial_devices, SerialDevice
 from i2cdetect import detect_i2c_device_not_27
 
 # Step 3: Configure logging to use JournalHandler
@@ -29,25 +30,28 @@ UNEXTENDED_USB_DEVICE_DIRECTION = "A"
 # Get the directory of the current file
 current_dir = Path(__file__).parent
 
-devices = find_qr_devices()
-usb_direction_lookup = json.loads(
-    Path(Path(__file__).parent / "usb_port_map.json").read_text()
-)
+keyboard_devices = find_qr_devices()
+serial_devices = find_serial_devices()
+devices = keyboard_devices + serial_devices
+
 load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 
 processes = []
 
 for qr_reader in devices:
     if qr_reader.is_extended:
+        logger.info(f"Found extended device: {qr_reader}")
         direction = EXTENDED_USB_DEVICE_DIRECTION
         lcd_address = DISPLAY_X27_DIRECTION
         entrance_uuid = os.getenv("ENTRANCE_UUID_B")
-        relay_pin = os.getenv("RELAY_PIN_B")
+        relay_pin = os.getenv("RELAY_PIN_B", "10")
+        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_B", "20")
     else:
         direction = UNEXTENDED_USB_DEVICE_DIRECTION
         lcd_address = detect_i2c_device_not_27(1)
         entrance_uuid = os.getenv("ENTRANCE_UUID_A")
-        relay_pin = os.getenv("RELAY_PIN_A")
+        relay_pin = os.getenv("RELAY_PIN_A", "24")
+        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_A", "21")
 
     env = os.environ.copy()
 
@@ -60,7 +64,9 @@ for qr_reader in devices:
     env["RELAY_PIN_DOOR"] = relay_pin
     env["ENTRANCE_UUID"] = entrance_uuid
     env["QR_USB_DEVICE_PATH"] = qr_reader.path
+    env["IS_SERIAL_DEVICE"] = str(isinstance(qr_reader, SerialDevice))
     env["DIRECTION"] = direction
+    env["RELAY_PIN_DISPLAY"] = display_relay_pin
     if os.getenv("RELAY_TOGGLE_DURATION"):
         env["RELAY_TOGGLE_DURATION"] = os.getenv("RELAY_TOGGLE_DURATION")
 
@@ -73,6 +79,7 @@ for qr_reader in devices:
     env_without_none_values = {k: v for k, v in env.items() if v is not None}
     p = subprocess.Popen(cmd, env=env_without_none_values)
     processes.append(p)
+    time.sleep(2)
 
 try:
     for p in processes:

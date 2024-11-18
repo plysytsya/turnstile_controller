@@ -51,7 +51,10 @@ def get_customers():
         log_unsuccessful_request(response)
         return None
 
-    return {customer["customer_uuid"]: customer for customer in response.json()}
+    customer_uuid_dict = {customer["customer_uuid"]: customer for customer in response.json()}
+    card_number_dict = {customer["card_number"]: customer for customer in response.json() if customer.get("card_number")}
+    # merge the two dictionaries
+    return {**customer_uuid_dict, **card_number_dict}
 
 
 def make_request(method, url, headers=None, payload=None, retries=60, sleep_duration=10):

@@ -1,18 +1,28 @@
 import logging
 import threading
 import time
+import RPi.GPIO as GPIO
 
 from rpi_lcd import LCD
 from unidecode import unidecode
 
 
 class LCDController:
-    def __init__(self, use_lcd, max_char_count=16, scroll_delay=0.5, lcd_address=None):
+    def __init__(self, use_lcd, max_char_count=16, scroll_delay=0.5, lcd_address=None, dark_mode=False, relay_pin=None):
         self.use_lcd = use_lcd
         self.max_char_count = max_char_count
         self.scroll_delay = scroll_delay
+        self.lcd_address = lcd_address
         if use_lcd:
             self.lcd = LCD(lcd_address)
+        self.dark_mode = dark_mode
+        if dark_mode and relay_pin:
+            self.relay_pin = relay_pin
+            GPIO.setup(relay_pin, GPIO.OUT)
+            GPIO.output(relay_pin, GPIO.HIGH)
+            time.sleep(0.5)
+            GPIO.output(relay_pin, GPIO.LOW)
+
 
     def clear(self):
         if self.use_lcd:
@@ -29,6 +39,13 @@ class LCDController:
         return [line[i: i + self.max_char_count] for i in range(scroll_positions)]
 
     def display(self, line1: str, line2: str, timeout=2) -> None:
+        if self.dark_mode and timeout is None:
+            # Don't display continuous text in dark mode
+            return
+
+        if self.dark_mode and self.relay_pin:
+            GPIO.output(self.relay_pin, GPIO.HIGH)
+
         if not self.use_lcd:
             logging.info(line1)
             logging.info(line2)
@@ -45,6 +62,9 @@ class LCDController:
             if timeout is not None:
                 time.sleep(timeout - self.scroll_delay)
                 self.lcd.clear()
+                if self.dark_mode and self.relay_pin:
+                    GPIO.output(self.relay_pin, GPIO.LOW)
+                    self.lcd = LCD(self.lcd_address)
 
 
 def display_on_multiple_lcds(line1: str, line2: str, controllers: list[LCDController], timeout=2) -> None:
