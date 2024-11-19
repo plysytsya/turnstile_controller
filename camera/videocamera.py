@@ -1,9 +1,14 @@
-import cv2
 import time
 from threading import Thread
 import os
 import signal
 import setproctitle
+import sys
+
+# Add the global Python library path to sys.path
+sys.path.append('/usr/lib/python3/dist-packages')
+import cv2
+
 
 class VideoCamera:
     """Video camera class that detects motion and records video upon motion detection."""
