@@ -30,7 +30,7 @@ class VideoCamera:
     # Video recording parameters
     VIDEO_CODEC = 'XVID'  # Codec used for recording video
     VIDEO_FORMAT = 'avi'  # Final format of the recorded video files
-    DEFAULT_FPS = 15.0  # Default FPS for recording
+    DEFAULT_FPS = 10.0  # Default FPS for recording
 
     def __init__(self):
         # Initialize video capture
@@ -127,12 +127,6 @@ class VideoCamera:
             end_time = time.time()
             frame_time = end_time - start_time
             frame_times.append(frame_time)
-            if len(frame_times) > self.DEFAULT_FPS:
-                # Keep last 30 frame times to compute average FPS
-                frame_times = frame_times[-1 * int(self.DEFAULT_FPS):]
-                avg_frame_time = sum(frame_times) / len(frame_times)
-                if avg_frame_time > 0:
-                    self.fps = 1.0 / avg_frame_time
 
         # Clean up resources when done
         self.cleanup()
@@ -172,6 +166,7 @@ def signal_handler(sig, frame):
     camera.cleanup()
     print("Exiting...")
     os._exit(0)
+
 
 # Register signal handlers
 signal.signal(signal.SIGINT, signal_handler)
