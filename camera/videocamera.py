@@ -4,11 +4,14 @@ import os
 import signal
 import setproctitle
 import sys
+import logging
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
 import cv2
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("VideoCameraLogger")
 
 class VideoCamera:
     """Video camera class that detects motion and records video upon motion detection."""
@@ -48,6 +51,10 @@ class VideoCamera:
         self.fps = self.DEFAULT_FPS  # Fixed FPS
         self.recording_file = None  # Temporary file path for recording
 
+        # Frame count variables for debugging
+        self.frame_count = 0
+        self.last_fps_check_time = time.time()
+
         # Start frame update thread
         self.thread = Thread(target=self.update_frame, args=())
         self.thread.daemon = True
@@ -62,7 +69,6 @@ class VideoCamera:
 
     def update_frame(self):
         """Continuously capture frames, detect motion, and handle recording."""
-        frame_times = []  # List to store time taken to process each frame
         while True:
             start_time = time.time()
 
@@ -123,10 +129,19 @@ class VideoCamera:
                     else:
                         self.record_frame(frame)
 
-            # Calculate processing time and adjust FPS accordingly
-            end_time = time.time()
-            frame_time = end_time - start_time
-            frame_times.append(frame_time)
+            # Debug: Calculate and log actual FPS
+            self.frame_count += 1
+            current_time = time.time()
+            elapsed_time = current_time - self.last_fps_check_time
+            if elapsed_time >= 1.0:  # Log every second
+                actual_fps = self.frame_count / elapsed_time
+                logger.info(f"Actual FPS captured: {actual_fps}")
+                self.frame_count = 0
+                self.last_fps_check_time = current_time
+
+            # Add a sleep to maintain consistent frame rate
+            time_to_sleep = max(0, (1.0 / self.fps) - (time.time() - start_time))
+            time.sleep(time_to_sleep)
 
         # Clean up resources when done
         self.cleanup()
@@ -140,7 +155,7 @@ class VideoCamera:
         self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
                                    (frame.shape[1], frame.shape[0]))
         self.recording = True
-        print(f"Started recording: {self.recording_file}")
+        logger.info(f"Started recording: {self.recording_file}")
 
     def stop_recording(self):
         """Stop video recording."""
@@ -152,7 +167,10 @@ class VideoCamera:
             # Replace 'temp' with an empty string in the filename
             new_filename = self.recording_file.replace('temp_', '')
             os.rename(self.recording_file, new_filename)
-            print(f"Recording saved as {new_filename}")
+            logger.info(f"Recording saved as {new_filename}")
+
+            # Log recording statistics
+            logger.info(f"Recording completed: {new_filename}. Frame rate: {self.fps} FPS")
 
     def record_frame(self, frame):
         """Write frame to the video file."""
@@ -162,11 +180,10 @@ class VideoCamera:
 
 # Signal handling for graceful shutdown
 def signal_handler(sig, frame):
-    print("Shutting down gracefully...")
+    logger.info("Shutting down gracefully...")
     camera.cleanup()
-    print("Exiting...")
+    logger.info("Exiting...")
     os._exit(0)
-
 
 # Register signal handlers
 signal.signal(signal.SIGINT, signal_handler)
@@ -176,10 +193,10 @@ signal.signal(signal.SIGTERM, signal_handler)
 if __name__ == "__main__":
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
-    print("Press Ctrl+C to stop.")
+    logger.info("Press Ctrl+C to stop.")
     try:
         while True:
             time.sleep(1)  # Keep the script running
     except KeyboardInterrupt:
-        print("KeyboardInterrupt received. Exiting...")
+        logger.info("KeyboardInterrupt received. Exiting...")
         signal_handler(None, None)
