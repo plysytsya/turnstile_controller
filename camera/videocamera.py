@@ -30,6 +30,7 @@ class VideoCamera:
     # Video recording parameters
     VIDEO_CODEC = 'XVID'  # Codec used for recording video
     VIDEO_FORMAT = 'avi'  # Final format of the recorded video files
+    DEFAULT_FPS = 15.0  # Default FPS for recording
 
     def __init__(self):
         # Initialize video capture
@@ -44,7 +45,7 @@ class VideoCamera:
         # Recording variables
         self.recording = False
         self.out = None
-        self.fps = 30.0  # Default FPS
+        self.fps = self.DEFAULT_FPS  # Fixed FPS
         self.recording_file = None  # Temporary file path for recording
 
         # Start frame update thread
@@ -158,7 +159,6 @@ class VideoCamera:
             new_filename = self.recording_file.replace('temp_', '')
             os.rename(self.recording_file, new_filename)
             print(f"Recording saved as {new_filename}")
-
 
     def record_frame(self, frame):
         """Write frame to the video file."""
