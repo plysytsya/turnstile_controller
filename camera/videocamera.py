@@ -129,7 +129,7 @@ class VideoCamera:
             frame_times.append(frame_time)
             if len(frame_times) > self.DEFAULT_FPS:
                 # Keep last 30 frame times to compute average FPS
-                frame_times = frame_times[-self.DEFAULT_FPS:]
+                frame_times = frame_times[-1 * self.DEFAULT_FPS:]
                 avg_frame_time = sum(frame_times) / len(frame_times)
                 if avg_frame_time > 0:
                     self.fps = 1.0 / avg_frame_time
