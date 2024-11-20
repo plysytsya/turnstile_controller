@@ -40,8 +40,8 @@ class VideoCamera:
         self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
         self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
 
-        # Adjust FPS based on actual camera performance
-        self.fps = self.measure_average_fps()
+        # Adjust FPS based on actual camera performance during recording
+        self.fps = self.measure_average_fps_during_recording()
 
         # Initialize motion detection variables
         self.previous_frame = None
@@ -68,21 +68,30 @@ class VideoCamera:
         if self.out:
             self.out.release()
 
-    def measure_average_fps(self, duration=10):
-        """Measure the average FPS of the camera over a given duration."""
-        logger.info("Measuring average FPS for initial adjustment...")
+    def measure_average_fps_during_recording(self, duration=10):
+        """Measure the average FPS of the camera while writing to a temporary video file."""
+        logger.info("Measuring average FPS for initial adjustment during recording...")
         frame_count = 0
         start_time = time.time()
 
+        # Set up a temporary video writer to mimic recording conditions
+        fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
+        temp_file = 'temp_fps_test.avi'
+        out = cv2.VideoWriter(temp_file, fourcc, 10.0, (self.FRAME_WIDTH, self.FRAME_HEIGHT))
+
         while time.time() - start_time < duration:
-            success, _ = self.video.read()
+            success, frame = self.video.read()
             if not success:
                 break
+            out.write(frame)
             frame_count += 1
 
         elapsed_time = time.time() - start_time
+        out.release()
+        os.remove(temp_file)  # Clean up the temporary file
+
         average_fps = frame_count / elapsed_time if elapsed_time > 0 else 1.0
-        logger.info(f"Measured average FPS: {average_fps}")
+        logger.info(f"Measured average FPS during recording: {average_fps}")
         return average_fps
 
     def update_frame(self):
