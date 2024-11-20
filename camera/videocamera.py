@@ -44,6 +44,7 @@ class VideoCamera:
         self.previous_frame = None
         self.last_motion_time = time.time()
         self.recorded_times = []
+        self.sleep_times = []
 
         # Recording variables
         self.recording = False
@@ -100,6 +101,7 @@ class VideoCamera:
                 # Add a sleep to maintain consistent frame rate
                 time_to_sleep = max(0, (1.0 / self.fps) - (time.time() - start_time))
                 await asyncio.sleep(time_to_sleep)
+                self.sleep_times.append(time_to_sleep)
 
         except asyncio.CancelledError:
             logger.info("Run loop cancelled.")
@@ -180,7 +182,8 @@ class VideoCamera:
     def _recalculate_fps(self):
         """Recalculate the FPS based on the actual recorded frame rates."""
         if self.recorded_times:
-            self.fps = sum(self.recorded_times) / len(self.recorded_times)
+            avg_sleep_time = sum(self.sleep_times) / len(self.sleep_times) if self.sleep_times else 0
+            self.fps = (sum(self.recorded_times) + avg_sleep_time) / len(self.recorded_times)
             logger.info(f"New FPS calculated: {self.fps}")
             self.recorded_times = []
 
