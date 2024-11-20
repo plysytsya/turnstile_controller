@@ -37,7 +37,7 @@ def setup_zmq_pusher():
     return socket
 
 # Initialize the ZeroMQ socket but only for entrance, not exit
-if False:
+if ENTRANCE_DIRECTION == DIRECTION:
     zmq_socket = setup_zmq_pusher()
 
 # Whenever you add data to shared_list, also send it over ZeroMQ
