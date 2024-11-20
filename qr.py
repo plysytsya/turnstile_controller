@@ -36,8 +36,9 @@ def setup_zmq_pusher():
     socket.bind("tcp://127.0.0.1:5557")
     return socket
 
-# Initialize the ZeroMQ socket
-zmq_socket = setup_zmq_pusher()
+# Initialize the ZeroMQ socket but only for entrance, not exit
+if False:
+    zmq_socket = setup_zmq_pusher()
 
 # Whenever you add data to shared_list, also send it over ZeroMQ
 def handle_new_qr_data(qr_data):
