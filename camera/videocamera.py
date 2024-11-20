@@ -33,13 +33,15 @@ class VideoCamera:
     # Video recording parameters
     VIDEO_CODEC = 'XVID'  # Codec used for recording video
     VIDEO_FORMAT = 'avi'  # Final format of the recorded video files
-    DEFAULT_FPS = 5.0  # Default FPS for recording
 
     def __init__(self):
         # Initialize video capture
         self.video = cv2.VideoCapture(0)
         self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
         self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
+
+        # Adjust FPS based on actual camera performance
+        self.fps = self.measure_average_fps()
 
         # Initialize motion detection variables
         self.previous_frame = None
@@ -48,7 +50,6 @@ class VideoCamera:
         # Recording variables
         self.recording = False
         self.out = None
-        self.fps = self.DEFAULT_FPS  # Fixed FPS
         self.recording_file = None  # Temporary file path for recording
 
         # Frame count variables for debugging
@@ -66,6 +67,23 @@ class VideoCamera:
             self.video.release()
         if self.out:
             self.out.release()
+
+    def measure_average_fps(self, duration=10):
+        """Measure the average FPS of the camera over a given duration."""
+        logger.info("Measuring average FPS for initial adjustment...")
+        frame_count = 0
+        start_time = time.time()
+
+        while time.time() - start_time < duration:
+            success, _ = self.video.read()
+            if not success:
+                break
+            frame_count += 1
+
+        elapsed_time = time.time() - start_time
+        average_fps = frame_count / elapsed_time if elapsed_time > 0 else 1.0
+        logger.info(f"Measured average FPS: {average_fps}")
+        return average_fps
 
     def update_frame(self):
         """Continuously capture frames, detect motion, and handle recording."""
