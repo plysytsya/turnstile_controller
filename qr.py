@@ -43,7 +43,9 @@ if ENTRANCE_DIRECTION == DIRECTION:
 # Whenever you add data to shared_list, also send it over ZeroMQ
 def handle_new_qr_data(qr_data):
     shared_list.append(qr_data)
-    zmq_socket.send_json(json.dumps(qr_data))
+    if ENTRANCE_DIRECTION == DIRECTION:
+        logger.info(f"Sending QR data over ZeroMQ: {qr_data}")
+        zmq_socket.send_json(json.dumps(qr_data))
 
 
 class DirectionFilter(logging.Filter):
