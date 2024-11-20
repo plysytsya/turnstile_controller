@@ -377,22 +377,19 @@ def handle_keyboard_interrupt(vs):
 
 async def heartbeat():
     while True:
-        await make_one_heartbeat()
+        try:
+            timestamp = int(time.time())
+            heartbeat_data = {"timestamp": timestamp, "direction": DIRECTION}
+
+            # Write to the file
+            heartbeat_file = pathlib.Path(HEARTBEAT_FILE_PATH)
+            with heartbeat_file.open("w") as f:
+                json.dump(heartbeat_data, f)
+
+        except Exception as e:
+            logger.error(f"Failed to write heartbeat: {e}")
+
         await asyncio.sleep(HEARTBEAT_INTERVAL)
-
-
-async def make_one_heartbeat():
-    try:
-        timestamp = int(time.time())
-        heartbeat_data = {"timestamp": timestamp, "direction": DIRECTION}
-
-        # Write to the file
-        heartbeat_file = pathlib.Path(HEARTBEAT_FILE_PATH)
-        with heartbeat_file.open("w") as f:
-            json.dump(heartbeat_data, f)
-
-    except Exception as e:
-        logger.error(f"Failed to write heartbeat: {e}")
 
 
 async def keyboard_event_loop(device):
@@ -447,8 +444,10 @@ async def serial_device_event_loop():
                             logger.warning(f"Invalid JSON data: {data}")
                             await asyncio.sleep(0.1)
                             continue
-                        verify_customer(hash_uuid(data), int(time.time()))
-                await asyncio.sleep(0.5)
+                        qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
+                        logger.info(f"Created QR dict: {qr_dict}")
+                        shared_list.append(qr_dict)
+                await asyncio.sleep(0.1)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
@@ -490,7 +489,7 @@ async def main_loop():
             logger.info(f"Received QR data: {qr_data}")
             customer = qr_data.get("customer-uuid", qr_data.get("customer_uuid"))
             verify_customer(customer, qr_data["timestamp"])
-        await asyncio.sleep(0.5)  # 1-second delay to avoid busy-waiting
+        await asyncio.sleep(0.3)  # delay to avoid busy-waiting
 
 
 if __name__ == "__main__":
@@ -498,7 +497,7 @@ if __name__ == "__main__":
     dev = init_qr_device()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), main_loop(), heartbeat()))
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
     except KeyboardInterrupt:
