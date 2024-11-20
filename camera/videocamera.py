@@ -69,7 +69,7 @@ class VideoCamera:
             self.out.release()
 
     def measure_average_fps_during_recording(self, duration=10):
-        """Measure the average FPS of the camera while writing to a temporary video file."""
+        """Measure the average FPS of the camera while performing motion detection and writing to a temporary video file."""
         logger.info("Measuring average FPS for initial adjustment during recording...")
         frame_count = 0
         start_time = time.time()
@@ -79,18 +79,53 @@ class VideoCamera:
         temp_file = 'temp_fps_test.avi'
         out = cv2.VideoWriter(temp_file, fourcc, 10.0, (self.FRAME_WIDTH, self.FRAME_HEIGHT))
 
+        self.previous_frame = None  # Reset previous_frame for accurate measurement
+
         while time.time() - start_time < duration:
-            iteration_start_time = time.time()
             success, frame = self.video.read()
             if not success:
                 break
+
+            # Process the frame
+            gray = self.process_frame(frame)
+
+            # Initialize previous_frame if it's the first frame
+            if self.previous_frame is None:
+                self.previous_frame = gray
+                continue
+
+            # Compute absolute difference between current frame and previous frame
+            frame_delta = cv2.absdiff(self.previous_frame, gray)
+
+            # Use starting parameters for motion detection
+            thresh_sensitivity = self.START_THRESHOLD_SENSITIVITY
+            min_area = self.START_MIN_AREA
+
+            # Apply threshold to highlight differences exceeding the sensitivity
+            thresh = cv2.threshold(frame_delta, thresh_sensitivity, 255, cv2.THRESH_BINARY)[1]
+            thresh = cv2.dilate(thresh, None, iterations=2)  # Dilate to fill in gaps
+
+            # Find contours (areas of motion) in the thresholded image
+            contours, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            motion_detected = False
+            for contour in contours:
+                if cv2.contourArea(contour) >= min_area:
+                    motion_detected = True
+                    self.last_motion_time = time.time()  # Update last motion time
+                    break  # No need to check other contours
+
+            # Update previous_frame for the next iteration
+            self.previous_frame = gray
+
+            # Write the frame to the temporary file
             out.write(frame)
             frame_count += 1
 
             # Debug: Log FPS for each iteration
-            iteration_elapsed_time = time.time() - iteration_start_time
+            iteration_elapsed_time = time.time() - start_time
             if iteration_elapsed_time > 0:
-                iteration_fps = 1.0 / iteration_elapsed_time
+                iteration_fps = frame_count / iteration_elapsed_time
                 logger.info(f"Iteration FPS: {iteration_fps}")
 
         elapsed_time = time.time() - start_time
@@ -101,6 +136,12 @@ class VideoCamera:
         logger.info(f"Measured average FPS during recording: {average_fps}")
         return average_fps
 
+    def process_frame(self, frame):
+        """Process a frame by converting to grayscale and applying Gaussian blur."""
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (21, 21), 0)
+        return gray
+
     def update_frame(self):
         """Continuously capture frames, detect motion, and handle recording."""
         while True:
@@ -110,9 +151,8 @@ class VideoCamera:
             if not success:
                 break
 
-            # Convert to grayscale and apply Gaussian blur to reduce noise and improve detection accuracy
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (21, 21), 0)
+            # Process the frame
+            gray = self.process_frame(frame)
 
             # Initialize previous_frame if it's the first frame
             if self.previous_frame is None:
