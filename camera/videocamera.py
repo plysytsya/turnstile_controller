@@ -80,11 +80,18 @@ class VideoCamera:
         out = cv2.VideoWriter(temp_file, fourcc, 10.0, (self.FRAME_WIDTH, self.FRAME_HEIGHT))
 
         while time.time() - start_time < duration:
+            iteration_start_time = time.time()
             success, frame = self.video.read()
             if not success:
                 break
             out.write(frame)
             frame_count += 1
+
+            # Debug: Log FPS for each iteration
+            iteration_elapsed_time = time.time() - iteration_start_time
+            if iteration_elapsed_time > 0:
+                iteration_fps = 1.0 / iteration_elapsed_time
+                logger.info(f"Iteration FPS: {iteration_fps}")
 
         elapsed_time = time.time() - start_time
         out.release()
