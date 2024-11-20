@@ -11,3 +11,7 @@ pytest
 smbus2
 systemd-python
 pyserial
+pyzmq
+aioboto3
+python-dotenv
+setproctitle

@@ -1,3 +1,0 @@
-aioboto3
-python-dotenv
-setproctitle

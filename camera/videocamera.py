@@ -1,5 +1,6 @@
 import time
 import asyncio
+import zmq
 import os
 import signal
 import setproctitle
@@ -12,6 +13,18 @@ import cv2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCameraLogger")
+
+async def zmq_listener():
+    context = zmq.Context()
+    socket = context.socket(zmq.PULL)
+    socket.connect("tcp://127.0.0.1:5557")
+    while True:
+        try:
+            qr_data = socket.recv_json(flags=zmq.NOBLOCK)
+            logger.info(f"Received QR data: {qr_data}")
+            # Process the QR data as needed
+        except zmq.Again:
+            await asyncio.sleep(0.3)  # No data received, wait a bit
 
 class VideoCamera:
     """Video camera class that detects motion and records video upon motion detection."""
@@ -190,23 +203,12 @@ class VideoCamera:
 async def main():
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
-    logger.info("Press Ctrl+C to stop.")
 
-    # Start the run() coroutine as a task
+    zmq_task = asyncio.create_task(zmq_listener())
+    # Start the camera run loop as well
     camera_task = asyncio.create_task(camera.run())
-
-    # Handle signals
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, camera_task.cancel)
-
-    try:
-        await camera_task
-    except asyncio.CancelledError:
-        logger.info("Camera task cancelled.")
-    finally:
-        camera.cleanup()
-        logger.info("Exiting...")
+    await asyncio.gather(zmq_task, camera_task)
 
 if __name__ == "__main__":
+    zmq_task = asyncio.create_task(zmq_listener())
     asyncio.run(main())

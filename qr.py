@@ -14,6 +14,7 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
+import zmq
 
 from keymap import KEYMAP
 from lcd_controller import LCDController
@@ -27,6 +28,21 @@ MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
 HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
 HEARTBEAT_INTERVAL = 15
+
+
+def setup_zmq_pusher():
+    context = zmq.Context()
+    socket = context.socket(zmq.PUSH)
+    socket.bind("tcp://127.0.0.1:5557")
+    return socket
+
+# Initialize the ZeroMQ socket
+zmq_socket = setup_zmq_pusher()
+
+# Whenever you add data to shared_list, also send it over ZeroMQ
+def handle_new_qr_data(qr_data):
+    shared_list.append(qr_data)
+    zmq_socket.send_json(json.dumps(qr_data))
 
 
 class DirectionFilter(logging.Filter):
@@ -412,7 +428,7 @@ async def keyboard_event_loop(device):
                         try:
                             output_string = "{" + output_string.lstrip("{")
                             qr_dict = json.loads(output_string)
-                            shared_list.append(qr_dict)
+                            handle_new_qr_data(qr_dict)
                             output_string = ""
                         except json.JSONDecodeError:
                             logger.error("Invalid JSON data.")
