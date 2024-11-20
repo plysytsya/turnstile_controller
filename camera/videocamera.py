@@ -6,7 +6,6 @@ import setproctitle
 import sys
 import logging
 import io
-import numpy as np
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
