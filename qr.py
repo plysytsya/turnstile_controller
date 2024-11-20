@@ -519,5 +519,9 @@ if __name__ == "__main__":
             loop.run_until_complete(asyncio.gather(serial_device_event_loop(), main_loop(), heartbeat()))
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
+    except Exception as e:
+        logger.error(f"Unhandled exception: {e}")
+        sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
+
