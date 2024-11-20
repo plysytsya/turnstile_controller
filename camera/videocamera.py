@@ -5,7 +5,6 @@ import signal
 import setproctitle
 import sys
 import logging
-import io
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
@@ -50,7 +49,7 @@ class VideoCamera:
 
         # Recording variables
         self.recording = False
-        self.buffer = io.BytesIO()  # Buffer to store video in memory initially
+        self.out = None
         self.recording_file = None  # Temporary file path for recording
 
         # Frame count variables for debugging
@@ -66,17 +65,19 @@ class VideoCamera:
         """Release resources properly on exit."""
         if self.video.isOpened():
             self.video.release()
+        if self.out:
+            self.out.release()
 
     def measure_average_fps_during_recording(self, duration=10):
-        """Measure the average FPS of the camera while performing motion detection and writing to a temporary buffer."""
+        """Measure the average FPS of the camera while performing motion detection and writing to a temporary video file."""
         logger.info("Measuring average FPS for initial adjustment during recording...")
         frame_count = 0
         start_time = time.time()
 
-        # Set up a temporary buffer to mimic recording conditions
-        self.buffer = io.BytesIO()
+        # Set up a temporary video writer to mimic recording conditions
         fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
-        temp_writer = cv2.VideoWriter('temp.avi', fourcc, 10.0, (self.FRAME_WIDTH, self.FRAME_HEIGHT))
+        temp_file = 'temp_fps_test.avi'
+        out = cv2.VideoWriter(temp_file, fourcc, 10.0, (self.FRAME_WIDTH, self.FRAME_HEIGHT))
 
         self.previous_frame = None  # Reset previous_frame for accurate measurement
 
@@ -117,8 +118,8 @@ class VideoCamera:
             # Update previous_frame for the next iteration
             self.previous_frame = gray
 
-            # Write the frame to the temporary buffer
-            temp_writer.write(frame)
+            # Write the frame to the temporary file
+            out.write(frame)
             frame_count += 1
 
             # Debug: Log FPS for each iteration
@@ -128,7 +129,8 @@ class VideoCamera:
                 logger.info(f"Iteration FPS: {iteration_fps}")
 
         elapsed_time = time.time() - start_time
-        temp_writer.release()
+        out.release()
+        os.remove(temp_file)  # Clean up the temporary file
 
         average_fps = frame_count / elapsed_time if elapsed_time > 0 else 1.0
         logger.info(f"Measured average FPS during recording: {average_fps}")
@@ -190,8 +192,9 @@ class VideoCamera:
             # Handle recording based on motion detection
             if motion_detected:
                 if not self.recording:
-                    self.start_recording()
-                self.record_frame(frame)
+                    self.start_recording(frame)
+                else:
+                    self.record_frame(frame)
             else:
                 if self.recording:
                     # Check if no motion has been detected for the specified duration
@@ -217,28 +220,25 @@ class VideoCamera:
         # Clean up resources when done
         self.cleanup()
 
-    def start_recording(self):
+    def start_recording(self, frame):
         """Start video recording."""
-        self.buffer = io.BytesIO()  # Start with a fresh buffer
+        # Use a codec and name the file with 'temp' as the prefix
+        fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
+        timestamp = int(time.time())
+        self.recording_file = f'temp_{timestamp}.avi'
+        self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
+                                   (frame.shape[1], frame.shape[0]))
         self.recording = True
-        logger.info("Started recording in memory buffer.")
+        logger.info(f"Started recording: {self.recording_file}")
 
     def stop_recording(self):
-        """Stop video recording and write buffer to a file."""
+        """Stop video recording."""
         if self.recording:
+            self.out.release()
+            self.out = None
             self.recording = False
 
-            # Release the VideoWriter
-            if hasattr(self, '_video_writer'):
-                self._video_writer.release()
-                del self._video_writer
-
-            # Save the buffer to a file
-            timestamp = int(time.time())
-            self.recording_file = f'temp_{timestamp}.avi'
-            with open(self.recording_file, 'wb') as f:
-                f.write(self.buffer.getvalue())
-
+            # Replace 'temp' with an empty string in the filename
             new_filename = self.recording_file.replace('temp_', '')
             os.rename(self.recording_file, new_filename)
             logger.info(f"Recording saved as {new_filename}")
@@ -247,20 +247,9 @@ class VideoCamera:
             logger.info(f"Recording completed: {new_filename}. Frame rate: {self.fps} FPS")
 
     def record_frame(self, frame):
-        """Write frame to the video buffer."""
-        if self.recording:
-            if not hasattr(self, '_video_writer'):
-                # Initialize VideoWriter when recording starts
-                fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
-                self._video_writer = cv2.VideoWriter(
-                    self.buffer,  # Use memory buffer
-                    fourcc,
-                    self.fps,
-                    (self.FRAME_WIDTH, self.FRAME_HEIGHT)
-                )
-            # Write frame to the VideoWriter
-            self._video_writer.write(frame)
-
+        """Write frame to the video file."""
+        if self.recording and self.out is not None:
+            self.out.write(frame)
 
 
 # Signal handling for graceful shutdown
