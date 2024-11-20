@@ -227,7 +227,11 @@ class VideoCamera:
         """Stop video recording and write buffer to a file."""
         if self.recording:
             self.recording = False
-            self.buffer.seek(0)
+
+            # Release the VideoWriter
+            if hasattr(self, '_video_writer'):
+                self._video_writer.release()
+                del self._video_writer
 
             # Save the buffer to a file
             timestamp = int(time.time())
@@ -245,10 +249,18 @@ class VideoCamera:
     def record_frame(self, frame):
         """Write frame to the video buffer."""
         if self.recording:
-            # Encode the frame as a video frame and write to the buffer
-            success, encoded_image = cv2.imencode('.avi', frame)
-            if success:
-                self.buffer.write(encoded_image.tobytes())
+            if not hasattr(self, '_video_writer'):
+                # Initialize VideoWriter when recording starts
+                fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
+                self._video_writer = cv2.VideoWriter(
+                    self.buffer,  # Use memory buffer
+                    fourcc,
+                    self.fps,
+                    (self.FRAME_WIDTH, self.FRAME_HEIGHT)
+                )
+            # Write frame to the VideoWriter
+            self._video_writer.write(frame)
+
 
 
 # Signal handling for graceful shutdown
