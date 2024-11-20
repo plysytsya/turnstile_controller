@@ -199,16 +199,31 @@ class VideoCamera:
             self.out.write(frame)
 
 
-# Initialize and run the video camera
 async def main():
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
+    logger.info("Press Ctrl+C to stop.")
 
+    # Start the zmq_listener and camera run loops as tasks
     zmq_task = asyncio.create_task(zmq_listener())
-    # Start the camera run loop as well
     camera_task = asyncio.create_task(camera.run())
-    await asyncio.gather(zmq_task, camera_task)
+
+    # Handle signals for graceful shutdown
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, lambda: [task.cancel() for task in [zmq_task, camera_task]])
+
+    try:
+        # Wait for both tasks to complete
+        await asyncio.gather(zmq_task, camera_task)
+    except asyncio.CancelledError:
+        logger.info("Tasks cancelled. Exiting...")
+    finally:
+        camera.cleanup()
+        logger.info("Exiting...")
 
 if __name__ == "__main__":
-    zmq_task = asyncio.create_task(zmq_listener())
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received. Exiting...")
