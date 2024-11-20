@@ -455,7 +455,7 @@ async def serial_device_event_loop():
                     logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
-                        shared_list.append(qr_dict)
+                        handle_new_qr_data(qr_dict)
                     except json.JSONDecodeError:
                         if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
