@@ -72,7 +72,6 @@ class VideoCamera:
 
         # Adjust FPS based on actual camera performance during recording
         self.fps = self.DEFAULT_FPS
-        logger.info("finally set the fps to {}".format(self.fps))
 
     def cleanup(self):
         """Release resources properly on exit."""
@@ -108,7 +107,7 @@ class VideoCamera:
                 elapsed_time = current_time - self.last_fps_check_time
                 if elapsed_time >= 1.0:  # Log every second
                     actual_fps = self.frame_count / elapsed_time
-                    logger.info(f"Actual FPS captured: {actual_fps}")
+                    logger.debug(f"Actual FPS captured: {actual_fps}")
                     if self.recording:
                         self.recorded_times.append(actual_fps)
                     self.frame_count = 0
