@@ -33,7 +33,7 @@ class VideoCamera:
     # Video recording parameters
     VIDEO_CODEC = 'XVID'  # Codec used for recording video
     VIDEO_FORMAT = 'avi'  # Final format of the recorded video files
-    DEFAULT_FPS = 10.0  # Default FPS for recording
+    DEFAULT_FPS = 6.3  # Default FPS for recording
 
     def __init__(self):
         # Initialize video capture
