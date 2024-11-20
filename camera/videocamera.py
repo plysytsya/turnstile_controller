@@ -30,6 +30,8 @@ class VideoCamera:
     FRAME_WIDTH = 480  # Width of the video frames
     FRAME_HEIGHT = 360  # Height of the video frames
 
+    DEFAULT_FPS = 20  # Default FPS for recording
+
     # Video recording parameters
     VIDEO_CODEC = 'XVID'  # Codec used for recording video
     VIDEO_FORMAT = 'avi'  # Final format of the recorded video files
@@ -56,7 +58,7 @@ class VideoCamera:
         self.last_fps_check_time = time.time()
 
         # Adjust FPS based on actual camera performance during recording
-        self.fps = 12  # Default FPS
+        self.fps = self.DEFAULT_FPS
         logger.info("finally set the fps to {}".format(self.fps))
 
     def cleanup(self):
@@ -177,15 +179,6 @@ class VideoCamera:
             new_filename = self.recording_file.replace('temp_', '')
             os.rename(self.recording_file, new_filename)
             logger.info(f"Recording saved as {new_filename}")
-            self._recalculate_fps()
-
-    def _recalculate_fps(self):
-        """Recalculate the FPS based on the actual recorded frame rates."""
-        if self.recorded_times:
-            avg_sleep_time = sum(self.sleep_times) / len(self.sleep_times) if self.sleep_times else 0
-            self.fps = sum(self.recorded_times) / len(self.recorded_times)
-            logger.info(f"New FPS calculated: {self.fps}")
-            self.recorded_times = []
 
     def record_frame(self, frame):
         """Write frame to the video file."""
