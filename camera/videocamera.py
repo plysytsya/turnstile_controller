@@ -27,8 +27,8 @@ class VideoCamera:
     N_SECONDS_NO_MOTION = 3  # Number of seconds of no motion after which we stop recording
 
     # Video parameters
-    FRAME_WIDTH = 640  # Width of the video frames
-    FRAME_HEIGHT = 480  # Height of the video frames
+    FRAME_WIDTH = 320  # Width of the video frames
+    FRAME_HEIGHT = 240  # Height of the video frames
 
     # Video recording parameters
     VIDEO_CODEC = 'XVID'  # Codec used for recording video
