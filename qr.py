@@ -32,8 +32,8 @@ HEARTBEAT_INTERVAL = 15
 
 def setup_zmq_pusher():
     context = zmq.Context()
-    socket = context.socket(zmq.PUSH)
-    socket.bind("tcp://127.0.0.1:5557")
+    socket = context.socket(zmq.REP)
+    socket.bind("tcp://*:5555")
     return socket
 
 # Initialize the ZeroMQ socket but only for entrance, not exit
@@ -44,8 +44,9 @@ if ENTRANCE_DIRECTION == DIRECTION:
 def handle_new_qr_data(qr_data):
     shared_list.append(qr_data)
     if ENTRANCE_DIRECTION == DIRECTION:
-        logger.info(f"Sending QR data over ZeroMQ: {qr_data}")
-        zmq_socket.send_json(json.dumps(qr_data))
+        qr_bytes = json.dumps(qr_data).encode("utf-8")
+        zmq_socket.send(qr_bytes)
+        logger.info(f"Sent QR data over ZeroMQ: {qr_data}")
 
 
 class DirectionFilter(logging.Filter):

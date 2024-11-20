@@ -16,11 +16,11 @@ logger = logging.getLogger("VideoCameraLogger")
 
 async def zmq_listener():
     context = zmq.Context()
-    socket = context.socket(zmq.PULL)
-    socket.connect("tcp://127.0.0.1:5557")
+    socket = context.socket(zmq.REQ)
+    socket.connect("tcp://localhost:5555")
     while True:
         try:
-            qr_data = socket.recv_json(flags=zmq.NOBLOCK)
+            qr_data = socket.recv()
             logger.info(f"Received QR data: {qr_data}")
             # Process the QR data as needed
         except zmq.Again:
