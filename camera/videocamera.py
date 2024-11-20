@@ -265,6 +265,8 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 # Initialize and run the video camera
 if __name__ == "__main__":
+    #execute a shell script in the same folder
+    os.system('sh kill_videorecorder.sh')
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
     logger.info("Press Ctrl+C to stop.")
