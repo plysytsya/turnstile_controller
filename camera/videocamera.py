@@ -1,6 +1,7 @@
 import time
 from threading import Thread
 import os
+import subprocess
 import signal
 import setproctitle
 import sys
@@ -265,8 +266,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 # Initialize and run the video camera
 if __name__ == "__main__":
-    #execute a shell script in the same folder
-    os.system('sh kill_videorecorder.sh')
+    subprocess.run(["sh", "kill_videorecorder.sh"], check=True)
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
     logger.info("Press Ctrl+C to stop.")
