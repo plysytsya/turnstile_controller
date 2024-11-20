@@ -1,5 +1,5 @@
 import time
-from threading import Thread
+import asyncio
 import os
 import signal
 import setproctitle
@@ -55,13 +55,8 @@ class VideoCamera:
         self.last_fps_check_time = time.time()
 
         # Adjust FPS based on actual camera performance during recording
-        self.fps = 17  # Default FPS
+        self.fps = 12  # Default FPS
         logger.info("finally set the fps to {}".format(self.fps))
-
-        # Start frame update thread
-        self.thread = Thread(target=self.update_frame, args=())
-        self.thread.daemon = True
-        self.thread.start()
 
     def cleanup(self):
         """Release resources properly on exit."""
@@ -76,37 +71,42 @@ class VideoCamera:
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
         return gray
 
-    def update_frame(self):
-        """Continuously capture frames, detect motion, and handle recording."""
+    async def run(self):
+        """Asynchronous method to run the video capturing and processing loop."""
         time_to_sleep = 0
-        while True:
-            start_time = time.time()
+        try:
+            while True:
+                start_time = time.time()
 
-            success, frame = self.video.read()
-            if not success:
-                break
+                success, frame = self.video.read()
+                if not success:
+                    break
 
-            # Process the current frame (includes motion detection and recording logic)
-            self._record_frame(frame)
+                # Process the current frame (includes motion detection and recording logic)
+                self._record_frame(frame)
 
-            # Debug: Calculate and log actual FPS
-            self.frame_count += 1
-            current_time = time.time()
-            elapsed_time = current_time - self.last_fps_check_time
-            if elapsed_time >= 1.0:  # Log every second
-                actual_fps = self.frame_count / (elapsed_time - time_to_sleep)
-                logger.info(f"Actual FPS captured: {actual_fps}. Time slept (ms): {time_to_sleep * 1000}")
-                if self.recording:
-                    self.recorded_times.append(actual_fps)
-                self.frame_count = 0
-                self.last_fps_check_time = current_time
+                # Debug: Calculate and log actual FPS
+                self.frame_count += 1
+                current_time = time.time()
+                elapsed_time = current_time - self.last_fps_check_time
+                if elapsed_time >= 1.0:  # Log every second
+                    actual_fps = self.frame_count / (elapsed_time - time_to_sleep)
+                    logger.info(f"Actual FPS captured: {actual_fps}. Time slept (ms): {time_to_sleep * 1000}")
+                    if self.recording:
+                        self.recorded_times.append(actual_fps)
+                    self.frame_count = 0
+                    self.last_fps_check_time = current_time
 
-            # Add a sleep to maintain consistent frame rate
-            time_to_sleep = max(0, (1.0 / self.fps) - (time.time() - start_time))
-            time.sleep(time_to_sleep)
+                # Add a sleep to maintain consistent frame rate
+                time_to_sleep = max(0, (1.0 / self.fps) - (time.time() - start_time))
+                await asyncio.sleep(time_to_sleep)
 
-        # Clean up resources when done
-        self.cleanup()
+        except asyncio.CancelledError:
+            logger.info("Run loop cancelled.")
+            raise
+        finally:
+            # Clean up resources when done
+            self.cleanup()
 
     def _record_frame(self, frame):
         """Process a single frame for motion detection and handle recording."""
@@ -190,25 +190,27 @@ class VideoCamera:
             self.out.write(frame)
 
 
-# Signal handling for graceful shutdown
-def signal_handler(sig, frame):
-    logger.info("Shutting down gracefully...")
-    camera.cleanup()
-    logger.info("Exiting...")
-    os._exit(0)
-
-# Register signal handlers
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
 # Initialize and run the video camera
-if __name__ == "__main__":
+async def main():
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
     logger.info("Press Ctrl+C to stop.")
+
+    # Start the run() coroutine as a task
+    camera_task = asyncio.create_task(camera.run())
+
+    # Handle signals
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, camera_task.cancel)
+
     try:
-        while True:
-            time.sleep(1)  # Keep the script running
-    except KeyboardInterrupt:
-        logger.info("KeyboardInterrupt received. Exiting...")
-        signal_handler(None, None)
+        await camera_task
+    except asyncio.CancelledError:
+        logger.info("Camera task cancelled.")
+    finally:
+        camera.cleanup()
+        logger.info("Exiting...")
+
+if __name__ == "__main__":
+    asyncio.run(main())
