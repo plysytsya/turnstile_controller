@@ -41,6 +41,7 @@ OPEN_N_TIMES = None
 IS_SERIAL_DEVICE = None
 QR_USB_DEVICE_PATH = None
 LCD_I2C_ADDRESS = None
+LCD = None
 
 
 def handle_new_qr_data(qr_data, global_qr_data=None):
@@ -82,7 +83,7 @@ def display_on_lcd(line1, line2, timeout=None):
         logger.info(line1)
         logger.info(line2)
     else:
-        lcd.display(line1, line2, timeout)
+        LCD.display(line1, line2, timeout)
 
 
 def init_qr_device():
@@ -473,7 +474,7 @@ async def main_loop():
 
 def initialize_globals(settings):
     global DIRECTION, ENTRANCE_DIRECTION, ENABLE_STREAM_HANDLER, DARK_MODE
-    global HEARTBEAT_FILE_PATH, ENTRANCE_UUID, HOSTNAME, USERNAME, PASSWORD
+    global HEARTBEAT_FILE_PATH, ENTRANCE_UUID, HOSTNAME, USERNAME, PASSWORD, LCD
     global JWT_TOKEN, USE_LCD, RELAY_PIN_DOOR, RELAY_PIN_DISPLAY, LCD_I2C_ADDRESS
     global RELAY_TOGGLE_DURATION, OPEN_N_TIMES, IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
 
@@ -513,9 +514,9 @@ def initialize_globals(settings):
     if USE_LCD:
         # Initialize LCD
         try:
-            lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE,
+            LCD = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE,
                                 relay_pin=RELAY_PIN_DISPLAY)
-            lcd.display("Inicializando...", "")
+            LCD.display("Inicializando...", "")
             logger.info("LCD initialized successfully for direction %s.", DIRECTION)
         except Exception as e:
             logger.exception(
