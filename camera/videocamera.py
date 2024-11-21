@@ -176,10 +176,14 @@ class VideoCamera:
         """Stop video recording."""
         qr_data = read_and_delete_multi_process_qr_data(global_qr_data, lock)
         if qr_data:
-            logger.info("!!!!! yeaah {}".format(qr_data))
-            qr_timestamp = qr_data['timestamp']
+            logger.info("received from qr-reader: {}".format(qr_data))
+            qr_timestamp = qr_data['scanned_at']
             timestamp_in_video = int(self.recording_file.split('_')[2])
             logger.info(f"timestamp in video {timestamp_in_video}, qr timestamp {qr_timestamp}")
+            # the recording must have started before the qr code was scanned.
+            # The idea is that the motion sensor would trigger a video before the qr code is scanned.
+            # Otherwise this means that the video was recorded after the qr code was scanned, thus the
+            # customer already walked in.
             if qr_timestamp >= timestamp_in_video and self.recording:
                 self.out.release()
                 self.out = None
