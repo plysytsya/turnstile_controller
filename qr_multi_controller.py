@@ -45,7 +45,7 @@ manager = Manager()
 multi_process_qr_data = manager.dict()
 lock = manager.Lock()
 
-camera_process = Process(target=videocamera.main, args=(multi_process_qr_data, lock))
+camera_process = Process(target=videocamera.run_camera, args=(multi_process_qr_data, lock))
 processes.append(camera_process)
 
 for qr_reader in devices:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     try:
         for process in processes:
             process.start()
-            logger.info(f"Started process {process.name}. Sleeping for 2 minutes before starting the next process.")
+            logger.info(f"Started process {process.name}. Sleeping for 2 seconds before starting the next process.")
             time.sleep(2)
 
         # Wait for all processes to complete (in this case, they never end, so this is just a safeguard)

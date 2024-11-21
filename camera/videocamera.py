@@ -217,5 +217,9 @@ async def main(global_qr_data=None, lock=None):
         camera.cleanup()
         logger.info("Exiting...")
 
+
+def run_camera(global_qr_data=None, lock=None):
+    asyncio.run(main(global_qr_data, lock))
+
 if __name__ == "__main__":
     asyncio.run(main())
