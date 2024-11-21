@@ -427,6 +427,7 @@ async def serial_device_event_loop(global_qr_data=None):
                         qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
                         handle_new_qr_data(qr_dict, global_qr_data)
+                        await asyncio.sleep(1.5) # don't read the same qr for n seconds to avoid multi reading
                 await asyncio.sleep(0.1)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
