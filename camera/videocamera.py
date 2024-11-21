@@ -83,7 +83,7 @@ class VideoCamera:
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
         return gray
 
-    async def run(self):
+    async def run(self, global_qr_data=None, lock=None):
         """Asynchronous method to run the video capturing and processing loop."""
         time_to_sleep = 0
         try:
@@ -95,7 +95,7 @@ class VideoCamera:
                     break
 
                 # Process the current frame (includes motion detection and recording logic)
-                self._record_frame(frame)
+                self._record_frame(frame, global_qr_data, lock)
 
                 # Debug: Calculate and log actual FPS
                 # Debug: Calculate and log actual FPS
@@ -121,7 +121,7 @@ class VideoCamera:
             # Clean up resources when done
             self.cleanup()
 
-    def _record_frame(self, frame):
+    def _record_frame(self, frame, global_qr_data=None, lock=None):
         """Process a single frame for motion detection and handle recording."""
         # Process the frame
         gray = self.process_frame(frame)
@@ -163,7 +163,7 @@ class VideoCamera:
             if self.recording:
                 # Check if no motion has been detected for the specified duration
                 if time.time() - self.last_motion_time >= self.N_SECONDS_NO_MOTION:
-                    self.stop_recording()
+                    self.stop_recording(global_qr_data, lock)
                 else:
                     self.record_frame(frame)
 
@@ -177,8 +177,11 @@ class VideoCamera:
         self.recording = True
         logger.info(f"Started recording: {self.recording_file}")
 
-    def stop_recording(self):
+    def stop_recording(self, global_qr_data=None, lock=None):
         """Stop video recording."""
+        qr_data = read_and_delete_multi_process_qr_data(global_qr_data, lock)
+        if qr_data:
+            logger.info("!!!!! yeaah {}".format(qr_data))
         if self.recording:
             self.out.release()
             self.out = None
@@ -195,6 +198,26 @@ class VideoCamera:
             self.out.write(frame)
 
 
+def read_and_delete_multi_process_qr_data(global_qr_data, lock):
+    """
+    Reads the value from multi_process_qr_data and deletes it.
+
+    Args:
+        global_qr_data (Manager.dict): The shared dictionary.
+        lock (Manager.Lock): The lock to ensure thread-safe access.
+
+    Returns:
+        dict or None: The data that was read, or None if the dictionary is empty.
+    """
+    with lock:  # Acquire the lock to ensure thread safety
+        if 'qr_data' in global_qr_data:
+            data = global_qr_data['qr_data']
+            del global_qr_data['qr_data']  # Delete the data after reading
+            return data
+        else:
+            return None  # No data available
+
+
 # Initialize and run the video camera
 async def main(global_qr_data=None, lock=None):
     setproctitle.setproctitle("videocamera")
@@ -202,7 +225,7 @@ async def main(global_qr_data=None, lock=None):
     logger.info("Press Ctrl+C to stop.")
 
     # Start the run() coroutine as a task
-    camera_task = asyncio.create_task(camera.run())
+    camera_task = asyncio.create_task(camera.run(global_qr_data, lock))
 
     # Handle signals
     loop = asyncio.get_running_loop()
