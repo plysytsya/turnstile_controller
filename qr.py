@@ -36,8 +36,8 @@ JWT_TOKEN = None
 USE_LCD = None
 RELAY_PIN_DOOR = None
 RELAY_PIN_DISPLAY = None
-RELAY_TOGGLE_DURATION = None
-OPEN_N_TIMES = None
+RELAY_TOGGLE_DURATION = 1
+OPEN_N_TIMES = 1
 IS_SERIAL_DEVICE = None
 QR_USB_DEVICE_PATH = None
 LCD_I2C_ADDRESS = None
@@ -476,7 +476,7 @@ def initialize_globals(settings):
     global DIRECTION, ENTRANCE_DIRECTION, ENABLE_STREAM_HANDLER, DARK_MODE
     global HEARTBEAT_FILE_PATH, ENTRANCE_UUID, HOSTNAME, USERNAME, PASSWORD, LCD
     global JWT_TOKEN, USE_LCD, RELAY_PIN_DOOR, RELAY_PIN_DISPLAY, LCD_I2C_ADDRESS
-    global RELAY_TOGGLE_DURATION, OPEN_N_TIMES, IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
+    global IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
 
     DIRECTION = settings.get("DIRECTION")
     ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
@@ -494,8 +494,6 @@ def initialize_globals(settings):
     USE_LCD = int(settings.get("USE_LCD", 1))
     RELAY_PIN_DOOR = int(settings.get("RELAY_PIN_DOOR", 10))
     RELAY_PIN_DISPLAY = int(settings.get("RELAY_PIN_DISPLAY")) if settings.get("RELAY_PIN_DISPLAY") else None
-    RELAY_TOGGLE_DURATION = int(settings.get("RELAY_TOGGLE_DURATION", 1))
-    OPEN_N_TIMES = int(settings.get("OPEN_N_TIMES", 1))
     IS_SERIAL_DEVICE = settings.get("IS_SERIAL_DEVICE", "False").lower() == "true"
     QR_USB_DEVICE_PATH = settings.get("QR_USB_DEVICE_PATH")
     LCD_I2C_ADDRESS = settings.get("LCD_I2C_ADDRESS")
