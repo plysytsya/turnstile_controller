@@ -171,7 +171,7 @@ class VideoCamera:
         """Start video recording."""
         fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
         timestamp = int(time.time())
-        self.recording_file = f'temp_{timestamp}.avi'
+        self.recording_file = f'/home/manager/turnstile_controller/camera/temp_{timestamp}.avi'
         self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
                                    (frame.shape[1], frame.shape[0]))
         self.recording = True
