@@ -5,9 +5,10 @@
 # Step 2: Import the necessary modules
 import logging
 import os
-import subprocess
+from multiprocessing import Process, Manager, Lock
 import sys
 import time
+import qr
 
 import dotenv
 from pathlib import Path
@@ -37,6 +38,11 @@ devices = keyboard_devices + serial_devices
 load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 
 processes = []
+
+# Create a Manager for shared data
+manager = Manager()
+multi_process_qr_data = manager.dict()
+lock = manager.Lock()
 
 for qr_reader in devices:
     if qr_reader.is_extended:
@@ -77,10 +83,11 @@ for qr_reader in devices:
 
     logging.warning(f"Starging subprocess {direction} with env-vars: {env}")
     env_without_none_values = {k: v for k, v in env.items() if v is not None}
-    p = subprocess.Popen(cmd, env=env_without_none_values)
-    processes.append(p)
-    time.sleep(2)
 
+    p = Process(target=qr.main, args=(env_without_none_values, multi_process_qr_data, lock))
+    processes.append(p)
+    p.start()
+    time.sleep(2)
 try:
     for p in processes:
         ret_code = p.wait()  # Wait for each subprocess to finish and get the return code

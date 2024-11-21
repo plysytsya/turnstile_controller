@@ -19,19 +19,33 @@ from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
 
-DIRECTION = os.getenv("DIRECTION")
-ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
-ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
-DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
+
+# Global Variables
+DIRECTION = None
+ENTRANCE_DIRECTION = None
+ENABLE_STREAM_HANDLER = True
+DARK_MODE = None
 MAGIC_TIMESTAMP = 1725628212
-current_dir = pathlib.Path(__file__).parent
-HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
+HEARTBEAT_FILE_PATH = None
 HEARTBEAT_INTERVAL = 15
+ENTRANCE_UUID = None
+HOSTNAME = None
+USERNAME = None
+PASSWORD = None
+JWT_TOKEN = None
+USE_LCD = None
+RELAY_PIN_DOOR = None
+RELAY_PIN_DISPLAY = None
+RELAY_TOGGLE_DURATION = None
+OPEN_N_TIMES = None
+IS_SERIAL_DEVICE = None
 
 
-# Whenever you add data to shared_list, also send it over ZeroMQ
-def handle_new_qr_data(qr_data):
+def handle_new_qr_data(qr_data, global_qr_data=None):
     shared_list.append(qr_data)
+
+    if DIRECTION == ENTRANCE_DIRECTION and global_qr_data:
+        global_qr_data = qr_data
 
 
 class DirectionFilter(logging.Filter):
@@ -60,26 +74,14 @@ load_dotenv()
 
 jwt_token = None
 
-ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
-HOSTNAME = os.getenv("HOSTNAME")
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
-JWT_TOKEN = os.getenv("JWT_TOKEN")
-USE_LCD = int(os.getenv("USE_LCD", 1))
-RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
-RELAY_PIN_DISPLAY = int(os.getenv("RELAY_PIN_DISPLAY")) if os.getenv("RELAY_PIN_DISPLAY") else None
-RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
-OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
-IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
-
 if USE_LCD:
     try:
-        LCD_I2C_ADDRESS = int(os.getenv("LCD_I2C_ADDRESS", 0x27), 16)
+        LCD_I2C_ADDRESS = int(settings.get("LCD_I2C_ADDRESS", 0x27), 16)
     except Exception as e:
         logger.warning(f"Error parsing LCD I2C address: {e}. Continuing without")
         USE_LCD = False
 
-QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
+QR_USB_DEVICE_PATH = settings.get("QR_USB_DEVICE_PATH")
 
 logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
@@ -397,7 +399,7 @@ async def heartbeat():
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 
-async def keyboard_event_loop(device):
+async def keyboard_event_loop(device, global_qr_data=None):
     global shared_list
     output_string = ""
     display_on_lcd("Escanea", "codigo QR...")
@@ -417,7 +419,7 @@ async def keyboard_event_loop(device):
                         try:
                             output_string = "{" + output_string.lstrip("{")
                             qr_dict = json.loads(output_string)
-                            handle_new_qr_data(qr_dict)
+                            handle_new_qr_data(qr_dict, handle_new_qr_data)
                             output_string = ""
                         except json.JSONDecodeError:
                             logger.error("Invalid JSON data.")
@@ -428,7 +430,7 @@ async def keyboard_event_loop(device):
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
 
-async def serial_device_event_loop():
+async def serial_device_event_loop(global_qr_data=None):
     global shared_list
     display_on_lcd("Escanea", "codigo QR...")
 
@@ -441,7 +443,7 @@ async def serial_device_event_loop():
                     logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
-                        handle_new_qr_data(qr_dict)
+                        handle_new_qr_data(qr_dict, global_qr_data)
                     except json.JSONDecodeError:
                         if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
@@ -451,7 +453,7 @@ async def serial_device_event_loop():
                             continue
                         qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
-                        handle_new_qr_data(qr_dict)
+                        handle_new_qr_data(qr_dict, global_qr_data)
                 await asyncio.sleep(0.1)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
@@ -497,16 +499,49 @@ async def main_loop():
         await asyncio.sleep(0.3)  # delay to avoid busy-waiting
 
 
-if __name__ == "__main__":
+def initialize_globals(settings):
+    global DIRECTION, ENTRANCE_DIRECTION, ENABLE_STREAM_HANDLER, DARK_MODE
+    global HEARTBEAT_FILE_PATH, ENTRANCE_UUID, HOSTNAME, USERNAME, PASSWORD
+    global JWT_TOKEN, USE_LCD, RELAY_PIN_DOOR, RELAY_PIN_DISPLAY
+    global RELAY_TOGGLE_DURATION, OPEN_N_TIMES, IS_SERIAL_DEVICE
+
+    DIRECTION = settings.get("DIRECTION")
+    ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
+    ENABLE_STREAM_HANDLER = settings.get("ENABLE_STREAM_HANDLER", "False").lower() == "true"
+    DARK_MODE = settings.get("DARK_MODE", "False").lower() == "true"
+
+    current_dir = pathlib.Path(__file__).parent
+    HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
+
+    ENTRANCE_UUID = settings.get("ENTRANCE_UUID")
+    HOSTNAME = settings.get("HOSTNAME")
+    USERNAME = settings.get("USERNAME")
+    PASSWORD = settings.get("PASSWORD")
+    JWT_TOKEN = settings.get("JWT_TOKEN")
+    USE_LCD = int(settings.get("USE_LCD", 1))
+    RELAY_PIN_DOOR = int(settings.get("RELAY_PIN_DOOR", 10))
+    RELAY_PIN_DISPLAY = int(settings.get("RELAY_PIN_DISPLAY")) if settings.get("RELAY_PIN_DISPLAY") else None
+    RELAY_TOGGLE_DURATION = int(settings.get("RELAY_TOGGLE_DURATION", 1))
+    OPEN_N_TIMES = int(settings.get("OPEN_N_TIMES", 1))
+    IS_SERIAL_DEVICE = settings.get("IS_SERIAL_DEVICE", "False").lower() == "true"
+
+
+def main(settings, global_qr_data=None, lock=None):
+    initialize_globals(settings)
+
     loop = asyncio.get_event_loop()
     dev = init_qr_device()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), main_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(serial_device_event_loop(global_qr_data), main_loop(), heartbeat()))
         else:
-            loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev, global_qr_data), main_loop(), heartbeat()))
     except Exception as e:
         logger.error(f"Unhandled exception: {e}")
         sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
+
+if __name__ == "__main__":
+    settings = os.environ.copy()
+    main(settings)
