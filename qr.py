@@ -40,6 +40,7 @@ RELAY_TOGGLE_DURATION = None
 OPEN_N_TIMES = None
 IS_SERIAL_DEVICE = None
 QR_USB_DEVICE_PATH = None
+LCD_I2C_ADDRESS = None
 
 
 def handle_new_qr_data(qr_data, global_qr_data=None):
@@ -74,34 +75,6 @@ logger.info(f"Starting QR script. My direction is {DIRECTION}")
 load_dotenv()
 
 jwt_token = None
-
-if USE_LCD:
-    try:
-        LCD_I2C_ADDRESS = int(settings.get("LCD_I2C_ADDRESS", 0x27), 16)
-    except Exception as e:
-        logger.warning(f"Error parsing LCD I2C address: {e}. Continuing without")
-        USE_LCD = False
-
-
-logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
-
-# Initialize Relay
-RELAY_PIN_QR_READER = 22  # Hopefully we never again have to use a relay to restart the qr reader
-GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
-GPIO.setup(RELAY_PIN_DOOR, GPIO.OUT)  # Set pin as an output pin
-
-if USE_LCD:
-    # Initialize LCD
-    try:
-        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE, relay_pin=RELAY_PIN_DISPLAY)
-        lcd.display("Inicializando...", "")
-        logger.info("LCD initialized successfully for direction %s.", DIRECTION)
-    except Exception as e:
-        logger.exception(
-            f"Error initializing LCD direction {DIRECTION} on "
-            f"address {LCD_I2C_ADDRESS}. Continuing without LCD: {e}"
-        )
-        USE_LCD = False
 
 
 def display_on_lcd(line1, line2, timeout=None):
@@ -501,7 +474,7 @@ async def main_loop():
 def initialize_globals(settings):
     global DIRECTION, ENTRANCE_DIRECTION, ENABLE_STREAM_HANDLER, DARK_MODE
     global HEARTBEAT_FILE_PATH, ENTRANCE_UUID, HOSTNAME, USERNAME, PASSWORD
-    global JWT_TOKEN, USE_LCD, RELAY_PIN_DOOR, RELAY_PIN_DISPLAY
+    global JWT_TOKEN, USE_LCD, RELAY_PIN_DOOR, RELAY_PIN_DISPLAY, LCD_I2C_ADDRESS
     global RELAY_TOGGLE_DURATION, OPEN_N_TIMES, IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
 
     DIRECTION = settings.get("DIRECTION")
@@ -524,6 +497,32 @@ def initialize_globals(settings):
     OPEN_N_TIMES = int(settings.get("OPEN_N_TIMES", 1))
     IS_SERIAL_DEVICE = settings.get("IS_SERIAL_DEVICE", "False").lower() == "true"
     QR_USB_DEVICE_PATH = settings.get("QR_USB_DEVICE_PATH")
+    LCD_I2C_ADDRESS = settings.get("LCD_I2C_ADDRESS")
+
+    # Initialize Relay
+    GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
+    GPIO.setup(RELAY_PIN_DOOR, GPIO.OUT)  # Set pin as an output pin
+
+    if USE_LCD:
+        try:
+            LCD_I2C_ADDRESS = int(settings.get("LCD_I2C_ADDRESS", 0x27), 16)
+        except Exception as e:
+            logger.warning(f"Error parsing LCD I2C address: {e}. Continuing without")
+            USE_LCD = False
+
+    if USE_LCD:
+        # Initialize LCD
+        try:
+            lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE,
+                                relay_pin=RELAY_PIN_DISPLAY)
+            lcd.display("Inicializando...", "")
+            logger.info("LCD initialized successfully for direction %s.", DIRECTION)
+        except Exception as e:
+            logger.exception(
+                f"Error initializing LCD direction {DIRECTION} on "
+                f"address {LCD_I2C_ADDRESS}. Continuing without LCD: {e}"
+            )
+            USE_LCD = False
 
 
 def main(settings, global_qr_data=None, lock=None):
