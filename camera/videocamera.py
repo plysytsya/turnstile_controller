@@ -5,6 +5,7 @@ import signal
 import setproctitle
 import sys
 import logging
+from systemd.journal import JournalHandler
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
@@ -12,6 +13,15 @@ import cv2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCameraLogger")
+journal_handler = JournalHandler()
+
+class LogFilter(logging.Filter):
+    def filter(self, record):
+        record.msg = f"video recorder - {record.msg}"
+        return True
+
+journal_handler.addFilter(LogFilter())
+logger.addHandler(journal_handler)
 
 class VideoCamera:
     """Video camera class that detects motion and records video upon motion detection."""
