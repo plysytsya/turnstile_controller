@@ -14,13 +14,6 @@ import cv2
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCameraLogger")
 journal_handler = JournalHandler()
-
-class LogFilter(logging.Filter):
-    def filter(self, record):
-        record.msg = f"video recorder - {record.msg}"
-        return True
-
-journal_handler.addFilter(LogFilter())
 logger.addHandler(journal_handler)
 
 class VideoCamera:
