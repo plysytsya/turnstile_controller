@@ -196,7 +196,7 @@ class VideoCamera:
 
 
 # Initialize and run the video camera
-async def main():
+async def main(global_qr_data=None, lock=None):
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
     logger.info("Press Ctrl+C to stop.")
