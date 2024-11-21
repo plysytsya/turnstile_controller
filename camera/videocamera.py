@@ -39,6 +39,8 @@ class VideoCamera:
     VIDEO_CODEC = 'XVID'  # Codec used for recording video
     VIDEO_FORMAT = 'avi'  # Final format of the recorded video files
 
+    RECORDING_DIR = '/home/manager/turnstile_controller/camera'
+
     def __init__(self):
         # Initialize video capture
         self.video = cv2.VideoCapture(0)
@@ -164,7 +166,7 @@ class VideoCamera:
         """Start video recording."""
         fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
         timestamp = int(time.time())
-        self.recording_file = f'/home/manager/turnstile_controller/camera/temp_{timestamp}.avi'
+        self.recording_file = f'/home/manager/turnstile_controller/camera/temp_{timestamp}_.avi'
         self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
                                    (frame.shape[1], frame.shape[0]))
         self.recording = True
@@ -175,6 +177,19 @@ class VideoCamera:
         qr_data = read_and_delete_multi_process_qr_data(global_qr_data, lock)
         if qr_data:
             logger.info("!!!!! yeaah {}".format(qr_data))
+            qr_timestamp = qr_data['timestamp']
+            timestamp_in_video = int(self.recording_file.split('_')[1])
+            if qr_timestamp > timestamp_in_video and self.recording:
+                logger.info("!!!!!!! QR timestamp is greater than video timestamp")
+                self.out.release()
+                self.out = None
+                self.recording = False
+                # Replace 'temp' with an empty string in the filename
+                new_filename = f"cstm_{qr_data['customer_uuid']}_unix_{qr_data['timestamp']}.avi"
+                os.rename(self.recording_file, new_filename)
+                logger.info(f"Recording saved as {new_filename}")
+
+
         if self.recording:
             self.out.release()
             self.out = None
