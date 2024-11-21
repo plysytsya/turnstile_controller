@@ -1,6 +1,5 @@
 import time
 import asyncio
-import zmq
 import os
 import signal
 import setproctitle
@@ -13,18 +12,6 @@ import cv2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCameraLogger")
-
-async def zmq_listener():
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect("tcp://localhost:5555")
-    while True:
-        try:
-            qr_data = socket.recv()
-            logger.info(f"Received QR data: {qr_data}")
-            # Process the QR data as needed
-        except zmq.Again:
-            await asyncio.sleep(0.3)  # No data received, wait a bit
 
 class VideoCamera:
     """Video camera class that detects motion and records video upon motion detection."""
@@ -198,31 +185,27 @@ class VideoCamera:
             self.out.write(frame)
 
 
+# Initialize and run the video camera
 async def main():
     setproctitle.setproctitle("videocamera")
     camera = VideoCamera()
     logger.info("Press Ctrl+C to stop.")
 
-    # Start the zmq_listener and camera run loops as tasks
-    zmq_task = asyncio.create_task(zmq_listener())
+    # Start the run() coroutine as a task
     camera_task = asyncio.create_task(camera.run())
 
-    # Handle signals for graceful shutdown
+    # Handle signals
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, lambda: [task.cancel() for task in [zmq_task, camera_task]])
+        loop.add_signal_handler(sig, camera_task.cancel)
 
     try:
-        # Wait for both tasks to complete
-        await asyncio.gather(zmq_task, camera_task)
+        await camera_task
     except asyncio.CancelledError:
-        logger.info("Tasks cancelled. Exiting...")
+        logger.info("Camera task cancelled.")
     finally:
         camera.cleanup()
         logger.info("Exiting...")
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received. Exiting...")
+    asyncio.run(main())

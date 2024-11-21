@@ -14,7 +14,6 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
-import zmq
 
 from keymap import KEYMAP
 from lcd_controller import LCDController
@@ -30,23 +29,9 @@ HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
 HEARTBEAT_INTERVAL = 15
 
 
-def setup_zmq_pusher():
-    context = zmq.Context()
-    socket = context.socket(zmq.REP)
-    socket.bind("tcp://*:5555")
-    return socket
-
-# Initialize the ZeroMQ socket but only for entrance, not exit
-if ENTRANCE_DIRECTION == DIRECTION:
-    zmq_socket = setup_zmq_pusher()
-
 # Whenever you add data to shared_list, also send it over ZeroMQ
 def handle_new_qr_data(qr_data):
     shared_list.append(qr_data)
-    if ENTRANCE_DIRECTION == DIRECTION:
-        qr_bytes = json.dumps(qr_data).encode("utf-8")
-        zmq_socket.send(qr_bytes)
-        logger.info(f"Sent QR data over ZeroMQ: {qr_data}")
 
 
 class DirectionFilter(logging.Filter):
@@ -525,4 +510,3 @@ if __name__ == "__main__":
         sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
-
