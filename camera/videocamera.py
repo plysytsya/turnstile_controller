@@ -170,7 +170,7 @@ class VideoCamera:
         self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
                                    (frame.shape[1], frame.shape[0]))
         self.recording = True
-        logger.info(f"--------- Started recording: {self.recording_file}")
+        logger.info(f"Started recording: {self.recording_file}")
 
     def stop_recording(self, global_qr_data=None, lock=None):
         """Stop video recording."""
@@ -185,7 +185,8 @@ class VideoCamera:
                 self.out = None
                 self.recording = False
                 # Replace 'temp' with an empty string in the filename
-                new_filename = f"cstm_{qr_data['customer_uuid']}_unix_{qr_data['timestamp']}.avi"
+                additional_data = f"cstmqr_{qr_data['customer_uuid']}_unixqr_{qr_data['scanned_at']}_"
+                new_filename = self.recording_file.replace('temp_', additional_data)
                 os.rename(self.recording_file, new_filename)
                 logger.info(f"Recording saved as {new_filename}")
                 return

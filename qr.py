@@ -7,7 +7,6 @@ import sys
 import threading
 import time
 import uuid
-from asyncio import timeout
 
 import evdev
 from evdev import InputDevice, categorize, KeyEvent
@@ -51,6 +50,7 @@ def handle_new_qr_data(qr_data, global_qr_data=None, lock=None):
     if DIRECTION == ENTRANCE_DIRECTION and global_qr_data is not None:
         with lock:
             logger.info(f"Writing to global_qr_data: {qr_data}")
+            qr_data["scanned_at"] = int(time.time())
             global_qr_data['qr_data'] = qr_data
 
 
