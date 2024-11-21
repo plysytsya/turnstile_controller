@@ -17,6 +17,7 @@ from systemd.journal import JournalHandler
 from find_device import find_qr_devices
 from serial_reader import find_serial_devices, SerialDevice
 from i2cdetect import detect_i2c_device_not_27
+from camera import videocamera
 
 # Step 3: Configure logging to use JournalHandler
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,9 @@ processes = []
 manager = Manager()
 multi_process_qr_data = manager.dict()
 lock = manager.Lock()
+
+camera_process = Process(target=videocamera.main, args=(multi_process_qr_data, lock))
+processes.append(camera_process)
 
 for qr_reader in devices:
     if qr_reader.is_extended:
