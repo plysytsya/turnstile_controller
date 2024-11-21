@@ -170,7 +170,7 @@ class VideoCamera:
         self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
                                    (frame.shape[1], frame.shape[0]))
         self.recording = True
-        logger.info(f"Started recording: {self.recording_file}")
+        logger.info(f"--------- Started recording: {self.recording_file}")
 
     def stop_recording(self, global_qr_data=None, lock=None):
         """Stop video recording."""
