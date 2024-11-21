@@ -209,9 +209,11 @@ def read_and_delete_multi_process_qr_data(global_qr_data, lock):
     Returns:
         dict or None: The data that was read, or None if the dictionary is empty.
     """
+    logger.info(f"Trying to read global data")
     with lock:  # Acquire the lock to ensure thread safety
         if 'qr_data' in global_qr_data:
             data = global_qr_data['qr_data']
+            logger.info(f"///////// DATA: {data}")
             del global_qr_data['qr_data']  # Delete the data after reading
             return data
         else:

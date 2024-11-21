@@ -50,6 +50,7 @@ def handle_new_qr_data(qr_data, global_qr_data=None, lock=None):
 
     if DIRECTION == ENTRANCE_DIRECTION and global_qr_data:
         with lock:
+            logger.info(f"Writing to global_qr_data: {qr_data}")
             global_qr_data['qr_data'] = qr_data
 
 
