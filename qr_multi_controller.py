@@ -86,13 +86,22 @@ for qr_reader in devices:
 
     p = Process(target=qr.main, args=(env_without_none_values, multi_process_qr_data, lock))
     processes.append(p)
-    p.start()
-    time.sleep(2)
 
+
+if __name__ == "__main__":
     try:
-        for p in processes:
-            p.join()
+        for process in processes:
+            process.start()
+            logger.info(f"Started process {process.name}. Sleeping for 2 minutes before starting the next process.")
+            time.sleep(2)
+
+        # Wait for all processes to complete (in this case, they never end, so this is just a safeguard)
+        for process in processes:
+            process.join()
+
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt detected. Terminating all processes.")
-        for p in processes:
-            p.terminate()
+        logger.info("Interrupt received. Terminating all processes.")
+        for process in processes:
+            process.terminate()
+            process.join()
+        logger.info("All processes terminated.")
