@@ -188,7 +188,7 @@ class VideoCamera:
                 new_filename = f"cstm_{qr_data['customer_uuid']}_unix_{qr_data['timestamp']}.avi"
                 os.rename(self.recording_file, new_filename)
                 logger.info(f"Recording saved as {new_filename}")
-
+                return
 
         if self.recording:
             self.out.release()
