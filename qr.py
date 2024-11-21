@@ -39,6 +39,7 @@ RELAY_PIN_DISPLAY = None
 RELAY_TOGGLE_DURATION = None
 OPEN_N_TIMES = None
 IS_SERIAL_DEVICE = None
+QR_USB_DEVICE_PATH = None
 
 
 def handle_new_qr_data(qr_data, global_qr_data=None):
@@ -81,15 +82,13 @@ if USE_LCD:
         logger.warning(f"Error parsing LCD I2C address: {e}. Continuing without")
         USE_LCD = False
 
-QR_USB_DEVICE_PATH = settings.get("QR_USB_DEVICE_PATH")
 
 logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
 # Initialize Relay
-relay_pin = RELAY_PIN_DOOR
 RELAY_PIN_QR_READER = 22  # Hopefully we never again have to use a relay to restart the qr reader
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
-GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
+GPIO.setup(RELAY_PIN_DOOR, GPIO.OUT)  # Set pin as an output pin
 
 if USE_LCD:
     # Initialize LCD
@@ -153,13 +152,13 @@ def log_unsuccessful_request(response):
 
 
 def toggle_relay(duration=RELAY_TOGGLE_DURATION, open_n_times=OPEN_N_TIMES):
-    logger.info(f"Toggling relay PIN {relay_pin}")
+    logger.info(f"Toggling relay PIN {RELAY_PIN_DOOR}")
     open_duration = duration / open_n_times
     for _ in range(open_n_times):
-        GPIO.output(relay_pin, GPIO.HIGH)
+        GPIO.output(RELAY_PIN_DOOR, GPIO.HIGH)
         time.sleep(open_duration)
     for i in range(10):
-        GPIO.output(relay_pin, GPIO.LOW)
+        GPIO.output(RELAY_PIN_DOOR, GPIO.LOW)
 
 
 def unpack_barcode(barcode_data):
@@ -503,7 +502,7 @@ def initialize_globals(settings):
     global DIRECTION, ENTRANCE_DIRECTION, ENABLE_STREAM_HANDLER, DARK_MODE
     global HEARTBEAT_FILE_PATH, ENTRANCE_UUID, HOSTNAME, USERNAME, PASSWORD
     global JWT_TOKEN, USE_LCD, RELAY_PIN_DOOR, RELAY_PIN_DISPLAY
-    global RELAY_TOGGLE_DURATION, OPEN_N_TIMES, IS_SERIAL_DEVICE
+    global RELAY_TOGGLE_DURATION, OPEN_N_TIMES, IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
 
     DIRECTION = settings.get("DIRECTION")
     ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
@@ -524,6 +523,7 @@ def initialize_globals(settings):
     RELAY_TOGGLE_DURATION = int(settings.get("RELAY_TOGGLE_DURATION", 1))
     OPEN_N_TIMES = int(settings.get("OPEN_N_TIMES", 1))
     IS_SERIAL_DEVICE = settings.get("IS_SERIAL_DEVICE", "False").lower() == "true"
+    QR_USB_DEVICE_PATH = settings.get("QR_USB_DEVICE_PATH")
 
 
 def main(settings, global_qr_data=None, lock=None):
