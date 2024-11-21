@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 import uuid
+from asyncio import timeout
 
 import evdev
 from evdev import InputDevice, categorize, KeyEvent
@@ -44,11 +45,12 @@ LCD_I2C_ADDRESS = None
 LCD = None
 
 
-def handle_new_qr_data(qr_data, global_qr_data=None):
+def handle_new_qr_data(qr_data, global_qr_data=None, lock=None):
     shared_list.append(qr_data)
 
     if DIRECTION == ENTRANCE_DIRECTION and global_qr_data:
-        global_qr_data = qr_data
+        with lock:
+            global_qr_data['qr_data'] = qr_data
 
 
 class DirectionFilter(logging.Filter):
@@ -348,13 +350,6 @@ def refresh_token():
     return f"Bearer {jwt_token}"
 
 
-def handle_keyboard_interrupt(vs):
-    logger.warning("Keyboard interrupt received. Stopping video stream and exiting...")
-    lcd.clear()
-    GPIO.cleanup()  # This will reset all GPIO ports you have used in this program back to input mode.
-    exit()
-
-
 async def heartbeat():
     while True:
         try:
@@ -398,12 +393,12 @@ async def keyboard_event_loop(device, global_qr_data=None):
                             logger.error("Invalid JSON data.")
                             output_string = ""
     except OSError as e:
-        lcd.display("No coneccion con", "lector, reinicio")
+        display_on_lcd("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
 
-async def serial_device_event_loop(global_qr_data=None):
+async def serial_device_event_loop(global_qr_data=None, lock=None):
     global shared_list
     display_on_lcd("Escanea", "codigo QR...")
 
@@ -416,7 +411,7 @@ async def serial_device_event_loop(global_qr_data=None):
                     logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
-                        handle_new_qr_data(qr_dict, global_qr_data)
+                        handle_new_qr_data(qr_dict, global_qr_data, lock)
                     except json.JSONDecodeError:
                         if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
@@ -426,11 +421,11 @@ async def serial_device_event_loop(global_qr_data=None):
                             continue
                         qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
-                        handle_new_qr_data(qr_dict, global_qr_data)
+                        handle_new_qr_data(qr_dict, global_qr_data, lock)
                         await asyncio.sleep(2.5) # don't read the same qr for n seconds to avoid multi reading
                 await asyncio.sleep(0.1)
     except OSError as e:
-        lcd.display("No coneccion con", "lector, reinicio")
+        display_on_lcd("No hay lector", "QR, reinicio...", timeout=5)
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except (serial.SerialException, Exception) as e:
@@ -532,7 +527,7 @@ def main(settings, global_qr_data=None, lock=None):
     dev = init_qr_device()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(global_qr_data), main_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(serial_device_event_loop(global_qr_data, lock), main_loop(), heartbeat()))
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev, global_qr_data), main_loop(), heartbeat()))
     except Exception as e:
