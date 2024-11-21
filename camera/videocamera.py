@@ -180,7 +180,7 @@ class VideoCamera:
             qr_timestamp = qr_data['timestamp']
             timestamp_in_video = int(self.recording_file.split('_')[2])
             logger.info(f"timestamp in video {timestamp_in_video}, qr timestamp {qr_timestamp}")
-            if qr_timestamp > timestamp_in_video and self.recording:
+            if qr_timestamp >= timestamp_in_video and self.recording:
                 self.out.release()
                 self.out = None
                 self.recording = False
