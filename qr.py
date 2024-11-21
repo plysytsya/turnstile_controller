@@ -48,6 +48,7 @@ LCD = None
 def handle_new_qr_data(qr_data, global_qr_data=None, lock=None):
     shared_list.append(qr_data)
 
+    logger.info(f"#### is entrance: {DIRECTION == ENTRANCE_DIRECTION} #### qr_data: {qr_data}")
     if DIRECTION == ENTRANCE_DIRECTION and global_qr_data:
         with lock:
             logger.info(f"Writing to global_qr_data: {qr_data}")
