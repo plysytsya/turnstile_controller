@@ -255,7 +255,10 @@ async def main(global_qr_data=None, lock=None):
 
 
 def run_camera(global_qr_data=None, lock=None):
-    asyncio.run(main(global_qr_data, lock))
+    try:
+        asyncio.run(main(global_qr_data, lock))
+    except Exception as e:
+        logger.exception(f"Error running camera: {e}... Continuing")
 
 if __name__ == "__main__":
     asyncio.run(main())
