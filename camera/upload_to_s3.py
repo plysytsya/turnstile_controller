@@ -5,6 +5,7 @@ import aioboto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 import setproctitle
+from systemd.journal import JournalHandler
 
 # Load environment variables
 load_dotenv()
