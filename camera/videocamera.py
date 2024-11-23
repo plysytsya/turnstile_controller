@@ -6,7 +6,7 @@ import setproctitle
 import sys
 import logging
 from systemd.journal import JournalHandler
-from upload_to_s3 import upload_loop
+from .upload_to_s3 import upload_loop
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
