@@ -251,9 +251,12 @@ async def main(global_qr_data=None, lock=None):
         logger.info("Exiting...")
 
 
+async def run_all(global_qr_data, lock):
+    await asyncio.gather(main(global_qr_data, lock), upload_loop())
+
 def run_camera(global_qr_data=None, lock=None):
     try:
-        asyncio.run(asyncio.gather(main(global_qr_data, lock), upload_loop()))
+        asyncio.run(run_all(global_qr_data, lock))
     except Exception as e:
         logger.exception(f"Error running camera: {e}... Continuing")
 
