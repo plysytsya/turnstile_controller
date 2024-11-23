@@ -47,7 +47,7 @@ async def ensure_bucket_exists(s3_client, bucket_name):
 async def upload_file_to_s3(s3_client, bucket_name, file_path):
     """Upload a file to S3 with the gym_uuid prepended to the filename."""
     file_name = os.path.basename(file_path)
-    s3_key = f"{GYM_UUID}_{file_name}"
+    s3_key = file_name
 
     try:
         logger.info(f"Uploading {file_name} as {s3_key} to bucket {bucket_name}...")
