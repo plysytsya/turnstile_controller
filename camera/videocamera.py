@@ -99,7 +99,7 @@ class VideoCamera:
                 elapsed_time = current_time - self.last_fps_check_time
                 if elapsed_time >= 1.0:  # Log every second
                     actual_fps = self.frame_count / elapsed_time
-                    logger.debug(f"Actual FPS captured: {actual_fps}")
+                    logger.info(f"Actual FPS captured: {actual_fps}")
                     if self.recording:
                         self.recorded_times.append(actual_fps)
                     self.frame_count = 0
