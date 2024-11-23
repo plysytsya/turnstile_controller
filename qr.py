@@ -414,10 +414,10 @@ async def serial_device_event_loop(global_qr_data=None, lock=None):
                 # Read data from the serial port
                 if ser.in_waiting > 0:
                     data = ser.readline().decode('utf-8').strip()
-                    logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
                         handle_new_qr_data(qr_dict, global_qr_data, lock)
+                        await asyncio.sleep(2.5)  # don't read the same qr for n seconds to avoid multi reading
                     except json.JSONDecodeError:
                         if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
