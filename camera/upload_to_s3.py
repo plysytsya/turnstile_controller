@@ -21,9 +21,11 @@ logger = logging.getLogger("VideoUpload")
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
 
+RECORDING_DIR = '/home/manager/turnstile_controller/camera'
 
 if not all([GYM_UUID, ACCESS_KEY, SECRET_ACCESS_KEY, ENDPOINT_URL]):
     raise ValueError("Missing required environment variables in .env file.")
+
 
 async def ensure_bucket_exists(s3_client, bucket_name):
     """Ensure the S3 bucket exists. Create it if not."""
@@ -43,16 +45,17 @@ async def ensure_bucket_exists(s3_client, bucket_name):
             logger.info(f"Error checking bucket {bucket_name}: {e}")
             raise
 
+
 async def upload_file_to_s3(s3_client, bucket_name, file_path):
     """Upload a file to S3 with the gym_uuid prepended to the filename."""
     file_name = os.path.basename(file_path)
     s3_key = f"{GYM_UUID}_{file_name}"
-    
+
     try:
         logger.info(f"Uploading {file_name} as {s3_key} to bucket {bucket_name}...")
         await s3_client.upload_file(file_path, bucket_name, s3_key)
         logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
-        
+
         # Delete the file after successful upload
         os.remove(file_path)
         logger.info(f"Deleted local file: {file_path}")
@@ -61,24 +64,29 @@ async def upload_file_to_s3(s3_client, bucket_name, file_path):
     except OSError as e:
         logger.info(f"Failed to delete file {file_path}: {e}")
 
+
 async def upload_loop():
     """Main loop to check the directory and upload files."""
     try:
         bucket_name = GYM_UUID
         session = aioboto3.Session()
         async with session.client(
-            "s3",
-            aws_access_key_id=ACCESS_KEY,
-            aws_secret_access_key=SECRET_ACCESS_KEY,
-            endpoint_url=ENDPOINT_URL,
+                "s3",
+                aws_access_key_id=ACCESS_KEY,
+                aws_secret_access_key=SECRET_ACCESS_KEY,
+                endpoint_url=ENDPOINT_URL,
         ) as s3_client:
             # Ensure the bucket exists on startup
             await ensure_bucket_exists(s3_client, bucket_name)
-            
+
             # Start the upload loop
             while True:
-                # List all files in the current directory
-                files = [f for f in os.listdir(".") if os.path.isfile(f)]
+                # List all files in the recording directory
+                files = [
+                    os.path.join(RECORDING_DIR, f)
+                    for f in os.listdir(RECORDING_DIR)
+                    if os.path.isfile(os.path.join(RECORDING_DIR, f))
+                ]
                 video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
 
                 if video_files:
@@ -93,6 +101,7 @@ async def upload_loop():
     except Exception as e:
         logger.info(e)
         logger.info("continuing")
+
 
 if __name__ == "__main__":
     setproctitle.setproctitle("videouploader")

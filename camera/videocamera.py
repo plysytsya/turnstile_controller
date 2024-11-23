@@ -34,7 +34,7 @@ class VideoCamera:
     FRAME_WIDTH = 480  # Width of the video frames
     FRAME_HEIGHT = 360  # Height of the video frames
 
-    DEFAULT_FPS = 11  # Default FPS for recording
+    DEFAULT_FPS = 10.5  # Default FPS for recording
 
     # Video recording parameters
     VIDEO_CODEC = 'mp4v'  # Codec used for recording video
