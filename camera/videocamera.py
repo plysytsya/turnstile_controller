@@ -252,13 +252,22 @@ async def main(global_qr_data=None, lock=None):
 
 
 async def run_all(global_qr_data, lock):
-    await asyncio.gather(main(global_qr_data, lock), upload_loop())
+    try:
+        await asyncio.gather(
+            main(global_qr_data, lock),  # Ensure `main` is well-defined
+            upload_loop()
+        )
+    except Exception as e:
+        logger.exception(f"Error in run_all: {e}")
 
 def run_camera(global_qr_data=None, lock=None):
     try:
-        asyncio.run(run_all(global_qr_data, lock))
+        # Use `asyncio.create_task` and run within the main thread event loop
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(run_all(global_qr_data, lock))
     except Exception as e:
         logger.exception(f"Error running camera: {e}... Continuing")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
