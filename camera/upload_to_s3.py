@@ -26,7 +26,6 @@ RECORDING_DIR = '/home/manager/turnstile_controller/camera'
 if not all([GYM_UUID, ACCESS_KEY, SECRET_ACCESS_KEY, ENDPOINT_URL]):
     raise ValueError("Missing required environment variables in .env file.")
 
-
 async def ensure_bucket_exists(s3_client, bucket_name):
     """Ensure the S3 bucket exists. Create it if not."""
     try:
@@ -39,12 +38,11 @@ async def ensure_bucket_exists(s3_client, bucket_name):
                 await s3_client.create_bucket(Bucket=bucket_name)
                 logger.info(f"Bucket {bucket_name} created successfully.")
             except ClientError as create_error:
-                logger.info(f"Failed to create bucket {bucket_name}: {create_error}")
+                logger.error(f"Failed to create bucket {bucket_name}: {create_error}")
                 raise
         else:
-            logger.info(f"Error checking bucket {bucket_name}: {e}")
+            logger.error(f"Error checking bucket {bucket_name}: {e}")
             raise
-
 
 async def upload_file_to_s3(s3_client, bucket_name, file_path):
     """Upload a file to S3 with the gym_uuid prepended to the filename."""
@@ -60,10 +58,9 @@ async def upload_file_to_s3(s3_client, bucket_name, file_path):
         os.remove(file_path)
         logger.info(f"Deleted local file: {file_path}")
     except ClientError as e:
-        logger.info(f"Failed to upload {file_name}: {e}")
+        logger.error(f"Failed to upload {file_name}: {e}")
     except OSError as e:
-        logger.info(f"Failed to delete file {file_path}: {e}")
-
+        logger.error(f"Failed to delete file {file_path}: {e}")
 
 async def upload_loop():
     """Main loop to check the directory and upload files."""
@@ -98,10 +95,13 @@ async def upload_loop():
 
                 # Sleep for n seconds
                 await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        logger.info("Upload loop cancelled.")
+        raise
     except Exception as e:
-        logger.info(e)
-        logger.info("continuing")
-
+        logger.exception(f"Exception in upload_loop {e}")
+    finally:
+        logger.info("Upload loop exiting.")
 
 if __name__ == "__main__":
     setproctitle.setproctitle("videouploader")

@@ -6,13 +6,17 @@ import setproctitle
 import sys
 import logging
 from systemd.journal import JournalHandler
+from multiprocessing import Process
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
 import cv2
 
+# Import the upload_to_s3 module
+import upload_to_s3
+
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("VideoCameraLogger")
+logger = logging.getLogger("VideoCamera")
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
 
@@ -111,6 +115,8 @@ class VideoCamera:
         except asyncio.CancelledError:
             logger.info("Run loop cancelled.")
             raise
+        except Exception as e:
+            logger.exception("Exception in VideoCamera.run")
         finally:
             # Clean up resources when done
             self.cleanup()
@@ -165,7 +171,7 @@ class VideoCamera:
         """Start video recording."""
         fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
         timestamp = int(time.time())
-        self.recording_file = f'/home/manager/turnstile_controller/camera/temp_{timestamp}_.{self.VIDEO_FORMAT}'
+        self.recording_file = f'{self.RECORDING_DIR}/temp_{timestamp}_.{self.VIDEO_FORMAT}'
         self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
                                    (frame.shape[1], frame.shape[0]))
         self.recording = True
@@ -177,15 +183,10 @@ class VideoCamera:
         if qr_data:
             qr_timestamp = qr_data['scanned_at']
             timestamp_in_video = int(self.recording_file.split('_')[2])
-            # the recording must have started before the qr code was scanned.
-            # The idea is that the motion sensor would trigger a video before the qr code is scanned.
-            # Otherwise this means that the video was recorded after the qr code was scanned, thus the
-            # customer already walked in.
             if qr_timestamp >= timestamp_in_video and self.recording:
                 self.out.release()
                 self.out = None
                 self.recording = False
-                # Replace 'temp' with an empty string in the filename
                 additional_data = f"/{qr_data['uuid']}.{self.VIDEO_FORMAT}"
                 new_filename = "/".join(self.recording_file.split("/")[:-1]) + additional_data
                 os.rename(self.recording_file, new_filename)
@@ -204,7 +205,6 @@ class VideoCamera:
         """Write frame to the video file."""
         if self.recording and self.out is not None:
             self.out.write(frame)
-
 
 def read_and_delete_multi_process_qr_data(global_qr_data, lock):
     """
@@ -226,7 +226,6 @@ def read_and_delete_multi_process_qr_data(global_qr_data, lock):
         else:
             return None  # No data available
 
-
 # Initialize and run the video camera
 async def main(global_qr_data=None, lock=None):
     setproctitle.setproctitle("videocamera")
@@ -236,19 +235,36 @@ async def main(global_qr_data=None, lock=None):
     # Start the run() coroutine as a task
     camera_task = asyncio.create_task(camera.run(global_qr_data, lock))
 
+    # Start the upload_loop coroutine as a task from upload_to_s3 module
+    upload_task = asyncio.create_task(upload_to_s3.upload_loop())
+
     # Handle signals
     loop = asyncio.get_running_loop()
+
+    def shutdown():
+        logger.info("Received shutdown signal.")
+        for task in [camera_task, upload_task]:
+            task.cancel()
+
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, camera_task.cancel)
+        loop.add_signal_handler(sig, shutdown)
+
+    tasks = [camera_task, upload_task]
 
     try:
-        await camera_task
+        # Wait for both tasks to complete
+        await asyncio.gather(*tasks)
     except asyncio.CancelledError:
-        logger.info("Camera task cancelled.")
+        logger.info("Main tasks cancelled.")
+    except Exception as e:
+        logger.exception("Exception in main")
     finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         camera.cleanup()
         logger.info("Exiting...")
-
 
 def run_camera(global_qr_data=None, lock=None):
     try:
