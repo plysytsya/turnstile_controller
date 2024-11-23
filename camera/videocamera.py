@@ -6,14 +6,13 @@ import setproctitle
 import sys
 import logging
 from systemd.journal import JournalHandler
-from multiprocessing import Process
+
+# Import the upload_to_s3 module
+from .upload_to_s3 import upload_loop
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
 import cv2
-
-# Import the upload_to_s3 module
-import upload_to_s3
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCamera")
@@ -236,7 +235,7 @@ async def main(global_qr_data=None, lock=None):
     camera_task = asyncio.create_task(camera.run(global_qr_data, lock))
 
     # Start the upload_loop coroutine as a task from upload_to_s3 module
-    upload_task = asyncio.create_task(upload_to_s3.upload_loop())
+    upload_task = asyncio.create_task(upload_loop())
 
     # Handle signals
     loop = asyncio.get_running_loop()
