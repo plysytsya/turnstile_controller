@@ -36,8 +36,8 @@ class VideoCamera:
     DEFAULT_FPS = 11  # Default FPS for recording
 
     # Video recording parameters
-    VIDEO_CODEC = 'XVID'  # Codec used for recording video
-    VIDEO_FORMAT = 'avi'  # Final format of the recorded video files
+    VIDEO_CODEC = 'mp4v'  # Codec used for recording video
+    VIDEO_FORMAT = 'mp4'  # Final format of the recorded video files
 
     RECORDING_DIR = '/home/manager/turnstile_controller/camera'
 
@@ -92,7 +92,6 @@ class VideoCamera:
                 # Process the current frame (includes motion detection and recording logic)
                 self._record_frame(frame, global_qr_data, lock)
 
-                # Debug: Calculate and log actual FPS
                 # Debug: Calculate and log actual FPS
                 self.frame_count += 1
                 current_time = time.time()
@@ -166,7 +165,7 @@ class VideoCamera:
         """Start video recording."""
         fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
         timestamp = int(time.time())
-        self.recording_file = f'/home/manager/turnstile_controller/camera/temp_{timestamp}_.avi'
+        self.recording_file = f'/home/manager/turnstile_controller/camera/temp_{timestamp}_.{self.VIDEO_FORMAT}'
         self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
                                    (frame.shape[1], frame.shape[0]))
         self.recording = True
@@ -176,10 +175,8 @@ class VideoCamera:
         """Stop video recording."""
         qr_data = read_and_delete_multi_process_qr_data(global_qr_data, lock)
         if qr_data:
-            logger.info("received from qr-reader: {}".format(qr_data))
             qr_timestamp = qr_data['scanned_at']
             timestamp_in_video = int(self.recording_file.split('_')[2])
-            logger.info(f"timestamp in video {timestamp_in_video}, qr timestamp {qr_timestamp}")
             # the recording must have started before the qr code was scanned.
             # The idea is that the motion sensor would trigger a video before the qr code is scanned.
             # Otherwise this means that the video was recorded after the qr code was scanned, thus the
@@ -189,7 +186,7 @@ class VideoCamera:
                 self.out = None
                 self.recording = False
                 # Replace 'temp' with an empty string in the filename
-                additional_data = f"/{qr_data['uuid']}.avi"
+                additional_data = f"/{qr_data['uuid']}.{self.VIDEO_FORMAT}"
                 new_filename = "/".join(self.recording_file.split("/")[:-1]) + additional_data
                 os.rename(self.recording_file, new_filename)
                 logger.info(f"Recording saved as {new_filename}")
@@ -224,7 +221,6 @@ def read_and_delete_multi_process_qr_data(global_qr_data, lock):
     with lock:  # Acquire the lock to ensure thread safety
         if 'qr_data' in global_qr_data:
             data = global_qr_data['qr_data']
-            logger.info(f"///////// DATA: {data}")
             del global_qr_data['qr_data']  # Delete the data after reading
             return data
         else:
