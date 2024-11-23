@@ -6,7 +6,6 @@ import setproctitle
 import sys
 import logging
 from systemd.journal import JournalHandler
-from .upload_to_s3 import upload_loop
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
@@ -34,7 +33,7 @@ class VideoCamera:
     FRAME_WIDTH = 480  # Width of the video frames
     FRAME_HEIGHT = 360  # Height of the video frames
 
-    DEFAULT_FPS = 10.5  # Default FPS for recording
+    DEFAULT_FPS = 11  # Default FPS for recording
 
     # Video recording parameters
     VIDEO_CODEC = 'mp4v'  # Codec used for recording video
@@ -251,23 +250,11 @@ async def main(global_qr_data=None, lock=None):
         logger.info("Exiting...")
 
 
-async def run_all(global_qr_data, lock):
-    try:
-        await asyncio.gather(
-            main(global_qr_data, lock),  # Ensure `main` is well-defined
-            upload_loop()
-        )
-    except Exception as e:
-        logger.exception(f"Error in run_all: {e}")
-
 def run_camera(global_qr_data=None, lock=None):
     try:
-        # Use `asyncio.create_task` and run within the main thread event loop
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(run_all(global_qr_data, lock))
+        asyncio.run(main(global_qr_data, lock))
     except Exception as e:
         logger.exception(f"Error running camera: {e}... Continuing")
-
 
 if __name__ == "__main__":
     asyncio.run(main())
