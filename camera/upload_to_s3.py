@@ -1,3 +1,4 @@
+import logging
 import os
 import asyncio
 import aioboto3
@@ -14,6 +15,12 @@ ACCESS_KEY = os.getenv("access_key")
 SECRET_ACCESS_KEY = os.getenv("secret_access_key")
 ENDPOINT_URL = os.getenv("endpoint")
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("VideoUpload")
+journal_handler = JournalHandler()
+logger.addHandler(journal_handler)
+
+
 if not all([GYM_UUID, ACCESS_KEY, SECRET_ACCESS_KEY, ENDPOINT_URL]):
     raise ValueError("Missing required environment variables in .env file.")
 
@@ -21,18 +28,18 @@ async def ensure_bucket_exists(s3_client, bucket_name):
     """Ensure the S3 bucket exists. Create it if not."""
     try:
         await s3_client.head_bucket(Bucket=bucket_name)
-        print(f"Bucket {bucket_name} exists.")
+        logger.info(f"Bucket {bucket_name} exists.")
     except ClientError as e:
         if e.response['Error']['Code'] == '404':
-            print(f"Bucket {bucket_name} does not exist. Creating it...")
+            logger.info(f"Bucket {bucket_name} does not exist. Creating it...")
             try:
                 await s3_client.create_bucket(Bucket=bucket_name)
-                print(f"Bucket {bucket_name} created successfully.")
+                logger.info(f"Bucket {bucket_name} created successfully.")
             except ClientError as create_error:
-                print(f"Failed to create bucket {bucket_name}: {create_error}")
+                logger.info(f"Failed to create bucket {bucket_name}: {create_error}")
                 raise
         else:
-            print(f"Error checking bucket {bucket_name}: {e}")
+            logger.info(f"Error checking bucket {bucket_name}: {e}")
             raise
 
 async def upload_file_to_s3(s3_client, bucket_name, file_path):
@@ -41,17 +48,17 @@ async def upload_file_to_s3(s3_client, bucket_name, file_path):
     s3_key = f"{GYM_UUID}_{file_name}"
     
     try:
-        print(f"Uploading {file_name} as {s3_key} to bucket {bucket_name}...")
+        logger.info(f"Uploading {file_name} as {s3_key} to bucket {bucket_name}...")
         await s3_client.upload_file(file_path, bucket_name, s3_key)
-        print(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
+        logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
         
         # Delete the file after successful upload
         os.remove(file_path)
-        print(f"Deleted local file: {file_path}")
+        logger.info(f"Deleted local file: {file_path}")
     except ClientError as e:
-        print(f"Failed to upload {file_name}: {e}")
+        logger.info(f"Failed to upload {file_name}: {e}")
     except OSError as e:
-        print(f"Failed to delete file {file_path}: {e}")
+        logger.info(f"Failed to delete file {file_path}: {e}")
 
 async def upload_loop():
     """Main loop to check the directory and upload files."""
@@ -74,7 +81,7 @@ async def upload_loop():
                 video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
 
                 if video_files:
-                    print(f"Found {len(video_files)} video files to upload...")
+                    logger.info(f"Found {len(video_files)} video files to upload...")
                     tasks = [upload_file_to_s3(s3_client, bucket_name, file) for file in video_files]
                     await asyncio.gather(*tasks)
                 else:
@@ -83,12 +90,12 @@ async def upload_loop():
                 # Sleep for n seconds
                 await asyncio.sleep(1)
     except Exception as e:
-        print(e)
-        print("continuing")
+        logger.info(e)
+        logger.info("continuing")
 
 if __name__ == "__main__":
     setproctitle.setproctitle("videouploader")
     try:
         asyncio.run(upload_loop())
     except KeyboardInterrupt:
-        print("Terminating upload loop.")
+        logger.info("Terminating upload loop.")
