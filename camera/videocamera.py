@@ -6,6 +6,7 @@ import setproctitle
 import sys
 import logging
 from systemd.journal import JournalHandler
+from upload_to_s3 import upload_loop
 
 # Add the global Python library path to sys.path
 sys.path.append('/usr/lib/python3/dist-packages')
@@ -252,7 +253,7 @@ async def main(global_qr_data=None, lock=None):
 
 def run_camera(global_qr_data=None, lock=None):
     try:
-        asyncio.run(main(global_qr_data, lock))
+        asyncio.run(asyncio.gather(main(global_qr_data, lock), upload_loop()))
     except Exception as e:
         logger.exception(f"Error running camera: {e}... Continuing")
 

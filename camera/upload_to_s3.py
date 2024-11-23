@@ -71,7 +71,7 @@ async def upload_loop():
             while True:
                 # List all files in the current directory
                 files = [f for f in os.listdir(".") if os.path.isfile(f)]
-                video_files = [f for f in files if f.endswith(".avi") and not "temp" in f]
+                video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
 
                 if video_files:
                     print(f"Found {len(video_files)} video files to upload...")
@@ -81,7 +81,7 @@ async def upload_loop():
                     pass
 
                 # Sleep for n seconds
-                await asyncio.sleep(3)
+                await asyncio.sleep(1)
     except Exception as e:
         print(e)
         print("continuing")
