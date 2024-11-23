@@ -45,6 +45,7 @@ LCD = None
 
 
 def handle_new_qr_data(qr_data, global_qr_data=None, lock=None):
+    qr_data["uuid"] = generate_uuid_from_string(str(qr_data))
     shared_list.append(qr_data)
 
     if DIRECTION == ENTRANCE_DIRECTION and global_qr_data is not None:
@@ -212,8 +213,6 @@ def post_request(url, headers, payload, retries=10, sleep_duration=10):
 
 
 def send_entrance_log(url, headers, payload, retries=3, sleep_duration=5):
-    _uuid = generate_uuid_from_string(str(payload))
-    payload["uuid"] = _uuid
     for i in range(retries):
         try:
             response = requests.put(url, headers=headers, json=payload)
@@ -258,15 +257,21 @@ def login():
     return jwt_token
 
 
-def verify_customer(customer_uuid, timestamp):
+def verify_customer(qr_data):
     global jwt_token
 
+
     url = f"{HOSTNAME}/verify_customer/"
+
+    customer_uuid = qr_data.get("customer-uuid", qr_data.get("customer_uuid"))
+    timestamp = qr_data.get("timestamp")
+    entrance_log_uuid = qr_data.get("uuid")
     payload = {
         "customer_uuid": customer_uuid,
         "entrance_uuid": ENTRANCE_UUID,
         "direction": DIRECTION,
         "timestamp": timestamp,
+        "uuid": entrance_log_uuid,
     }
 
     headers = {
@@ -463,9 +468,7 @@ async def main_loop():
     while True:
         if shared_list:
             qr_data = shared_list.pop(0)
-            logger.info(f"Received QR data: {qr_data}")
-            customer = qr_data.get("customer-uuid", qr_data.get("customer_uuid"))
-            verify_customer(customer, qr_data["timestamp"])
+            verify_customer(qr_data)
         await asyncio.sleep(0.3)  # delay to avoid busy-waiting
 
 

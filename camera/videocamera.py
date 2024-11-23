@@ -189,8 +189,8 @@ class VideoCamera:
                 self.out = None
                 self.recording = False
                 # Replace 'temp' with an empty string in the filename
-                additional_data = f"cstmqr_{qr_data['customer_uuid']}_unixqr_{qr_data['scanned_at']}_"
-                new_filename = self.recording_file.replace('temp_', additional_data)
+                additional_data = f"/{qr_data['uuid']}.avi"
+                new_filename = "/".join(self.recording_file.split("/")[:-1]) + additional_data
                 os.rename(self.recording_file, new_filename)
                 logger.info(f"Recording saved as {new_filename}")
                 return
@@ -200,10 +200,8 @@ class VideoCamera:
             self.out = None
             self.recording = False
 
-            # Replace 'temp' with an empty string in the filename
-            new_filename = self.recording_file.replace('temp_', '')
-            os.rename(self.recording_file, new_filename)
-            logger.info(f"Recording saved as {new_filename}")
+            os.remove(self.recording_file)
+            logger.info(f"Recording removed")
 
     def record_frame(self, frame):
         """Write frame to the video file."""
