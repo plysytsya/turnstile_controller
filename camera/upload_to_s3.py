@@ -6,8 +6,14 @@ from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from camera.videocamera import logger
 from utils import login
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("VideoUploader")
+journal_handler = JournalHandler()
+logger.addHandler(journal_handler)
+logger.propagate = False
 
 
 class VideoUploader:
