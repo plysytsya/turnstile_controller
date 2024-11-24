@@ -4,7 +4,7 @@ def login(hostname, username, password, logger):
     url = f"{hostname}/api/token/"
     payload = {"email": username, "password": password}
     headers = {"Content-Type": "application/json"}
-    response = requests.post(url, headers, json=payload)
+    response = requests.post(url, headers=headers, json=payload)
 
     if response is None or response.status_code != 200:
         log_unsuccessful_request(response, logger)
