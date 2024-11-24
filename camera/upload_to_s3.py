@@ -5,7 +5,7 @@ import aioboto3
 from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
 from tenacity import retry, stop_after_attempt, wait_exponential
-from ..utils import login
+from utils import login
 
 
 class VideoUploader:
