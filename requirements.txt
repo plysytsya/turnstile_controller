@@ -15,3 +15,5 @@ pyzmq
 aioboto3
 python-dotenv
 setproctitle
+aiohttp
+tenacity

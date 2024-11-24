@@ -2,6 +2,7 @@ import serial
 import serial.tools.list_ports
 import threading
 
+
 class SerialDevice:
     def __init__(self, path, is_extended):
         self.path = path
@@ -36,7 +37,7 @@ def read_serial_device(device_name):
             while True:
                 # Read data from the serial port
                 if ser.in_waiting > 0:
-                    data = ser.readline().decode('utf-8').strip()
+                    data = ser.readline().decode("utf-8").strip()
                     if data:
                         print(f"Received: {data}")
     except serial.SerialException as e:

@@ -11,13 +11,14 @@ from systemd.journal import JournalHandler
 from .upload_to_s3 import upload_loop
 
 # Add the global Python library path to sys.path
-sys.path.append('/usr/lib/python3/dist-packages')
+sys.path.append("/usr/lib/python3/dist-packages")
 import cv2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCamera")
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
+
 
 class VideoCamera:
     """Video camera class that detects motion and records video upon motion detection."""
@@ -39,12 +40,13 @@ class VideoCamera:
     DEFAULT_FPS = 11  # Default FPS for recording
 
     # Video recording parameters
-    VIDEO_CODEC = 'mp4v'  # Codec used for recording video
-    VIDEO_FORMAT = 'mp4'  # Final format of the recorded video files
+    VIDEO_CODEC = "mp4v"  # Codec used for recording video
+    VIDEO_FORMAT = "mp4"  # Final format of the recorded video files
 
-    RECORDING_DIR = '/home/manager/turnstile_controller/camera'
 
-    def __init__(self):
+    def __init__(self, settings):
+        self.RECORDING_DIR = settings.RECORDING_DIR
+
         # Initialize video capture
         self.video = cv2.VideoCapture(0)
         self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
@@ -134,9 +136,10 @@ class VideoCamera:
         frame_delta = cv2.absdiff(self.previous_frame, gray)
 
         # Select motion detection parameters based on recording state
-        thresh_sensitivity = (self.START_THRESHOLD_SENSITIVITY if not self.recording
-                              else self.CONTINUE_THRESHOLD_SENSITIVITY)
-        min_area = (self.START_MIN_AREA if not self.recording else self.CONTINUE_MIN_AREA)
+        thresh_sensitivity = (
+            self.START_THRESHOLD_SENSITIVITY if not self.recording else self.CONTINUE_THRESHOLD_SENSITIVITY
+        )
+        min_area = self.START_MIN_AREA if not self.recording else self.CONTINUE_MIN_AREA
 
         # Apply threshold to highlight differences exceeding the sensitivity
         thresh = cv2.threshold(frame_delta, thresh_sensitivity, 255, cv2.THRESH_BINARY)[1]
@@ -170,9 +173,8 @@ class VideoCamera:
         """Start video recording."""
         fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
         timestamp = int(time.time())
-        self.recording_file = f'{self.RECORDING_DIR}/temp_{timestamp}_.{self.VIDEO_FORMAT}'
-        self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps,
-                                   (frame.shape[1], frame.shape[0]))
+        self.recording_file = f"{self.RECORDING_DIR}/temp_{timestamp}_.{self.VIDEO_FORMAT}"
+        self.out = cv2.VideoWriter(self.recording_file, fourcc, self.fps, (frame.shape[1], frame.shape[0]))
         self.recording = True
         logger.info(f"Started recording: {self.recording_file}")
 
@@ -180,8 +182,8 @@ class VideoCamera:
         """Stop video recording."""
         qr_data = read_and_delete_multi_process_qr_data(global_qr_data, lock)
         if qr_data:
-            qr_timestamp = qr_data['scanned_at']
-            timestamp_in_video = int(self.recording_file.split('_')[2])
+            qr_timestamp = qr_data["scanned_at"]
+            timestamp_in_video = int(self.recording_file.split("_")[2])
             if qr_timestamp >= timestamp_in_video and self.recording:
                 self.out.release()
                 self.out = None
@@ -205,6 +207,7 @@ class VideoCamera:
         if self.recording and self.out is not None:
             self.out.write(frame)
 
+
 def read_and_delete_multi_process_qr_data(global_qr_data, lock):
     """
     Reads the value from multi_process_qr_data and deletes it.
@@ -218,24 +221,25 @@ def read_and_delete_multi_process_qr_data(global_qr_data, lock):
     """
     logger.info(f"Trying to read global data")
     with lock:  # Acquire the lock to ensure thread safety
-        if 'qr_data' in global_qr_data:
-            data = global_qr_data['qr_data']
-            del global_qr_data['qr_data']  # Delete the data after reading
+        if "qr_data" in global_qr_data:
+            data = global_qr_data["qr_data"]
+            del global_qr_data["qr_data"]  # Delete the data after reading
             return data
         else:
             return None  # No data available
 
+
 # Initialize and run the video camera
-async def main(global_qr_data=None, lock=None):
+async def main(settings, global_qr_data=None, lock=None):
     setproctitle.setproctitle("videocamera")
-    camera = VideoCamera()
+    camera = VideoCamera(settings)
     logger.info("Press Ctrl+C to stop.")
 
     # Start the run() coroutine as a task
     camera_task = asyncio.create_task(camera.run(global_qr_data, lock))
 
     # Start the upload_loop coroutine as a task from upload_to_s3 module
-    upload_task = asyncio.create_task(upload_loop())
+    upload_task = asyncio.create_task(upload_loop(settings))
 
     # Handle signals
     loop = asyncio.get_running_loop()
@@ -265,11 +269,9 @@ async def main(global_qr_data=None, lock=None):
         camera.cleanup()
         logger.info("Exiting...")
 
-def run_camera(global_qr_data=None, lock=None):
+
+def run_camera(settings, global_qr_data=None, lock=None):
     try:
-        asyncio.run(main(global_qr_data, lock))
+        asyncio.run(main(settings, global_qr_data, lock))
     except Exception as e:
         logger.exception(f"Error running camera: {e}... Continuing")
-
-if __name__ == "__main__":
-    asyncio.run(main())

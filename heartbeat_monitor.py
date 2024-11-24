@@ -59,17 +59,13 @@ def restart_service():
         capture_output=True,
         text=True,
     )
-    logging.warning(
-        f"Service qr_script.service restarted successfully: {result.stdout}"
-    )
+    logging.warning(f"Service qr_script.service restarted successfully: {result.stdout}")
 
 
 if __name__ == "__main__":
     while True:
         if IS_BIDIRECT:
-            heartbeat_status = all(
-                _is_alive(filename) for filename in HEARTBEAT_FILENAMES
-            )
+            heartbeat_status = all(_is_alive(filename) for filename in HEARTBEAT_FILENAMES)
         else:
             a_alive = _is_alive(HEARTBEAT_FILENAMES[0])
             b_alive = _is_alive(HEARTBEAT_FILENAMES[1])

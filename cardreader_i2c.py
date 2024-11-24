@@ -13,7 +13,7 @@ def convert_uid_to_decimal(card_data):
     last_four_bytes = card_data[-4:][::-1]
 
     # Convert these 4 bytes to a hexadecimal string
-    hex_string = ''.join([f'{byte:02X}' for byte in last_four_bytes])
+    hex_string = "".join([f"{byte:02X}" for byte in last_four_bytes])
 
     # Convert the hex string to a decimal integer
     decimal_value = int(hex_string, 16)
@@ -31,7 +31,7 @@ while True:
         card_uid_decimal = convert_uid_to_decimal(card_data)
 
         # Format the decimal number to be exactly 10 digits long
-        formatted_uid = f'{card_uid_decimal:010d}'
+        formatted_uid = f"{card_uid_decimal:010d}"
         print(f"Card UID (Decimal): {formatted_uid}")
     else:
         print("No card detected.")

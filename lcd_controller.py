@@ -8,7 +8,15 @@ from unidecode import unidecode
 
 
 class LCDController:
-    def __init__(self, use_lcd, max_char_count=16, scroll_delay=0.5, lcd_address=None, dark_mode=False, relay_pin=None):
+    def __init__(
+        self,
+        use_lcd,
+        max_char_count=16,
+        scroll_delay=0.5,
+        lcd_address=None,
+        dark_mode=False,
+        relay_pin=None,
+    ):
         self.use_lcd = use_lcd
         self.max_char_count = max_char_count
         self.scroll_delay = scroll_delay
@@ -23,7 +31,6 @@ class LCDController:
             time.sleep(0.5)
             GPIO.output(relay_pin, GPIO.LOW)
 
-
     def clear(self):
         if self.use_lcd:
             self.lcd.clear()
@@ -36,7 +43,7 @@ class LCDController:
             return [line]
 
         scroll_positions = line_length - self.max_char_count + 1
-        return [line[i: i + self.max_char_count] for i in range(scroll_positions)]
+        return [line[i : i + self.max_char_count] for i in range(scroll_positions)]
 
     def display(self, line1: str, line2: str, timeout=2) -> None:
         if self.dark_mode and timeout is None:

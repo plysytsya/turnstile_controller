@@ -44,7 +44,10 @@ def get_customers():
             return None
 
     url = f"{HOSTNAME}/customers/"
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {jwt_token}"}
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {jwt_token}",
+    }
 
     response = make_request("GET", url, headers=headers)
     if response is None or response.status_code != 200:
@@ -52,7 +55,9 @@ def get_customers():
         return None
 
     customer_uuid_dict = {customer["customer_uuid"]: customer for customer in response.json()}
-    card_number_dict = {customer["card_number"]: customer for customer in response.json() if customer.get("card_number")}
+    card_number_dict = {
+        customer["card_number"]: customer for customer in response.json() if customer.get("card_number")
+    }
     # merge the two dictionaries
     return {**customer_uuid_dict, **card_number_dict}
 
@@ -89,10 +94,10 @@ if __name__ == "__main__":
         # get the directory of the current script
         dir_path = os.path.dirname(os.path.realpath(__file__))
         # construct the full path for the output file
-        output_path = os.path.join(dir_path, 'customers.json')
+        output_path = os.path.join(dir_path, "customers.json")
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(customers, f)
-        logging.info(f'Successfully written customers to {output_path}')
+        logging.info(f"Successfully written customers to {output_path}")
     else:
-        logging.error('Failed to retrieve customers')
+        logging.error("Failed to retrieve customers")

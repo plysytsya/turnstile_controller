@@ -45,8 +45,30 @@ manager = Manager()
 multi_process_qr_data = manager.dict()
 lock = manager.Lock()
 
-camera_process = Process(target=videocamera.run_camera, args=(multi_process_qr_data, lock))
-processes.append(camera_process)
+
+if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
+    logger.info("Camera is enabled. Initializing camera process.")
+    class CameraSettings:
+        """Configuration settings for camera video uploads and S3 integration."""
+
+        S3_BUCKET = os.getenv("S3_BUCKET")
+        S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
+        S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+        S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+        GYM_UUID = os.getenv("GYM_UUID")
+        RECORDING_DIR = os.getenv("RECORDING_DIR")
+        HOSTNAME = os.getenv("HOSTNAME")
+        JWT_TOKEN = os.getenv("JWT_TOKEN")
+
+        @classmethod
+        def from_environment(cls):
+            """Create a settings instance populated from environment variables."""
+            return cls()
+
+    camera_process = Process(
+        target=videocamera.run_camera, args=(CameraSettings.from_environment(), multi_process_qr_data, lock)
+    )
+    processes.append(camera_process)
 
 for qr_reader in devices:
     if qr_reader.is_extended:

@@ -43,6 +43,7 @@ def toggle_relay(duration=1):
 # Initialize LCD
 lcd = LCD()
 
+
 def display_on_lcd(line1, line2, timeout=None):
     lcd.clear()
     lcd.text(unidecode(line1), 1)

@@ -51,7 +51,7 @@ def handle_new_qr_data(qr_data, global_qr_data=None, lock=None):
     if DIRECTION == ENTRANCE_DIRECTION and global_qr_data is not None:
         with lock:
             qr_data["scanned_at"] = int(time.time())
-            global_qr_data['qr_data'] = qr_data
+            global_qr_data["qr_data"] = qr_data
 
 
 class DirectionFilter(logging.Filter):
@@ -259,7 +259,6 @@ def login():
 def verify_customer(qr_data):
     global jwt_token
 
-
     url = f"{HOSTNAME}/verify_customer/"
 
     customer_uuid = qr_data.get("customer-uuid", qr_data.get("customer_uuid"))
@@ -412,7 +411,7 @@ async def serial_device_event_loop(global_qr_data=None, lock=None):
             while True:
                 # Read data from the serial port
                 if ser.in_waiting > 0:
-                    data = ser.readline().decode('utf-8').strip()
+                    data = ser.readline().decode("utf-8").strip()
                     try:
                         qr_dict = json.loads(data)
                         handle_new_qr_data(qr_dict, global_qr_data, lock)
@@ -424,10 +423,13 @@ async def serial_device_event_loop(global_qr_data=None, lock=None):
                             logger.warning(f"Invalid JSON data: {data}")
                             await asyncio.sleep(0.1)
                             continue
-                        qr_dict = {"customer_uuid": hash_uuid(data), "timestamp": int(time.time())}
+                        qr_dict = {
+                            "customer_uuid": hash_uuid(data),
+                            "timestamp": int(time.time()),
+                        }
                         logger.info(f"Created QR dict: {qr_dict}")
                         handle_new_qr_data(qr_dict, global_qr_data, lock)
-                        await asyncio.sleep(2.5) # don't read the same qr for n seconds to avoid multi reading
+                        await asyncio.sleep(2.5)  # don't read the same qr for n seconds to avoid multi reading
                 await asyncio.sleep(0.1)
     except OSError as e:
         display_on_lcd("No hay lector", "QR, reinicio...", timeout=5)
@@ -447,7 +449,7 @@ def read_serial_device(device_name):
             while True:
                 # Read data from the serial port
                 if ser.in_waiting > 0:
-                    data = ser.readline().decode('utf-8').strip()
+                    data = ser.readline().decode("utf-8").strip()
                     if data:
                         print(f"Received: {data}")
     except serial.SerialException as e:
@@ -511,8 +513,12 @@ def initialize_globals(settings):
     if USE_LCD:
         # Initialize LCD
         try:
-            LCD = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE,
-                                relay_pin=RELAY_PIN_DISPLAY)
+            LCD = LCDController(
+                use_lcd=USE_LCD,
+                lcd_address=LCD_I2C_ADDRESS,
+                dark_mode=DARK_MODE,
+                relay_pin=RELAY_PIN_DISPLAY,
+            )
             LCD.display("Inicializando...", "")
             logger.info("LCD initialized successfully for direction %s.", DIRECTION)
         except Exception as e:
@@ -530,7 +536,13 @@ def main(settings, global_qr_data=None, lock=None):
     dev = init_qr_device()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(global_qr_data, lock), main_loop(), heartbeat()))
+            loop.run_until_complete(
+                asyncio.gather(
+                    serial_device_event_loop(global_qr_data, lock),
+                    main_loop(),
+                    heartbeat(),
+                )
+            )
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev, global_qr_data), main_loop(), heartbeat()))
     except Exception as e:
@@ -538,6 +550,7 @@ def main(settings, global_qr_data=None, lock=None):
         sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
+
 
 if __name__ == "__main__":
     settings = os.environ.copy()
