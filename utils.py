@@ -1,17 +1,14 @@
-def login(hostname=HOSTNAME, username=USERNAME, password=PASSWORD):
-    global jwt_token
-    if jwt_token:
-        return jwt_token
+import requests
 
-    url = f"{HOSTNAME}/api/token/"
-    payload = {"email": USERNAME, "password": PASSWORD}
+def login(hostname, username, password, logger):
+    url = f"{hostname}/api/token/"
+    payload = {"email": username, "password": password}
     headers = {"Content-Type": "application/json"}
 
-    response = post_request(url, headers, payload)
+    response = requests.post(url, headers, payload)
 
     if response is None or response.status_code != 200:
-        log_unsuccessful_request(response)
-        display_on_lcd("Login", "Failed", timeout=2)
+        logger.error(response.text)
         return None
 
     jwt_token = response.json().get("access", None)
