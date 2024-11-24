@@ -61,7 +61,7 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
         RECORDING_DIR = os.getenv("RECORDING_DIR")
         HOSTNAME = os.getenv("HOSTNAME")
         JWT_TOKEN = qr.login(
-            hostname=os.getenv("HOSTNAME"), username=os.getenv("USERNAME"), password=os.getenv("PASSWORD")
+            hostname=os.environ["HOSTNAME"], username=os.environ["USERNAME"], password=os.environ["PASSWORD"]
         )
 
         @classmethod
