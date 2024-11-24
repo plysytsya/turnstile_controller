@@ -62,9 +62,10 @@ class DirectionFilter(logging.Filter):
 
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
+logger.handlers = []  # Remove inherited handlers
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
-#journal_handler.addFilter(DirectionFilter())
+journal_handler.addFilter(DirectionFilter())
 logger.propagate = False
 
 if ENABLE_STREAM_HANDLER:
