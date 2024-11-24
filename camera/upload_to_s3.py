@@ -9,39 +9,36 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from utils import login
 
+logger = logging.getLogger("VideoUploader")
+logger.setLevel(logging.INFO)
+journal_handler = JournalHandler()
+logger.addHandler(journal_handler)
+logger.propagate = False
+
 
 class VideoUploader:
     def __init__(self, settings):
         self.settings = settings
-        self.logger = self._setup_logger()
-        self.jwt_token = login(settings.HOSTNAME, settings.USERNAME, settings.PASSWORD, self.logger)
+        self.jwt_token = login(settings.HOSTNAME, settings.USERNAME, settings.PASSWORD, logger)
 
-    def _setup_logger(self):
-        """Set up a logger specific to this class."""
-        logger = logging.getLogger("VideoUploader")
-        logger.setLevel(logging.INFO)
-        journal_handler = JournalHandler()
-        logger.addHandler(journal_handler)
-        logger.propagate = False
-        return logger
 
     async def ensure_bucket_exists(self, s3_client):
         """Ensure the S3 bucket exists. Create it if not."""
         bucket_name = self.settings.GYM_UUID
         try:
             await s3_client.head_bucket(Bucket=bucket_name)
-            self.logger.info(f"Bucket {bucket_name} exists.")
+            logger.info(f"Bucket {bucket_name} exists.")
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
-                self.logger.info(f"Bucket {bucket_name} does not exist. Creating it...")
+                logger.info(f"Bucket {bucket_name} does not exist. Creating it...")
                 try:
                     await s3_client.create_bucket(Bucket=bucket_name)
-                    self.logger.info(f"Bucket {bucket_name} created successfully.")
+                    logger.info(f"Bucket {bucket_name} created successfully.")
                 except ClientError as create_error:
-                    self.logger.error(f"Failed to create bucket {bucket_name}: {create_error}")
+                    logger.error(f"Failed to create bucket {bucket_name}: {create_error}")
                     raise
             else:
-                self.logger.error(f"Error checking bucket {bucket_name}: {e}")
+                logger.error(f"Error checking bucket {bucket_name}: {e}")
                 raise
 
     async def upload_file_to_s3(self, s3_client, file_path):
@@ -51,20 +48,20 @@ class VideoUploader:
         s3_key = file_name
 
         try:
-            self.logger.info(f"Uploading {file_name} as {s3_key} to bucket {bucket_name}...")
+            logger.info(f"Uploading {file_name} as {s3_key} to bucket {bucket_name}...")
             await s3_client.upload_file(file_path, bucket_name, s3_key)
-            self.logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
+            logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
 
             # Delete the file after successful upload
             os.remove(file_path)
-            self.logger.info(f"Deleted local file: {file_path}")
+            logger.info(f"Deleted local file: {file_path}")
 
             entrance_log_uuid = os.path.splitext(file_name)[0]
             await self.set_has_video_to_true_in_db(entrance_log_uuid)
         except ClientError as e:
-            self.logger.error(f"Failed to upload {file_name}: {e}")
+            logger.error(f"Failed to upload {file_name}: {e}")
         except OSError as e:
-            self.logger.error(f"Failed to delete file {file_path}: {e}")
+            logger.error(f"Failed to delete file {file_path}: {e}")
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2), reraise=True)
     async def set_has_video_to_true_in_db(self, entrance_log_uuid):
@@ -80,15 +77,15 @@ class VideoUploader:
                 response_text = await response.text()
 
                 # Log the response text for debugging
-                self.logger.debug(f"Response text: {response_text}")
+                logger.debug(f"Response text: {response_text}")
 
                 # Check status code and handle accordingly
                 if response.status == 200:
-                    self.logger.info(
+                    logger.info(
                         f"Successfully updated has_video for UUID {entrance_log_uuid}. Response: {response_text}"
                     )
                 elif response.status in (401, 403):
-                    self.logger.error(
+                    logger.error(
                         f"Unauthorized to update has_video for UUID {entrance_log_uuid}. "
                         f"Status: {response.status}, Response: {response_text}. Refreshing JWT token..."
                     )
@@ -101,7 +98,7 @@ class VideoUploader:
                         message=f"Unauthorized: {response_text}"
                     )
                 else:
-                    self.logger.error(
+                    logger.error(
                         f"Failed to update has_video for UUID {entrance_log_uuid}. "
                         f"Status: {response.status}, Response: {response_text}"
                     )
@@ -138,21 +135,21 @@ class VideoUploader:
                     video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
 
                     if video_files:
-                        self.logger.info(f"Found {len(video_files)} video files to upload...")
+                        logger.info(f"Found {len(video_files)} video files to upload...")
                         tasks = [self.upload_file_to_s3(s3_client, file) for file in video_files]
                         await asyncio.gather(*tasks)
                     else:
-                        self.logger.debug("No files found to upload.")
+                        logger.debug("No files found to upload.")
 
                     # Sleep for n seconds
                     await asyncio.sleep(1)
         except asyncio.CancelledError:
-            self.logger.info("Upload loop cancelled.")
+            logger.info("Upload loop cancelled.")
             raise
         except Exception as e:
-            self.logger.exception(f"Exception in upload_loop {e}")
+            logger.exception(f"Exception in upload_loop {e}")
         finally:
-            self.logger.info("Upload loop exiting.")
+            logger.info("Upload loop exiting.")
 
 
 # Example Usage
