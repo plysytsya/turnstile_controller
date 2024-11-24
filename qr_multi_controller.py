@@ -23,6 +23,7 @@ from camera import videocamera
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("qr_multi_controller")
 logger.addHandler(JournalHandler())
+logger.propagate = False
 
 EXTENDED_USB_DEVICE_DIRECTION = "B"
 DISPLAY_X27_DIRECTION = "0x27"
