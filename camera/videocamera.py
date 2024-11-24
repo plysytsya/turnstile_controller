@@ -239,7 +239,7 @@ async def main(settings, global_qr_data=None, lock=None):
 
     # Start the upload_loop coroutine as a task from upload_to_s3 module
     uploader = VideoUploader(settings)
-    upload_task = asyncio.create_task(uploader.upload_loop(settings))
+    upload_task = asyncio.create_task(uploader.upload_loop())
 
     # Handle signals
     loop = asyncio.get_running_loop()
