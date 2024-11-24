@@ -59,9 +59,10 @@ class DirectionFilter(logging.Filter):
         record.msg = f"{DIRECTION} - {record.msg}"
         return True
 
+
 for logger in logging.Logger.manager.loggerDict.values():
-        if hasattr(logger, 'handlers'):
-            logger.handlers = []
+    if hasattr(logger, "handlers"):
+        logger.handlers = []
 
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
@@ -240,7 +241,7 @@ def generate_uuid_from_string(input_string):
     return str(generated_uuid)
 
 
-def login():
+def login(hostname=HOSTNAME, username=USERNAME, password=PASSWORD):
     global jwt_token
     if jwt_token:
         return jwt_token

@@ -49,6 +49,7 @@ lock = manager.Lock()
 
 if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
     logger.info("Camera is enabled. Initializing camera process.")
+
     class CameraSettings:
         """Configuration settings for camera video uploads and S3 integration."""
 
@@ -59,7 +60,9 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
         GYM_UUID = os.getenv("GYM_UUID")
         RECORDING_DIR = os.getenv("RECORDING_DIR")
         HOSTNAME = os.getenv("HOSTNAME")
-        JWT_TOKEN = os.getenv("JWT_TOKEN")
+        JWT_TOKEN = qr.login(
+            hostname=os.getenv("HOSTNAME"), username=os.getenv("USERNAME"), password=os.getenv("PASSWORD")
+        )
 
         @classmethod
         def from_environment(cls):
