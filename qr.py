@@ -23,7 +23,7 @@ from systemd.journal import JournalHandler
 # Global Variables
 DIRECTION = None
 ENTRANCE_DIRECTION = None
-ENABLE_STREAM_HANDLER = True
+ENABLE_STREAM_HANDLER = False
 DARK_MODE = None
 MAGIC_TIMESTAMP = 1725628212
 HEARTBEAT_FILE_PATH = None
@@ -62,6 +62,7 @@ class DirectionFilter(logging.Filter):
 for logger in logging.Logger.manager.loggerDict.values():
         if hasattr(logger, 'handlers'):
             logger.handlers = []
+
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
