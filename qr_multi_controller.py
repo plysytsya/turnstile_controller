@@ -21,7 +21,7 @@ from camera import videocamera
 
 # Step 3: Configure logging to use JournalHandler
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger()
+logger = logging.getLogger("qr_multi_controller")
 logger.addHandler(JournalHandler())
 
 EXTENDED_USB_DEVICE_DIRECTION = "B"
