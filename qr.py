@@ -64,7 +64,15 @@ logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
 journal_handler.addFilter(DirectionFilter())
-logger.addHandler(journal_handler)
+if not logger.hasHandlers():
+    journal_handler = JournalHandler()
+    stream_handler = logging.StreamHandler()
+
+    journal_handler.setLevel(logging.INFO)
+    stream_handler.setLevel(logging.INFO)
+
+    logger.addHandler(journal_handler)
+    logger.addHandler(stream_handler)
 
 if ENABLE_STREAM_HANDLER:
     # Stream handler (for stdout)
