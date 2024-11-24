@@ -59,10 +59,11 @@ class DirectionFilter(logging.Filter):
         record.msg = f"{DIRECTION} - {record.msg}"
         return True
 
-
+for logger in logging.Logger.manager.loggerDict.values():
+        if hasattr(logger, 'handlers'):
+            logger.handlers = []
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
-logger.handlers = []  # Remove inherited handlers
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
 journal_handler.addFilter(DirectionFilter())
