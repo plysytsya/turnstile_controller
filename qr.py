@@ -64,7 +64,6 @@ logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
 journal_handler.addFilter(DirectionFilter())
-logger.addHandler(journal_handler)
 logger.propagate = False
 
 if ENABLE_STREAM_HANDLER:
