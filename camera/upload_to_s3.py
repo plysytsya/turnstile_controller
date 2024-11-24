@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoUpload")
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
+logger.propagate = False
 
 
 async def ensure_bucket_exists(s3_client, bucket_name):

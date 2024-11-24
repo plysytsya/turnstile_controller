@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCamera")
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
+logger.propagate = False
 
 
 class VideoCamera:
