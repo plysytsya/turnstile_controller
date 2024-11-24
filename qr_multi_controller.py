@@ -60,9 +60,8 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
         GYM_UUID = os.getenv("GYM_UUID")
         RECORDING_DIR = os.getenv("RECORDING_DIR")
         HOSTNAME = os.getenv("HOSTNAME")
-        JWT_TOKEN = qr.login(
-            hostname=os.environ["HOSTNAME"], username=os.environ["USERNAME"], password=os.environ["PASSWORD"]
-        )
+        USERNAME = os.getenv("USERNAME")
+        PASSWORD = os.getenv("PASSWORD")
 
         @classmethod
         def from_environment(cls):

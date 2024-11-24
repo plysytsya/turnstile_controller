@@ -12,6 +12,7 @@ import evdev
 from evdev import InputDevice, categorize, KeyEvent
 import requests
 from dotenv import load_dotenv
+from utils import login
 import RPi.GPIO as GPIO
 import serial
 
@@ -241,26 +242,6 @@ def generate_uuid_from_string(input_string):
     return str(generated_uuid)
 
 
-def login(hostname=HOSTNAME, username=USERNAME, password=PASSWORD):
-    global jwt_token
-    if jwt_token:
-        return jwt_token
-
-    url = f"{HOSTNAME}/api/token/"
-    payload = {"email": USERNAME, "password": PASSWORD}
-    headers = {"Content-Type": "application/json"}
-
-    response = post_request(url, headers, payload)
-
-    if response is None or response.status_code != 200:
-        log_unsuccessful_request(response)
-        display_on_lcd("Login", "Failed", timeout=2)
-        return None
-
-    jwt_token = response.json().get("access", None)
-    return jwt_token
-
-
 def verify_customer(qr_data):
     global jwt_token
 
@@ -355,7 +336,7 @@ def _find_customer_in_cache(customer_uuid):
 
 def refresh_token():
     global jwt_token
-    jwt_token = login()
+    jwt_token = login(HOSTNAME, USERNAME, PASSWORD)
     return f"Bearer {jwt_token}"
 
 
@@ -469,7 +450,7 @@ def hash_uuid(input_string) -> str:
 async def main_loop():
     global shared_list
 
-    login()
+    login(HOSTNAME, USERNAME, PASSWORD)
 
     while True:
         if shared_list:
