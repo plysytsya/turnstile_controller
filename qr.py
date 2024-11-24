@@ -63,6 +63,7 @@ class DirectionFilter(logging.Filter):
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
+logger.addHandler(journal_handler)
 journal_handler.addFilter(DirectionFilter())
 logger.propagate = False
 
