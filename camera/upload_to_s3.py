@@ -5,13 +5,15 @@ import aioboto3
 from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+from camera.videocamera import logger
 from utils import login
 
 
 class VideoUploader:
     def __init__(self, settings):
         self.settings = settings
-        self.jwt_token = login(settings.HOSTNAME, settings.USERNAME, settings.PASSWORD)
+        self.jwt_token = login(settings.HOSTNAME, settings.USERNAME, settings.PASSWORD, logger)
         self.logger = self._setup_logger()
 
     def _setup_logger(self):
