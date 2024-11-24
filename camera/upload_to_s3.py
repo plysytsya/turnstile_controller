@@ -1,3 +1,4 @@
+import asyncio
 import aiohttp
 import logging
 import os
@@ -9,18 +10,11 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from utils import login
 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("VideoUploader")
-journal_handler = JournalHandler()
-logger.addHandler(journal_handler)
-logger.propagate = False
-
-
 class VideoUploader:
     def __init__(self, settings):
         self.settings = settings
-        self.jwt_token = login(settings.HOSTNAME, settings.USERNAME, settings.PASSWORD, logger)
         self.logger = self._setup_logger()
+        self.jwt_token = login(settings.HOSTNAME, settings.USERNAME, settings.PASSWORD, self.logger)
 
     def _setup_logger(self):
         """Set up a logger specific to this class."""
