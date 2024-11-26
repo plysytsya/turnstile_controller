@@ -41,8 +41,8 @@ class VideoCamera:
     DEFAULT_FPS = 11  # Default FPS for recording
 
     # Video recording parameters
-    VIDEO_CODEC = "mp4v"  # Codec used for recording video
-    VIDEO_FORMAT = "H264"  # Final format of the recorded video files
+    VIDEO_CODEC = "H264"  # Codec used for recording video
+    VIDEO_FORMAT = "mp4"  # Final format of the recorded video files
 
     def __init__(self, settings):
         self.RECORDING_DIR = settings.RECORDING_DIR
