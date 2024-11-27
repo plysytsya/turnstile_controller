@@ -46,6 +46,7 @@ class LCDController:
         return [line[i : i + self.max_char_count] for i in range(scroll_positions)]
 
     def display(self, line1: str, line2: str, timeout=2) -> None:
+        logging.info(f"is dark mode: {self.dark_mode}. timeout: {timeout}")
         if self.dark_mode and timeout is None:
             # Don't display continuous text in dark mode
             return

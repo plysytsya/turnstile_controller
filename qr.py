@@ -524,6 +524,7 @@ def initialize_globals(settings):
                 dark_mode=DARK_MODE,
                 relay_pin=RELAY_PIN_DISPLAY,
             )
+            logging.info("LCD initialized successfully.")
             LCD.display("Inicializando...", "")
             logger.info("LCD initialized successfully for direction %s.", DIRECTION)
         except Exception as e:
