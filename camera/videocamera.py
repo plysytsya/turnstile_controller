@@ -69,6 +69,7 @@ class VideoCamera:
 
         # Adjust FPS based on actual camera performance during recording
         self.fps = self.DEFAULT_FPS
+        self.uploader = VideoUploader(settings)
 
     def cleanup(self):
         """Release resources properly on exit."""
@@ -95,7 +96,7 @@ class VideoCamera:
                     break
 
                 # Process the current frame (includes motion detection and recording logic)
-                self._record_frame(frame, global_qr_data, lock)
+                await self._record_frame(frame, global_qr_data, lock)
 
                 # Debug: Calculate and log actual FPS
                 self.frame_count += 1
@@ -122,7 +123,7 @@ class VideoCamera:
             # Clean up resources when done
             self.cleanup()
 
-    def _record_frame(self, frame, global_qr_data=None, lock=None):
+    async def _record_frame(self, frame, global_qr_data=None, lock=None):
         """Process a single frame for motion detection and handle recording."""
         # Process the frame
         gray = self.process_frame(frame)
@@ -165,7 +166,7 @@ class VideoCamera:
             if self.recording:
                 # Check if no motion has been detected for the specified duration
                 if time.time() - self.last_motion_time >= self.N_SECONDS_NO_MOTION:
-                    self.stop_recording(global_qr_data, lock)
+                    await self.stop_recording(global_qr_data, lock)
                 else:
                     self.record_frame(frame)
 
@@ -178,7 +179,7 @@ class VideoCamera:
         self.recording = True
         logger.info(f"Started recording: {self.recording_file}")
 
-    def stop_recording(self, global_qr_data=None, lock=None):
+    async def stop_recording(self, global_qr_data=None, lock=None):
         """Stop video recording."""
         qr_data = read_and_delete_multi_process_qr_data(global_qr_data, lock)
         if qr_data:
@@ -192,6 +193,7 @@ class VideoCamera:
                 new_filename = "/".join(self.recording_file.split("/")[:-1]) + additional_data
                 os.rename(self.recording_file, new_filename)
                 logger.info(f"Recording saved as {new_filename}")
+                await self.uploader.upload()
                 return
 
         if self.recording:
@@ -238,21 +240,18 @@ async def main(settings, global_qr_data=None, lock=None):
     camera_task = asyncio.create_task(camera.run(global_qr_data, lock))
 
     # Start the upload_loop coroutine as a task from upload_to_s3 module
-    uploader = VideoUploader(settings)
-    upload_task = asyncio.create_task(uploader.upload_loop())
-
     # Handle signals
     loop = asyncio.get_running_loop()
 
     def shutdown():
         logger.info("Received shutdown signal.")
-        for task in [camera_task, upload_task]:
+        for task in [camera_task]:
             task.cancel()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, shutdown)
 
-    tasks = [camera_task, upload_task]
+    tasks = [camera_task]
 
     try:
         # Wait for both tasks to complete

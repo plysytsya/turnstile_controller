@@ -111,7 +111,7 @@ class VideoUploader:
                         message=f"Unexpected error: {response_text}"
                     )
 
-    async def upload_loop(self):
+    async def upload(self):
         """Main loop to check the directory and upload files."""
         try:
             bucket_name = self.settings.GYM_UUID
@@ -126,31 +126,27 @@ class VideoUploader:
                 await self.ensure_bucket_exists(s3_client)
 
                 # Start the upload loop
-                while True:
-                    # List all files in the recording directory
-                    files = [
-                        os.path.join(self.settings.RECORDING_DIR, f)
-                        for f in os.listdir(self.settings.RECORDING_DIR)
-                        if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
-                    ]
-                    video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
+                # List all files in the recording directory
+                files = [
+                    os.path.join(self.settings.RECORDING_DIR, f)
+                    for f in os.listdir(self.settings.RECORDING_DIR)
+                    if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
+                ]
+                video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
 
-                    if video_files:
-                        logger.info(f"Found {len(video_files)} video files to upload...")
-                        tasks = [self.upload_file_to_s3(s3_client, file) for file in video_files]
-                        await asyncio.gather(*tasks)
-                    else:
-                        logger.debug("No files found to upload.")
-
-                    # Sleep for n seconds
-                    await asyncio.sleep(1)
+                if video_files:
+                    logger.info(f"Found {len(video_files)} video files to upload...")
+                    tasks = [self.upload_file_to_s3(s3_client, file) for file in video_files]
+                    await asyncio.gather(*tasks)
+                else:
+                    logger.debug("No files found to upload.")
         except asyncio.CancelledError:
-            logger.info("Upload loop cancelled.")
+            logger.info("Upload cancelled.")
             raise
         except Exception as e:
             logger.exception(f"Exception in upload_loop {e}")
         finally:
-            logger.info("Upload loop exiting.")
+            logger.info("Upload exiting.")
 
 
 # Example Usage
@@ -171,6 +167,6 @@ if __name__ == "__main__":
     uploader = VideoUploader(settings)
 
     try:
-        asyncio.run(uploader.upload_loop())
+        asyncio.run(uploader.upload())
     except KeyboardInterrupt:
         uploader.logger.info("Program terminated by user.")
