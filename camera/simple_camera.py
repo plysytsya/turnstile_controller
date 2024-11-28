@@ -79,6 +79,7 @@ class VideoCamera:
 
     async def start_recording(self, qr_data):
         """Start video recording."""
+        start = time.time()
         self.video = cv2.VideoCapture(0)
         self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
         self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
@@ -108,7 +109,7 @@ class VideoCamera:
         )
         self.recording = True
         self.recording_start_time = time.time()
-        logger.info(f"Started recording: {self.recording_file}")
+        logger.info(f"Started recording: {self.recording_file}. Took {time.time() - start:.2f} seconds to init.")
 
         # Record frames for RECORDING_DURATION seconds
         frame_interval = 1.0 / self.fps
