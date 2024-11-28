@@ -17,7 +17,7 @@ from systemd.journal import JournalHandler
 from find_device import find_qr_devices
 from serial_reader import find_serial_devices, SerialDevice
 from i2cdetect import detect_i2c_device_not_27
-from camera import videocamera
+from camera import simple_camera as videocamera
 
 # Step 3: Configure logging to use JournalHandler
 logging.basicConfig(level=logging.INFO)
