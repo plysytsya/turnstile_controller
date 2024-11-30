@@ -165,6 +165,7 @@ async def keyboard_event_loop(device):
                             qr_dict = json.loads(output_string)
                             shared_list.append(qr_dict)
                             output_string = ""
+                            await asyncio.sleep(2)
                         except json.JSONDecodeError:
                             logger.error(f"Invalid JSON data: {output_string}")
                             logger.exception(f"{e} ... Invalid JSON data: {output_string}")
@@ -173,6 +174,7 @@ async def keyboard_event_loop(device):
                                 qr_dict = json.loads(output_string)
                                 shared_list.append(qr_dict)
                                 output_string = ""
+                                await asyncio.sleep(2)
                             except json.JSONDecodeError as e:
                                 logger.error(f"Invalid JSON data: {output_string}")
                                 logger.exception(f"{e} ... Invalid JSON data: {output_string}")
@@ -440,7 +442,7 @@ async def main_loop():
             logger.info(f"Received QR data: {qr_data}")
             display_on_lcd("Verificando", "QR...")
             verify_customer(qr_data["customer-uuid"], qr_data["timestamp"])
-        await asyncio.sleep(1)  # 1-second delay to avoid busy-waiting
+        await asyncio.sleep(0.2)  # 1-second delay to avoid busy-waiting
 
 
 if __name__ == "__main__":
