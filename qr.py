@@ -166,9 +166,9 @@ async def keyboard_event_loop(device):
                             shared_list.append(qr_dict)
                             output_string = ""
                             await asyncio.sleep(2)
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
                             logger.error(f"Invalid JSON data: {output_string}")
-                            logger.exception(f"{e} ... Invalid JSON data: {output_string}")
+                            logger.exception(e)
                             try:
                                 output_string = "{" + output_string.lstrip("{")
                                 qr_dict = json.loads(output_string)
@@ -177,7 +177,7 @@ async def keyboard_event_loop(device):
                                 await asyncio.sleep(2)
                             except json.JSONDecodeError as e:
                                 logger.error(f"Invalid JSON data: {output_string}")
-                                logger.exception(f"{e} ... Invalid JSON data: {output_string}")
+                                logger.exception(e)
                                 display_on_lcd("Codigo QR", "invalido", timeout=2)
                                 display_on_lcd("Escanea", "codigo QR")
                             output_string = ""
