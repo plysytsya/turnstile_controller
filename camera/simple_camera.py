@@ -94,6 +94,9 @@ class VideoCamera:
             logger.error("Failed to open camera.")
             return
 
+        stop_ini = time.time()
+        logger.info(f"Camera opened in {stop_ini - start:.2f} seconds.")
+
         # Read the first frame to get frame dimensions
         ret, frame = self.video.read()
         if not ret:
