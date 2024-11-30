@@ -179,6 +179,7 @@ async def keyboard_event_loop(device):
                                 logger.error(f"Invalid JSON data: {output_string}")
                                 logger.exception(e)
                                 display_on_lcd("Codigo QR", "invalido", timeout=2)
+                                await asyncio.sleep(2)
                                 display_on_lcd("Escanea", "codigo QR")
                             output_string = ""
     except OSError as e:
