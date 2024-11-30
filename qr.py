@@ -162,12 +162,19 @@ async def keyboard_event_loop(device):
 
                     if keycode == "KEY_ENTER":
                         try:
-                            output_string = "{" + output_string.lstrip("{")
                             qr_dict = json.loads(output_string)
                             shared_list.append(qr_dict)
                             output_string = ""
                         except json.JSONDecodeError:
-                            logger.error("Invalid JSON data.")
+                            logger.error(f"Invalid JSON data: {output_string}")
+                            try:
+                                output_string = "{" + output_string.lstrip("{")
+                                qr_dict = json.loads(output_string)
+                                shared_list.append(qr_dict)
+                                output_string = ""
+                            except json.JSONDecodeError as e:
+                                logger.exception(f"{e} ... Invalid JSON data: {output_string}")
+                                display_on_lcd("Codigo QR", "invalido", timeout=2)
                             output_string = ""
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
