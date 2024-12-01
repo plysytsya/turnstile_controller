@@ -6,6 +6,7 @@ import pathlib
 import sys
 import threading
 import time
+import csv
 import uuid
 
 import evdev
@@ -228,6 +229,16 @@ def send_entrance_log(url, headers, payload, retries=3, sleep_duration=5):
         except requests.exceptions.RequestException as e:
             logger.warning(f"Internet connection error when sending entrance-log: {e}. Retrying...")
             time.sleep(sleep_duration)  # sleep for 10 seconds before retrying
+
+    # If all retries fail, log the payload to a CSV file
+    with open('failed_entrance_logs.csv', mode='a', newline='') as file:
+        writer = csv.writer(file)
+        payload = json.dumps(payload) if isinstance(payload, dict) else payload
+        headers = json.dumps(headers) if isinstance(headers, dict) else headers
+        request_type = "PUT"
+        writer.writerow([url, headers, payload, request_type])
+        logger.error(f"Failed to send entrance log after {retries} retries. Logged to CSV: {payload}")
+
     return None
 
 
