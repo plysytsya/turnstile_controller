@@ -47,32 +47,6 @@ multi_process_qr_data = manager.dict()
 lock = manager.Lock()
 
 
-if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
-    logger.info("Camera is enabled. Initializing camera process.")
-
-    class CameraSettings:
-        """Configuration settings for camera video uploads and S3 integration."""
-
-        S3_BUCKET = os.getenv("S3_BUCKET")
-        S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
-        S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
-        S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
-        GYM_UUID = os.getenv("GYM_UUID")
-        RECORDING_DIR = os.getenv("RECORDING_DIR")
-        HOSTNAME = os.getenv("HOSTNAME")
-        USERNAME = os.getenv("USERNAME")
-        PASSWORD = os.getenv("PASSWORD")
-
-        @classmethod
-        def from_environment(cls):
-            """Create a settings instance populated from environment variables."""
-            return cls()
-
-    camera_process = Process(
-        target=videocamera.run_camera, args=(CameraSettings.from_environment(), multi_process_qr_data, lock)
-    )
-    processes.append(camera_process)
-
 for qr_reader in devices:
     if qr_reader.is_extended:
         logger.info(f"Found extended device: {qr_reader}")
@@ -115,6 +89,40 @@ for qr_reader in devices:
 
     p = Process(target=qr.main, args=(env_without_none_values, multi_process_qr_data, lock))
     processes.append(p)
+
+
+if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
+    logger.info("Camera is enabled. Initializing camera process.")
+
+    class CameraSettings:
+        """Configuration settings for camera video uploads and S3 integration."""
+
+        S3_BUCKET = os.getenv("S3_BUCKET")
+        S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
+        S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+        S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+        GYM_UUID = os.getenv("GYM_UUID")
+        RECORDING_DIR = os.getenv("RECORDING_DIR")
+        HOSTNAME = os.getenv("HOSTNAME")
+        USERNAME = os.getenv("USERNAME")
+        PASSWORD = os.getenv("PASSWORD")
+
+        @classmethod
+        def from_environment(cls):
+            """Create a settings instance populated from environment variables."""
+            return cls()
+
+
+    def run_camera_with_exception_handling(settings, qr_data, lock):
+        try:
+            videocamera.run_camera(settings, qr_data, lock)
+        except Exception as e:
+            logger.exception(f"Camera process failed with exception: {e}")
+
+    camera_process = Process(
+        target=videocamera.run_camera_with_exception_handling, args=(CameraSettings.from_environment(), multi_process_qr_data, lock)
+    )
+    processes.append(camera_process)
 
 
 if __name__ == "__main__":
