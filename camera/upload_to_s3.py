@@ -100,13 +100,12 @@ class VideoUploader:
         while True:
             try:
                 await self.upload()
-                await asyncio.sleep(2)
             except asyncio.CancelledError:
                 logger.info("Upload loop cancelled.")
                 break
             except Exception as e:
                 logger.exception(f"Exception in upload_loop {e}")
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
 
 
 # Example Usage
