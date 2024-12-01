@@ -2,6 +2,8 @@ import time
 import asyncio
 import os
 import signal
+from uuid import uuid4
+
 import setproctitle
 import sys
 import logging
@@ -225,4 +227,5 @@ if __name__ == "__main__":
         RECORDING_DIR = os.getenv("RECORDING_DIR")
 
     camera  = VideoCamera(CameraSettings())
-    camera.start_recording()
+    qr_data = {'uuid': uuid4()}
+    camera.start_recording(qr_data)
