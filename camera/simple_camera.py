@@ -228,4 +228,4 @@ if __name__ == "__main__":
 
     camera  = VideoCamera(CameraSettings())
     qr_data = {'uuid': uuid4()}
-    asyncio.run_until_complete(camera.start_recording(qr_data))
+    asyncio.run(camera.start_recording(qr_data))
