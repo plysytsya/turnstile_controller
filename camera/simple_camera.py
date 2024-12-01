@@ -7,9 +7,6 @@ import sys
 import logging
 from systemd.journal import JournalHandler
 
-# Import the upload_to_s3 module
-from upload_to_s3 import VideoUploader
-
 # Add the global Python library path to sys.path
 sys.path.append("/usr/lib/python3/dist-packages")
 import cv2
@@ -50,7 +47,6 @@ class VideoCamera:
 
         # Adjust FPS based on actual camera performance during recording
         self.fps = self.DEFAULT_FPS
-        self.uploader = VideoUploader(settings)
 
     def cleanup(self):
         """Release resources properly on exit."""
@@ -147,8 +143,6 @@ class VideoCamera:
             else:
                 logger.warning("No QR data available to rename the recording file.")
 
-            # Trigger uploader
-            await self.uploader.upload()
         else:
             logger.info("No recording to stop.")
 
@@ -228,15 +222,7 @@ if __name__ == "__main__":
 
     class CameraSettings:
         """Configuration settings for camera video uploads and S3 integration."""
-        S3_BUCKET = os.getenv("S3_BUCKET")
-        S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
-        S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
-        S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
-        GYM_UUID = os.getenv("GYM_UUID")
         RECORDING_DIR = os.getenv("RECORDING_DIR")
-        HOSTNAME = os.getenv("HOSTNAME")
-        USERNAME = os.getenv("USERNAME")
-        PASSWORD = os.getenv("PASSWORD")
 
     camera  = VideoCamera(CameraSettings())
     camera.start_recording()
