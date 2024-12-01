@@ -151,17 +151,30 @@ class VideoUploader:
 
 # Example Usage
 if __name__ == "__main__":
-    import asyncio
+    import dotenv
+
+    # Add stream handler
+    logger = logging.getLogger("UploadDebugger")
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    logger.addHandler(stream_handler)
+
+    # the path of the .env file which is in the deirectory that is one level up from the current directory
+    path_to_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env")
+
+    dotenv.load_dotenv(path_to_env)
 
     class Settings:
-        HOSTNAME = "https://example.com"
-        USERNAME = "user@example.com"
-        PASSWORD = "securepassword"
-        GYM_UUID = "my-gym"
-        S3_ACCESS_KEY = "your-s3-access-key"
-        S3_SECRET_ACCESS_KEY = "your-s3-secret-key"
-        S3_ENDPOINT_URL = "https://s3.amazonaws.com"
-        RECORDING_DIR = "/path/to/recordings"
+        """Configuration settings for camera video uploads and S3 integration."""
+        S3_BUCKET = os.getenv("S3_BUCKET")
+        S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
+        S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+        S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+        GYM_UUID = os.getenv("GYM_UUID")
+        RECORDING_DIR = os.getenv("RECORDING_DIR")
+        HOSTNAME = os.getenv("HOSTNAME")
+        USERNAME = os.getenv("USERNAME")
+        PASSWORD = os.getenv("PASSWORD")
 
     settings = Settings()
     uploader = VideoUploader(settings)
@@ -169,4 +182,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(uploader.upload())
     except KeyboardInterrupt:
-        uploader.logger.info("Program terminated by user.")
+        logger.info("Program terminated by user.")
