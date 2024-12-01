@@ -50,6 +50,12 @@ class VideoCamera:
         # Adjust FPS based on actual camera performance during recording
         self.fps = self.DEFAULT_FPS
 
+        self.video = cv2.VideoCapture(0)
+        self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
+        self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
+
+        fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
+
     def cleanup(self):
         """Release resources properly on exit."""
         if self.video and self.video.isOpened():
@@ -78,11 +84,7 @@ class VideoCamera:
     async def start_recording(self, qr_data):
         """Start video recording."""
         start = time.time()
-        self.video = cv2.VideoCapture(0)
-        self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
-        self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
 
-        fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
         timestamp = int(time.time())
         self.recording_file = f"{self.RECORDING_DIR}/temp_{timestamp}_.{self.VIDEO_FORMAT}"
         self.current_qr_data = qr_data  # Store QR data for later use
