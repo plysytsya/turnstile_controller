@@ -146,7 +146,7 @@ class VideoCamera:
                 new_filename = f"{self.RECORDING_DIR}/{uuid}.{self.VIDEO_FORMAT}"
                 os.rename(self.recording_file, new_filename)
                 self.recording_file = new_filename
-                logger.info(f"Recording saved as {self.recording_file}")
+                logger.info(f"Recording saved as {new_filename}")
             else:
                 logger.warning("No QR data available to rename the recording file.")
 
