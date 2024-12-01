@@ -224,6 +224,12 @@ if __name__ == "__main__":
 
     dotenv.load_dotenv(path_to_env)
 
+    # Add stream handler
+    logger = logging.getLogger("VideoCameraDebugger")
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    logger.addHandler(stream_handler)
+
     class CameraSettings:
         """Configuration settings for camera video uploads and S3 integration."""
         RECORDING_DIR = os.getenv("RECORDING_DIR")
@@ -232,8 +238,3 @@ if __name__ == "__main__":
     qr_data = {'uuid': uuid4()}
     asyncio.run(camera.start_recording(qr_data))
 
-    # Add stream handler
-    logger = logging.getLogger("VideoCameraDebugger")
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
-    logger.addHandler(stream_handler)
