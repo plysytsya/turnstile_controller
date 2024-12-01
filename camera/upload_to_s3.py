@@ -11,10 +11,6 @@ logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
 logger.propagate = False
-# Add stream handler
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-logger.addHandler(stream_handler)
 
 class VideoUploader:
     def __init__(self, settings):
