@@ -11,7 +11,10 @@ logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
 logger.propagate = False
-
+# Add stream handler
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+logger.addHandler(stream_handler)
 
 class VideoUploader:
     def __init__(self, settings):
@@ -97,12 +100,6 @@ class VideoUploader:
 # Example Usage
 if __name__ == "__main__":
     import dotenv
-
-    # Add stream handler
-    logger = logging.getLogger("UploadDebugger")
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
-    logger.addHandler(stream_handler)
 
     # the path of the .env file which is in the deirectory that is one level up from the current directory
     path_to_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env")
