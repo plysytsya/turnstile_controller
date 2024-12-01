@@ -233,6 +233,7 @@ if __name__ == "__main__":
     asyncio.run(camera.start_recording(qr_data))
 
     # Add stream handler
+    logger = logging.getLogger("VideoCameraDebugger")
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.DEBUG)
     logger.addHandler(stream_handler)
