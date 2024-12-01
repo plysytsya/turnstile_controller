@@ -1,21 +1,10 @@
 import asyncio
-import aiohttp
 import logging
 import os
-import sys
 import aioboto3
 from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
-from tenacity import retry, stop_after_attempt, wait_exponential
 
-try:
-    from utils import login
-except ImportError:
-    # Add the folder above the current file's folder to the Python path
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    sys.path.append(parent_dir)
-    from utils import login
 
 logger = logging.getLogger("VideoUploader")
 logger.setLevel(logging.INFO)
@@ -27,7 +16,6 @@ logger.propagate = False
 class VideoUploader:
     def __init__(self, settings):
         self.settings = settings
-        self.jwt_token = login(settings.HOSTNAME, settings.USERNAME, settings.PASSWORD, logger)
 
 
     async def ensure_bucket_exists(self, s3_client):
@@ -64,65 +52,14 @@ class VideoUploader:
             os.remove(file_path)
             logger.info(f"Deleted local file: {file_path}")
 
-            entrance_log_uuid = os.path.splitext(file_name)[0]
-            await asyncio.sleep(5)
-            await self.set_has_video_to_true_in_db(entrance_log_uuid)
         except ClientError as e:
             logger.error(f"Failed to upload {file_name}: {e}")
         except OSError as e:
             logger.error(f"Failed to delete file {file_path}: {e}")
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2), reraise=True)
-    async def set_has_video_to_true_in_db(self, entrance_log_uuid):
-        url = f"{self.settings.HOSTNAME}/verify_customer/"
-        payload = {"has_video": True, "uuid": str(entrance_log_uuid)}
-        headers = {
-            "Authorization": f"Bearer {self.jwt_token}",
-            "Content-Type": "application/json",
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.patch(url, headers=headers, json=payload) as response:
-                response_text = await response.text()
-
-                # Log the response text for debugging
-                logger.debug(f"Response text: {response_text}")
-
-                # Check status code and handle accordingly
-                if response.status == 200:
-                    logger.info(
-                        f"Successfully updated has_video for UUID {entrance_log_uuid}. Response: {response_text}"
-                    )
-                elif response.status in (401, 403):
-                    logger.error(
-                        f"Unauthorized to update has_video for UUID {entrance_log_uuid}. "
-                        f"Status: {response.status}, Response: {response_text}. Refreshing JWT token..."
-                    )
-                    # Refresh the JWT token
-                    self.jwt_token = login(self.settings.HOSTNAME, self.settings.USERNAME, self.settings.PASSWORD)
-                    raise aiohttp.ClientResponseError(
-                        request_info=response.request_info,
-                        history=response.history,
-                        status=response.status,
-                        message=f"Unauthorized: {response_text}"
-                    )
-                else:
-                    logger.error(
-                        f"Failed to update has_video for UUID {entrance_log_uuid}. "
-                        f"Status: {response.status}, Response: {response_text}"
-                    )
-                    # Raise an exception for non-successful responses
-                    raise aiohttp.ClientResponseError(
-                        request_info=response.request_info,
-                        history=response.history,
-                        status=response.status,
-                        message=f"Unexpected error: {response_text}"
-                    )
-
     async def upload(self):
         """Main loop to check the directory and upload files."""
         try:
-            bucket_name = self.settings.GYM_UUID
             session = aioboto3.Session()
             async with session.client(
                 "s3",
