@@ -216,3 +216,27 @@ def run_camera(settings, global_qr_data=None, lock=None):
         asyncio.run(main(settings, global_qr_data, lock))
     except Exception as e:
         logger.exception(f"Error running camera: {e}... Continuing")
+
+
+if __name__ == "__main__":
+    import dotenv
+
+    # the path of the .env file which is in the deirectory that is one level up from the current directory
+    path_to_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env")
+
+    dotenv.load_dotenv(path_to_env)
+
+    class CameraSettings:
+        """Configuration settings for camera video uploads and S3 integration."""
+        S3_BUCKET = os.getenv("S3_BUCKET")
+        S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
+        S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+        S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+        GYM_UUID = os.getenv("GYM_UUID")
+        RECORDING_DIR = os.getenv("RECORDING_DIR")
+        HOSTNAME = os.getenv("HOSTNAME")
+        USERNAME = os.getenv("USERNAME")
+        PASSWORD = os.getenv("PASSWORD")
+
+    camera  = VideoCamera(CameraSettings())
+    camera.start_recording()
