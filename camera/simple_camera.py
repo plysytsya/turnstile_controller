@@ -213,7 +213,6 @@ async def main(settings, global_qr_data=None, lock=None):
 
 
 def run_camera(settings, global_qr_data=None, lock=None):
-    raise Exception("This function is not used anymore.")
     try:
         asyncio.run(main(settings, global_qr_data, lock))
     except Exception as e:
