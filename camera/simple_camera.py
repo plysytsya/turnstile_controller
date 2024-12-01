@@ -30,7 +30,7 @@ class VideoCamera:
     DEFAULT_FPS = 18  # Increased FPS for recording
 
     # Video recording parameters
-    VIDEO_CODEC = "H264"  # Codec used for recording video
+    VIDEO_CODEC = "avc1"  # Codec used for recording video
     VIDEO_FORMAT = "mp4"  # Final format of the recorded video files
 
     RECORDING_DURATION = 6  # Duration to record after trigger (in seconds)
