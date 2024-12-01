@@ -117,8 +117,7 @@ class VideoCamera:
         # Record frames for RECORDING_DURATION seconds
         frame_interval = 1.0 / self.fps
 
-        end = time.time()
-        logger.info(f"Started recording: {self.recording_file}. Took {time.time() - start:.2f} seconds to init.")
+        logger.info(f"Started recording: {qr_data.get("uuid")}.{self.VIDEO_FORMAT}. Took {time.time() - start:.2f} seconds to init.")
         while time.time() < end_time:
             frame_start_time = time.time()
             ret, frame = self.video.read()
