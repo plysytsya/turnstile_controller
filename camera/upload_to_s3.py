@@ -2,12 +2,20 @@ import asyncio
 import aiohttp
 import logging
 import os
+import sys
 import aioboto3
 from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from utils import login
+try:
+    from utils import login
+except ImportError:
+    # Add the folder above the current file's folder to the Python path
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    sys.path.append(parent_dir)
+    from utils import login
 
 logger = logging.getLogger("VideoUploader")
 logger.setLevel(logging.INFO)
