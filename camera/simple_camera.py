@@ -94,6 +94,8 @@ class VideoCamera:
 
         # Read the first frame to get frame dimensions
         ret, frame = self.video.read()
+        end = time.time()
+        logger.debug(f"Time to init and read first frame: {end - start:.2f} seconds")
         if not ret:
             logger.error("Failed to read frame from camera.")
             self.video.release()
@@ -229,3 +231,8 @@ if __name__ == "__main__":
     camera  = VideoCamera(CameraSettings())
     qr_data = {'uuid': uuid4()}
     asyncio.run(camera.start_recording(qr_data))
+
+    # Add stream handler
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    logger.addHandler(stream_handler)
