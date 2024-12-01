@@ -93,7 +93,7 @@ class VideoUploader:
         except Exception as e:
             logger.exception(f"Exception in upload_loop {e}")
         finally:
-            logger.info("Upload exiting.")
+            logger.debug("Upload exiting.")
 
     async def upload_loop(self):
         """Run the upload loop continuously."""
