@@ -1,0 +1,15 @@
+[Unit]
+Description=Video uploader
+After=network.target
+
+[Service]
+TimeoutStopSec=3s
+RestartSec=10
+ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/camera/upload_to_s3.py
+User=manager
+Restart=always
+WorkingDirectory=/home/
+
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,4 @@
-.PHONY: install-qr uninstall-qr install-heartbeat uninstall-heartbeat restart-heartbeat logs-heartbeat install-cronjob watch-cronjob trigger-cronjob list-services
+.PHONY: install-qr uninstall-qr install-heartbeat uninstall-heartbeat restart-heartbeat logs-heartbeat install-cronjob uninstall-cronjob watch-cronjob status-cronjob trigger-cronjob list-services logs-qr logs-cronjob venv install-upload uninstall-upload restart-upload logs-upload
 
 # Instalar el script QR como un servicio
 install-qr:
@@ -18,6 +18,10 @@ uninstall-qr:
 
 restart-qr:
 	sudo systemctl restart qr_script.service
+
+# Observar el registro del script QR en tiempo real
+logs-qr:
+	journalctl -u qr_script -f
 
 # Instalar el servicio de monitoreo de latidos (Heartbeat Monitor)
 install-heartbeat:
@@ -41,6 +45,29 @@ restart-heartbeat:
 # Observar el registro del Heartbeat Monitor en tiempo real
 logs-heartbeat:
 	journalctl -u heartbeat-monitor -f
+
+# Instalar el servicio de subida de archivos (Upload Service)
+install-upload:
+	sudo cp /home/manager/turnstile_controller/upload.service /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable upload
+	sudo systemctl start upload
+	sudo systemctl status upload
+
+# Desinstalar el servicio de subida de archivos (Upload Service)
+uninstall-upload:
+	sudo systemctl stop upload
+	sudo systemctl disable upload
+	sudo rm /etc/systemd/system/upload.service
+	sudo systemctl daemon-reload
+	sudo systemctl reset-failed
+
+restart-upload:
+	sudo systemctl restart upload.service
+
+# Observar el registro del servicio de subida de archivos en tiempo real
+logs-upload:
+	journalctl -u upload -f
 
 # Instalar el cronjob para descargar la base de datos del cliente
 install-cronjob:
@@ -77,12 +104,6 @@ trigger-cronjob:
 list-services:
 	systemctl list-units --type=service
 
-# Observar el registro del script QR en tiempo real
-logs-qr:
-	journalctl -u qr_script -f
-
-logs-cronjob:
-	journalctl -u download_customer_db.service -f
-
+# Activar el entorno virtual
 venv:
 	@source ~/turnstile_controller/venv/bin/activate
