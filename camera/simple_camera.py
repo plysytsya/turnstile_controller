@@ -54,7 +54,7 @@ class VideoCamera:
         self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
         self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
 
-        fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
+        self.fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
 
     def cleanup(self):
         """Release resources properly on exit."""
@@ -105,7 +105,7 @@ class VideoCamera:
 
         self.out = cv2.VideoWriter(
             self.recording_file,
-            fourcc,
+            self.fourcc,
             self.fps,
             (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))),
         )
