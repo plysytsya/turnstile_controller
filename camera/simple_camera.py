@@ -56,6 +56,29 @@ class VideoCamera:
 
         self.fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
 
+        timestamp = int(time.time())
+        self.recording_file = f"{self.RECORDING_DIR}/temp_{timestamp}_.{self.VIDEO_FORMAT}"
+
+        # Check if camera is opened successfully
+        if not self.video.isOpened():
+            logger.error("Failed to open camera.")
+            return
+
+        # Read the first frame to get frame dimensions
+        ret, frame = self.video.read()
+
+        if not ret:
+            logger.error("Failed to read frame from camera.")
+            self.video.release()
+            return
+
+        self.out = cv2.VideoWriter(
+            self.recording_file,
+            self.fourcc,
+            self.fps,
+            (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))),
+        )
+
     def cleanup(self):
         """Release resources properly on exit."""
         if self.video and self.video.isOpened():
@@ -83,40 +106,19 @@ class VideoCamera:
 
     async def start_recording(self, qr_data):
         """Start video recording."""
-        start = time.time()
-
-        timestamp = int(time.time())
-        self.recording_file = f"{self.RECORDING_DIR}/temp_{timestamp}_.{self.VIDEO_FORMAT}"
         self.current_qr_data = qr_data  # Store QR data for later use
 
-        # Check if camera is opened successfully
-        if not self.video.isOpened():
-            logger.error("Failed to open camera.")
-            return
+        start = time.time()
 
-        # Read the first frame to get frame dimensions
-        ret, frame = self.video.read()
-        end = time.time()
-        logger.debug(f"Time to init and read first frame: {end - start:.2f} seconds")
-        if not ret:
-            logger.error("Failed to read frame from camera.")
-            self.video.release()
-            return
-
-        self.out = cv2.VideoWriter(
-            self.recording_file,
-            self.fourcc,
-            self.fps,
-            (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))),
-        )
         self.recording = True
         self.recording_start_time = time.time()
-        logger.info(f"Started recording: {self.recording_file}. Took {time.time() - start:.2f} seconds to init.")
+        end_time = self.recording_start_time + self.RECORDING_DURATION
 
         # Record frames for RECORDING_DURATION seconds
         frame_interval = 1.0 / self.fps
-        end_time = self.recording_start_time + self.RECORDING_DURATION
 
+        end = time.time()
+        logger.debug(f"Recording started. Took {end - start:.2f} seconds to start recording.")
         while time.time() < end_time:
             frame_start_time = time.time()
             ret, frame = self.video.read()
