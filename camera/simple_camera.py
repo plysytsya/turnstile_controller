@@ -49,7 +49,9 @@ class VideoCamera:
 
         # Adjust FPS based on actual camera performance during recording
         self.fps = self.DEFAULT_FPS
+        self.init_camera()
 
+    def init_camera(self):
         self.video = cv2.VideoCapture(0)
         self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
         self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
@@ -120,6 +122,7 @@ class VideoCamera:
         logger.info(f"Started recording: {qr_data.get('uuid')}.{self.VIDEO_FORMAT}. Took {time.time() - start:.2f} seconds to init.")
         while time.time() < end_time:
             frame_start_time = time.time()
+
             ret, frame = self.video.read()
             if not ret:
                 logger.error("Failed to read frame from camera.")
@@ -131,6 +134,7 @@ class VideoCamera:
             if sleep_time > 0:
                 await asyncio.sleep(sleep_time)
         await self.stop_recording()
+        self.init_camera()
 
     async def stop_recording(self):
         """Stop video recording."""
