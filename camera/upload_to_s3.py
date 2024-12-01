@@ -26,7 +26,6 @@ class VideoUploader:
         bucket_name = self.settings.GYM_UUID
         try:
             await s3_client.head_bucket(Bucket=bucket_name)
-            logger.info(f"Bucket {bucket_name} exists.")
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 logger.info(f"Bucket {bucket_name} does not exist. Creating it...")
@@ -96,6 +95,19 @@ class VideoUploader:
         finally:
             logger.info("Upload exiting.")
 
+    async def upload_loop(self):
+        """Run the upload loop continuously."""
+        while True:
+            try:
+                await self.upload()
+                await asyncio.sleep(2)
+            except asyncio.CancelledError:
+                logger.info("Upload loop cancelled.")
+                break
+            except Exception as e:
+                logger.exception(f"Exception in upload_loop {e}")
+            await asyncio.sleep(5)
+
 
 # Example Usage
 if __name__ == "__main__":
@@ -122,6 +134,6 @@ if __name__ == "__main__":
     uploader = VideoUploader(settings)
 
     try:
-        asyncio.run(uploader.upload())
+        asyncio.run(uploader.upload_loop())
     except KeyboardInterrupt:
         logger.info("Program terminated by user.")
