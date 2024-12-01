@@ -8,7 +8,7 @@ import logging
 from systemd.journal import JournalHandler
 
 # Import the upload_to_s3 module
-from .upload_to_s3 import VideoUploader
+from upload_to_s3 import VideoUploader
 
 # Add the global Python library path to sys.path
 sys.path.append("/usr/lib/python3/dist-packages")
