@@ -120,7 +120,7 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
             logger.exception(f"Camera process failed with exception: {e}")
 
     camera_process = Process(
-        target=videocamera.run_camera_with_exception_handling, args=(CameraSettings.from_environment(), multi_process_qr_data, lock)
+        target=run_camera_with_exception_handling, args=(CameraSettings.from_environment(), multi_process_qr_data, lock)
     )
     processes.append(camera_process)
 
