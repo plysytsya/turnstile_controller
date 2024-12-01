@@ -118,7 +118,7 @@ class VideoCamera:
         frame_interval = 1.0 / self.fps
 
         end = time.time()
-        logger.debug(f"Recording started. Took {end - start:.2f} seconds to start recording.")
+        logger.info(f"Started recording: {self.recording_file}. Took {time.time() - start:.2f} seconds to init.")
         while time.time() < end_time:
             frame_start_time = time.time()
             ret, frame = self.video.read()
