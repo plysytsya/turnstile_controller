@@ -106,6 +106,9 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
         HOSTNAME = os.getenv("HOSTNAME")
         USERNAME = os.getenv("USERNAME")
         PASSWORD = os.getenv("PASSWORD")
+        FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", 480))
+        FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT", 360))
+        FPS = int(os.getenv("FPS", 15))
 
         @classmethod
         def from_environment(cls):

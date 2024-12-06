@@ -22,22 +22,18 @@ logger.propagate = False
 
 class VideoCamera:
     """Video camera class that records video upon QR data trigger."""
-
-    # Video parameters
-    FRAME_WIDTH = 480  # Width of the video frames
-    FRAME_HEIGHT = 360  # Height of the video frames
-
-    DEFAULT_FPS = 18  # Increased FPS for recording
-
-    # Video recording parameters
-    VIDEO_CODEC = "avc1"  # Codec used for recording video
-    VIDEO_FORMAT = "mp4"  # Final format of the recorded video files
-
-    RECORDING_DURATION = 6  # Duration to record after trigger (in seconds)
-    QR_DATA_CHECK_INTERVAL = 0.2  # Interval to check for QR data (in seconds)
-
     def __init__(self, settings):
         self.RECORDING_DIR = settings.RECORDING_DIR
+        self.FRAME_WIDTH = settings.FRAME_WIDTH
+        self.FRAME_HEIGHT = settings.FRAME_HEIGHT
+        self.FPS = settings.FPS
+
+        # Video recording parameters
+        self.VIDEO_CODEC = "avc1"  # Codec used for recording video
+        self.VIDEO_FORMAT = "mp4"  # Final format of the recorded video files
+
+        self.RECORDING_DURATION = 6  # Duration to record after trigger (in seconds)
+        self.QR_DATA_CHECK_INTERVAL = 0.2  # Interval to check for QR data (in seconds)
 
         # Recording variables
         self.recording = False
@@ -48,7 +44,6 @@ class VideoCamera:
         self.current_qr_data = None  # Store QR data for filename
 
         # Adjust FPS based on actual camera performance during recording
-        self.fps = self.DEFAULT_FPS
         self.init_camera()
 
     def init_camera(self):
@@ -77,7 +72,7 @@ class VideoCamera:
         self.out = cv2.VideoWriter(
             self.recording_file,
             self.fourcc,
-            self.fps,
+            self.FPS,
             (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))),
         )
 
@@ -117,7 +112,7 @@ class VideoCamera:
         end_time = self.recording_start_time + self.RECORDING_DURATION
 
         # Record frames for RECORDING_DURATION seconds
-        frame_interval = 1.0 / self.fps
+        frame_interval = 1.0 / self.FPS
 
         logger.info(f"Started recording: {qr_data.get('uuid')}.{self.VIDEO_FORMAT}. Took {time.time() - start:.2f} seconds to init.")
         while time.time() < end_time:
@@ -240,6 +235,9 @@ if __name__ == "__main__":
     class CameraSettings:
         """Configuration settings for camera video uploads and S3 integration."""
         RECORDING_DIR = os.getenv("RECORDING_DIR")
+        FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", 480))
+        FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT", 360))
+        FPS = int(os.getenv("FPS", 15))
 
     camera  = VideoCamera(CameraSettings())
     qr_data = {'uuid': uuid4()}
