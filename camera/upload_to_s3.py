@@ -1,3 +1,4 @@
+upload_to_s3.py:
 import asyncio
 import logging
 import os
@@ -41,7 +42,7 @@ class VideoUploader:
                 raise
 
     async def flip_video(self, input_file_path, output_file_path):
-        """Flip the video upside down, preserving codec, resolution, and fps."""
+        """Flip the video upside down and mirror it left to right."""
         cap = cv2.VideoCapture(input_file_path)
         if not cap.isOpened():
             logger.error(f"Could not open video file: {input_file_path}")
@@ -59,8 +60,10 @@ class VideoUploader:
             ret, frame = cap.read()
             if not ret:
                 break
-            # Flip upside down
+            # First flip upside down (vertical flip)
             flipped_frame = cv2.flip(frame, 0)
+            # Then mirror left to right (horizontal flip)
+            flipped_frame = cv2.flip(flipped_frame, 1)
             out.write(flipped_frame)
 
         cap.release()
@@ -68,7 +71,7 @@ class VideoUploader:
         return True
 
     async def upload_file_to_s3(self, s3_client, file_path):
-        """Upload a file to S3, optionally flipping it first if configured."""
+        """Upload a file to S3, optionally flipping and mirroring it first if configured."""
         file_name = os.path.basename(file_path)
         bucket_name = self.settings.GYM_UUID
         s3_key = file_name
@@ -77,7 +80,7 @@ class VideoUploader:
         if getattr(self.settings, "FLIP_VIDEO", False):
             # Create a temporary flipped file
             flipped_file_path = file_path + ".flipped.mp4"
-            logger.info(f"Flipping video {file_name} before upload...")
+            logger.info(f"Flipping and mirroring video {file_name} before upload...")
             success = await self.flip_video(file_path, flipped_file_path)
             if success:
                 # Replace the file_path with the flipped one for uploading
