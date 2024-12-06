@@ -235,9 +235,9 @@ if __name__ == "__main__":
     class CameraSettings:
         """Configuration settings for camera video uploads and S3 integration."""
         RECORDING_DIR = os.getenv("RECORDING_DIR")
-        FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", 480))
-        FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT", 360))
-        FPS = int(os.getenv("FPS", 15))
+        FRAME_WIDTH = int(os.getenv("FRAME_WIDTH"))
+        FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))
+        FPS = int(os.getenv("FPS"))
 
     camera  = VideoCamera(CameraSettings())
     qr_data = {'uuid': uuid4()}
