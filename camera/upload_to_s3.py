@@ -1,9 +1,14 @@
 import asyncio
 import logging
 import os
+import sys
 import aioboto3
 from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
+
+# Add the global Python library path to sys.path to use cv2 just like in the videorecorder
+sys.path.append("/usr/lib/python3/dist-packages")
+import cv2
 
 
 logger = logging.getLogger("VideoUploader")
@@ -12,10 +17,10 @@ journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
 logger.propagate = False
 
+
 class VideoUploader:
     def __init__(self, settings):
         self.settings = settings
-
 
     async def ensure_bucket_exists(self, s3_client):
         """Ensure the S3 bucket exists. Create it if not."""
@@ -35,25 +40,68 @@ class VideoUploader:
                 logger.error(f"Error checking bucket {bucket_name}: {e}")
                 raise
 
+    async def flip_video(self, input_file_path, output_file_path):
+        """Flip the video upside down, preserving codec, resolution, and fps."""
+        cap = cv2.VideoCapture(input_file_path)
+        if not cap.isOpened():
+            logger.error(f"Could not open video file: {input_file_path}")
+            return False
+
+        # Read video properties
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+
+        out = cv2.VideoWriter(output_file_path, fourcc, fps, (width, height))
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            # Flip upside down
+            flipped_frame = cv2.flip(frame, 0)
+            out.write(flipped_frame)
+
+        cap.release()
+        out.release()
+        return True
+
     async def upload_file_to_s3(self, s3_client, file_path):
-        """Upload a file to S3 with the gym_uuid prepended to the filename."""
+        """Upload a file to S3, optionally flipping it first if configured."""
         file_name = os.path.basename(file_path)
         bucket_name = self.settings.GYM_UUID
         s3_key = file_name
 
+        # If flipping is required
+        if getattr(self.settings, "FLIP_VIDEO", False):
+            # Create a temporary flipped file
+            flipped_file_path = file_path + ".flipped.mp4"
+            logger.info(f"Flipping video {file_name} before upload...")
+            success = await self.flip_video(file_path, flipped_file_path)
+            if success:
+                # Replace the file_path with the flipped one for uploading
+                file_path_to_upload = flipped_file_path
+            else:
+                logger.error("Flipping video failed, uploading original.")
+                file_path_to_upload = file_path
+        else:
+            file_path_to_upload = file_path
+
         try:
-            logger.info(f"Uploading {file_name} as {s3_key} to bucket {bucket_name}...")
-            await s3_client.upload_file(file_path, bucket_name, s3_key)
+            logger.info(f"Uploading {os.path.basename(file_path_to_upload)} as {s3_key} to bucket {bucket_name}...")
+            await s3_client.upload_file(file_path_to_upload, bucket_name, s3_key)
             logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
 
-            # Delete the file after successful upload
+            # Delete local files
             os.remove(file_path)
-            logger.info(f"Deleted local file: {file_path}")
-
+            if file_path_to_upload != file_path:
+                os.remove(file_path_to_upload)
+            logger.info(f"Deleted local file(s) related to {file_name}")
         except ClientError as e:
             logger.error(f"Failed to upload {file_name}: {e}")
         except OSError as e:
-            logger.error(f"Failed to delete file {file_path}: {e}")
+            logger.error(f"Failed to delete file {file_path_to_upload}: {e}")
 
     async def upload(self):
         """Main loop to check the directory and upload files."""
@@ -68,7 +116,6 @@ class VideoUploader:
                 # Ensure the bucket exists on startup
                 await self.ensure_bucket_exists(s3_client)
 
-                # Start the upload loop
                 # List all files in the recording directory
                 files = [
                     os.path.join(self.settings.RECORDING_DIR, f)
@@ -108,7 +155,7 @@ class VideoUploader:
 if __name__ == "__main__":
     import dotenv
 
-    # the path of the .env file which is in the deirectory that is one level up from the current directory
+    # the path of the .env file which is in the directory that is one level up from the current directory
     path_to_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env")
 
     dotenv.load_dotenv(path_to_env)
@@ -124,6 +171,7 @@ if __name__ == "__main__":
         HOSTNAME = os.getenv("HOSTNAME")
         USERNAME = os.getenv("USERNAME")
         PASSWORD = os.getenv("PASSWORD")
+        FLIP_VIDEO = os.getenv("FLIP_VIDEO", "False").lower() == "true"
 
     settings = Settings()
     uploader = VideoUploader(settings)
