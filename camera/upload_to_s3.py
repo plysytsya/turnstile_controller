@@ -1,4 +1,3 @@
-upload_to_s3.py:
 import asyncio
 import logging
 import os
