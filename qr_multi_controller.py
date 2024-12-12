@@ -17,7 +17,6 @@ from systemd.journal import JournalHandler
 from find_device import find_qr_devices
 from serial_reader import find_serial_devices, SerialDevice
 from i2cdetect import detect_i2c_device_not_27
-from camera import simple_camera as videocamera
 
 # Step 3: Configure logging to use JournalHandler
 logging.basicConfig(level=logging.INFO)
@@ -92,6 +91,8 @@ for qr_reader in devices:
 
 
 if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
+    from camera import simple_camera as videocamera
+
     logger.info("Camera is enabled. Initializing camera process.")
 
     class CameraSettings:
