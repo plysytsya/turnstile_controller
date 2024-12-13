@@ -2,8 +2,6 @@
 # first install the c++ binary: sudo apt-get install libopencv-dev
 # then install python bindings: sudo apt-get install python3-opencv
 requests
-rpi-lcd
-unidecode
 python-dotenv
 evdev
 RPi.GPIO
@@ -11,9 +9,5 @@ pytest
 smbus2
 pyserial
 pyzmq
-aioboto3
-python-dotenv
 setproctitle
-aiohttp
-tenacity
 #systemd-python
