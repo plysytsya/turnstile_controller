@@ -87,7 +87,8 @@ load_dotenv()
 
 sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
-    environment=os.getenv("SENTRY_ENV")
+    environment=os.getenv("SENTRY_ENV"),
+    traces_sample_rate=1.0
 )
 logger.info("Sentry initialized successfully.")
 
