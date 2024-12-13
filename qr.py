@@ -67,7 +67,6 @@ for logger in logging.Logger.manager.loggerDict.values():
     if hasattr(logger, "handlers"):
         logger.handlers = []
 
-logging.setLoggerClass(SentryLogger)
 logger = logging.getLogger("qr")
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
@@ -600,8 +599,9 @@ def main(settings, global_qr_data=None, lock=None):
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev, global_qr_data), main_loop(), heartbeat()))
     except Exception as e:
-        logger.exception(f"Unhandled exception: {e}")
         sentry_sdk.capture_exception(e)
+        logger.info("sent exception to sentry")
+        logger.exception(f"Unhandled exception: {e}")
         sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
