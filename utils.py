@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import requests
 import sentry_sdk
@@ -26,14 +27,14 @@ def log_unsuccessful_request(response, logger):
 
 class SentryLogger(logging.Logger):
     def error(self, msg, *args, exc_info=None, **kwargs):
-        # Automatically send the exception to Sentry if exc_info is provided
+        if exc_info is True:  # Handle `True` explicitly
+            exc_info = sys.exc_info()
         if exc_info or "exc_info" in kwargs:
             sentry_sdk.capture_exception(exc_info or kwargs.get("exc_info"))
-        # Call the parent class's `error` method
         super().error(msg, *args, exc_info=exc_info, **kwargs)
 
     def exception(self, msg, *args, exc_info=True, **kwargs):
-        # Ensure that the exception is sent to Sentry
-        sentry_sdk.capture_exception()
-        # Call the parent class's `exception` method
+        if exc_info is True:  # Retrieve exception info
+            exc_info = sys.exc_info()
+        sentry_sdk.capture_exception(exc_info)
         super().exception(msg, *args, exc_info=exc_info, **kwargs)
