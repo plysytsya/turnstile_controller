@@ -531,6 +531,7 @@ def initialize_globals(settings):
         environment=settings["SENTRY_ENV"],
         traces_sample_rate=1.0,
     )
+    print(f"Sentry initialized with {settings['SENTRY_DSN']} and {settings['SENTRY_ENV']}")
 
     DIRECTION = settings.get("DIRECTION")
     ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
@@ -608,6 +609,5 @@ def main(settings, global_qr_data=None, lock=None):
 
 
 if __name__ == "__main__":
-    sentry_sdk.capture_message("hello")
     settings = os.environ.copy()
     main(settings)
