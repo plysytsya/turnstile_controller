@@ -8,6 +8,9 @@ import os
 from multiprocessing import Process, Manager, Lock
 import sys
 import time
+
+import sentry_sdk
+
 import qr
 
 import dotenv
@@ -37,6 +40,12 @@ serial_devices = find_serial_devices()
 devices = keyboard_devices + serial_devices
 
 load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("SENTRY_ENV"),
+    traces_sample_rate=1.0,
+)
 
 processes = []
 
@@ -131,6 +140,7 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
 
 if __name__ == "__main__":
     try:
+        sentry_sdk.capture_message("Starting QR multi-controller.")
         if not processes:
             logger.info("No processes to start.")
         for process in processes:

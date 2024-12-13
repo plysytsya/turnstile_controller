@@ -608,5 +608,6 @@ def main(settings, global_qr_data=None, lock=None):
 
 
 if __name__ == "__main__":
+    sentry_sdk.capture_message("hello")
     settings = os.environ.copy()
     main(settings)
