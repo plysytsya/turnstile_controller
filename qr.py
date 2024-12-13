@@ -456,7 +456,7 @@ async def serial_device_event_loop(global_qr_data=None, lock=None):
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except (serial.SerialException, Exception) as e:
-        logger.error(f"Error: {e}")
+        logger.exception(f"Error: {e}")
 
 
 def _detect_format_and_normalize(uid: str) -> str:
@@ -590,7 +590,7 @@ def main(settings, global_qr_data=None, lock=None):
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev, global_qr_data), main_loop(), heartbeat()))
     except Exception as e:
-        logger.error(f"Unhandled exception: {e}")
+        logger.exception(f"Unhandled exception: {e}")
         sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
