@@ -15,11 +15,11 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
-import sentry_sdk
 
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
+from utils import init_sentry
 
 
 # Global Variables
@@ -85,12 +85,7 @@ logger.info(f"Starting QR script. My direction is {DIRECTION}")
 
 load_dotenv()
 
-sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN"),
-    environment=os.getenv("SENTRY_ENV"),
-    traces_sample_rate=1.0
-)
-logger.info("Sentry initialized successfully.")
+init_sentry()
 
 jwt_token = None
 
