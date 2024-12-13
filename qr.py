@@ -531,6 +531,7 @@ def initialize_globals(settings):
         environment=settings["SENTRY_ENV"],
         traces_sample_rate=1.0,
     )
+    time.sleep(1)
     print(f"Sentry initialized with {settings['SENTRY_DSN']} and {settings['SENTRY_ENV']}")
 
     1/0
