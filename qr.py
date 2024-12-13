@@ -527,8 +527,8 @@ def initialize_globals(settings):
     global IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
 
     sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        environment=settings.SENTRY_ENV,
+        dsn=settings["SENTRY_DSN"],
+        environment=settings["SENTRY_ENV"],
         traces_sample_rate=1.0,
     )
 
