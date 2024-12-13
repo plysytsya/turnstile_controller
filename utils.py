@@ -1,4 +1,8 @@
+import logging
+
 import requests
+import sentry_sdk
+
 
 def login(hostname, username, password, logger):
     url = f"{hostname}/api/token/"
@@ -20,22 +24,16 @@ def log_unsuccessful_request(response, logger):
     logger.error(f"Unsuccessful request to endpoint {endpoint}. Response: {log_message}")
 
 
-def init_sentry():
-    import sentry_sdk
-    from sentry_sdk.integrations.logging import LoggingIntegration
-    import logging
-    import os
+class SentryLogger(logging.Logger):
+    def error(self, msg, *args, exc_info=None, **kwargs):
+        # Automatically send the exception to Sentry if exc_info is provided
+        if exc_info or "exc_info" in kwargs:
+            sentry_sdk.capture_exception(exc_info or kwargs.get("exc_info"))
+        # Call the parent class's `error` method
+        super().error(msg, *args, exc_info=exc_info, **kwargs)
 
-    sentry_logging = LoggingIntegration(
-        level=logging.ERROR,  # Capture errors and above
-        event_level=logging.ERROR  # Send events for errors
-    )
-
-    sentry_sdk.init(
-        dsn=os.getenv("SENTRY_DSN"),
-        environment=os.getenv("SENTRY_ENV"),
-        traces_sample_rate=1.0,
-        integrations=[sentry_logging]
-    )
-
-    logging.warning("Sentry initialized.")
+    def exception(self, msg, *args, exc_info=True, **kwargs):
+        # Ensure that the exception is sent to Sentry
+        sentry_sdk.capture_exception()
+        # Call the parent class's `exception` method
+        super().exception(msg, *args, exc_info=exc_info, **kwargs)

@@ -19,8 +19,9 @@ import serial
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
-from utils import init_sentry
+import sentry_sdk
 
+from utils import SentryLogger
 
 # Global Variables
 DIRECTION = None
@@ -66,7 +67,9 @@ for logger in logging.Logger.manager.loggerDict.values():
     if hasattr(logger, "handlers"):
         logger.handlers = []
 
-logger = logging.getLogger("qr_logger")
+logging.setLoggerClass(SentryLogger)
+logger = logging.getLogger("qr")
+logger.setLevel(logging.INFO)
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
@@ -85,7 +88,11 @@ logger.info(f"Starting QR script. My direction is {DIRECTION}")
 
 load_dotenv()
 
-init_sentry()
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("SENTRY_ENV"),
+    traces_sample_rate=1.0,
+)
 
 jwt_token = None
 
