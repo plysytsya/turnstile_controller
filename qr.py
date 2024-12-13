@@ -533,6 +533,7 @@ def initialize_globals(settings):
     )
     print(f"Sentry initialized with {settings['SENTRY_DSN']} and {settings['SENTRY_ENV']}")
 
+    1/0
     DIRECTION = settings.get("DIRECTION")
     ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
     ENABLE_STREAM_HANDLER = settings.get("ENABLE_STREAM_HANDLER", "False").lower() == "true"
