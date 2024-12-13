@@ -517,7 +517,6 @@ async def main_loop():
 
     while True:
         if shared_list:
-            raise Exception("new one")
             qr_data = shared_list.pop(0)
             verify_customer(qr_data)
         await asyncio.sleep(0.3)  # delay to avoid busy-waiting
