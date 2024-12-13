@@ -514,6 +514,7 @@ async def main_loop():
     login()
 
     while True:
+        a=1/0
         if shared_list:
             qr_data = shared_list.pop(0)
             verify_customer(qr_data)
@@ -534,7 +535,6 @@ def initialize_globals(settings):
     time.sleep(1)
     print(f"Sentry initialized with {settings['SENTRY_DSN']} and {settings['SENTRY_ENV']}")
 
-    1/0
     DIRECTION = settings.get("DIRECTION")
     ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
     ENABLE_STREAM_HANDLER = settings.get("ENABLE_STREAM_HANDLER", "False").lower() == "true"
