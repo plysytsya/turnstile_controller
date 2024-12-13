@@ -16,4 +16,4 @@ python-dotenv
 setproctitle
 aiohttp
 tenacity
-#systemd-python
+systemd-python  # sudo apt install libsystemd-dev

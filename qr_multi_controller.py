@@ -131,6 +131,8 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
 
 if __name__ == "__main__":
     try:
+        if not processes:
+            logger.info("No processes to start.")
         for process in processes:
             process.start()
             logger.info(f"Started process {process.name}. Sleeping for 2 seconds before starting the next process.")

@@ -10,4 +10,6 @@ smbus2
 pyserial
 pyzmq
 setproctitle
-#systemd-python
+systemd-python  # sudo apt install libsystemd-dev
+rpi-lcd
+unidecode
