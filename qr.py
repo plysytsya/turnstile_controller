@@ -438,8 +438,9 @@ async def serial_device_event_loop(global_qr_data=None, lock=None):
                             logger.warning(f"Invalid JSON data: {data}")
                             await asyncio.sleep(0.1)
                             continue
+                        normalized_data = _detect_format_and_normalize(data)
                         qr_dict = {
-                            "customer_uuid": hash_uuid(data),
+                            "customer_uuid": hash_uuid(normalized_data),
                             "timestamp": int(time.time()),
                         }
                         logger.info(f"Created QR dict: {qr_dict}")
@@ -452,6 +453,30 @@ async def serial_device_event_loop(global_qr_data=None, lock=None):
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except (serial.SerialException, Exception) as e:
         logger.error(f"Error: {e}")
+
+
+def _detect_format_and_normalize(uid: str) -> str:
+    """
+    Detects the format (decimal/hexadecimal) and byte order, then normalizes to big-endian hexadecimal.
+    """
+    try:
+        # Step 1: Convert to hexadecimal if input is decimal
+        if uid.isdigit():
+            uid_hex = format(int(uid), 'X')  # Decimal to hex
+        else:
+            uid_hex = uid.upper()  # Assume already in hex
+
+        # Step 2: Detect and handle little-endian
+        # NFC UIDs are usually 4 or 8 bytes (8 or 16 hex characters)
+        if len(uid_hex) % 2 == 0:  # Ensure even length for byte processing
+            # Reconstruct big-endian order and check if it matches known patterns
+            reversed_hex = ''.join(reversed([uid_hex[i:i + 2] for i in range(0, len(uid_hex), 2)]))
+            # Use heuristic: reversed_hex should look more like a standard UID
+            if int(reversed_hex, 16) > int(uid_hex, 16):  # Heuristic to decide byte order
+                return reversed_hex
+        return uid_hex
+    except ValueError:
+        return "Invalid UID"
 
 
 def read_serial_device(device_name):
