@@ -140,11 +140,6 @@ if os.getenv("HAS_CAMERA").lower() in ["true", "1"]:
 
 if __name__ == "__main__":
     try:
-        sentry_sdk.capture_message("Starting QR multi-controller.")
-        try:
-            raise Exception("hello world")
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
         if not processes:
             logger.info("No processes to start.")
         for process in processes:

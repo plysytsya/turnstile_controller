@@ -86,12 +86,6 @@ logger.info(f"Starting QR script. My direction is {DIRECTION}")
 
 load_dotenv()
 
-sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN"),
-    environment=os.getenv("SENTRY_ENV"),
-    traces_sample_rate=1.0,
-)
-
 jwt_token = None
 
 
@@ -531,6 +525,12 @@ def initialize_globals(settings):
     global HEARTBEAT_FILE_PATH, ENTRANCE_UUID, HOSTNAME, USERNAME, PASSWORD, LCD
     global JWT_TOKEN, USE_LCD, RELAY_PIN_DOOR, RELAY_PIN_DISPLAY, LCD_I2C_ADDRESS
     global IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
+
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.SENTRY_ENV,
+        traces_sample_rate=1.0,
+    )
 
     DIRECTION = settings.get("DIRECTION")
     ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
