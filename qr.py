@@ -514,8 +514,8 @@ async def main_loop():
     login()
 
     while True:
-        a=1/0
         if shared_list:
+            prtin("shared_list", shared_list)
             qr_data = shared_list.pop(0)
             verify_customer(qr_data)
         await asyncio.sleep(0.3)  # delay to avoid busy-waiting
