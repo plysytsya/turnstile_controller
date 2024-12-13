@@ -438,7 +438,11 @@ async def serial_device_event_loop(global_qr_data=None, lock=None):
                             logger.warning(f"Invalid JSON data: {data}")
                             await asyncio.sleep(0.1)
                             continue
-                        normalized_data = _detect_format_and_normalize(data)
+                        try:
+                            normalized_data = _detect_format_and_normalize(data)
+                        except Exception as e:
+                            logger.exception(e)
+                            raise e
                         qr_dict = {
                             "customer_uuid": hash_uuid(normalized_data),
                             "timestamp": int(time.time()),
