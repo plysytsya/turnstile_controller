@@ -31,10 +31,12 @@ class SentryLogger(logging.Logger):
             exc_info = sys.exc_info()
         if exc_info or "exc_info" in kwargs:
             sentry_sdk.capture_exception(exc_info or kwargs.get("exc_info"))
+            sentry_sdk.flush()
         super().error(msg, *args, exc_info=exc_info, **kwargs)
 
     def exception(self, msg, *args, exc_info=True, **kwargs):
         if exc_info is True:  # Retrieve exception info
             exc_info = sys.exc_info()
         sentry_sdk.capture_exception(exc_info)
+        sentry_sdk.flush()
         super().exception(msg, *args, exc_info=exc_info, **kwargs)
