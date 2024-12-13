@@ -515,7 +515,7 @@ async def main_loop():
 
     while True:
         if shared_list:
-            a = 1/0
+            raise Exception("BlahBLah Error")
             qr_data = shared_list.pop(0)
             verify_customer(qr_data)
         await asyncio.sleep(0.3)  # delay to avoid busy-waiting
@@ -600,6 +600,11 @@ def main(settings, global_qr_data=None, lock=None):
             )
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev, global_qr_data), main_loop(), heartbeat()))
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        sentry_sdk.flush()
+        logger.exception(f"Error in main: {e}")
+
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
 
