@@ -532,8 +532,7 @@ def initialize_globals(settings):
         environment=settings["SENTRY_ENV"],
         traces_sample_rate=1.0,
     )
-    time.sleep(1)
-    print(f"Sentry initialized with {settings['SENTRY_DSN']} and {settings['SENTRY_ENV']}")
+    logger.info(f"Sentry initialized with {settings['SENTRY_DSN']} and {settings['SENTRY_ENV']}")
 
     DIRECTION = settings.get("DIRECTION")
     ENTRANCE_DIRECTION = settings.get("ENTRANCE_DIRECTION")
@@ -601,11 +600,6 @@ def main(settings, global_qr_data=None, lock=None):
             )
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev, global_qr_data), main_loop(), heartbeat()))
-    except Exception as e:
-        sentry_sdk.capture_exception(e)
-        logger.info("sent exception to sentry")
-        logger.exception(f"Unhandled exception: {e}")
-        sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
 
