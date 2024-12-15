@@ -177,7 +177,6 @@ def handle_server_response(status_code, first_name=None):
 
 
 def open_door_and_greet(first_name):
-    raise Exception("Another test")
     if ENTRANCE_DIRECTION == DIRECTION:
         greet_word = "Hola"
     else:
