@@ -17,3 +17,4 @@ setproctitle
 aiohttp
 tenacity
 systemd-python  # sudo apt install libsystemd-dev
+sentry_sdk
