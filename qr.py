@@ -445,6 +445,7 @@ async def serial_device_event_loop():
                             await asyncio.sleep(0.1)
                             continue
                         normalized_data = _detect_format_and_normalize(data)
+                        logger.info(f"Normalized data: {normalized_data}")
                         qr_dict = {"customer_uuid": hash_uuid(normalized_data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
                         shared_list.append(qr_dict)
