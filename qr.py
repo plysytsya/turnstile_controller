@@ -66,6 +66,7 @@ RELAY_PIN_DISPLAY = int(os.getenv("RELAY_PIN_DISPLAY")) if os.getenv("RELAY_PIN_
 RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
+OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
 
 if USE_LCD:
     try:
@@ -444,7 +445,7 @@ async def serial_device_event_loop():
                             logger.warning(f"Invalid JSON data: {data}")
                             await asyncio.sleep(0.1)
                             continue
-                        normalized_data = _detect_format_and_normalize(data)
+                        normalized_data = convert_endian_format(data)
                         logger.info(f"Normalized data: {normalized_data}")
                         qr_dict = {"customer_uuid": hash_uuid(normalized_data), "timestamp": int(time.time())}
                         logger.info(f"Created QR dict: {qr_dict}")
@@ -456,6 +457,34 @@ async def serial_device_event_loop():
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except (serial.SerialException, Exception) as e:
         logger.error(f"Error: {e}")
+
+
+def convert_endian_format(uid: str, input_format: str = "hex", output_endian: str = OUTPUT_ENDIAN) -> str:
+    """
+    Converts the UID between decimal and hexadecimal formats and adjusts endianness.
+
+    Args:
+        uid (str): The input UID from the NFC reader.
+        input_format (str): The format of the input UID ("decimal" or "hex").
+        output_endian (str): The desired endianness ("big" or "little").
+
+    Returns:
+        str: The converted and normalized UID.
+    """
+    # Step 1: Convert to hexadecimal if input is decimal
+    if input_format == "decimal":
+        uid = format(int(uid), "X")  # Convert decimal to hexadecimal
+
+    # Step 2: Ensure the UID has even length for byte processing
+    if len(uid) % 2 != 0:
+        uid = "0" + uid
+
+    # Step 3: Reverse bytes for little-endian if needed
+    if output_endian == "little":
+        uid_bytes = [uid[i:i + 2] for i in range(0, len(uid), 2)]
+        uid = "".join(reversed(uid_bytes))
+
+    return uid
 
 
 def _detect_format_and_normalize(uid: str) -> str:
