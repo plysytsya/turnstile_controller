@@ -17,8 +17,15 @@ import serial
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
+import sentry_sdk
 
 from utils import SentryLogger
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("SENTRY_ENV"),
+    traces_sample_rate=1.0,
+)
 
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
