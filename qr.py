@@ -14,10 +14,11 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
-
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
+
+from utils import SentryLogger
 
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
@@ -34,7 +35,7 @@ class DirectionFilter(logging.Filter):
         record.msg = f"{DIRECTION} - {record.msg}"
         return True
 
-
+logging.setLoggerClass(SentryLogger)
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
 journal_handler = JournalHandler()
@@ -437,7 +438,8 @@ async def serial_device_event_loop():
                     logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
-                        shared_list.append(qr_dict)
+                        customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
+                        verify_customer(customer, qr_dict["timestamp"])
                     except (json.JSONDecodeError, TypeError):
                         if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
@@ -445,70 +447,14 @@ async def serial_device_event_loop():
                             logger.warning(f"Invalid JSON data: {data}")
                             await asyncio.sleep(0.1)
                             continue
-                        normalized_data = convert_endian_format(data)
-                        logger.info(f"Normalized data: {normalized_data}")
-                        qr_dict = {"customer_uuid": hash_uuid(normalized_data), "timestamp": int(time.time())}
-                        logger.info(f"Created QR dict: {qr_dict}")
-                        shared_list.append(qr_dict)
-                await asyncio.sleep(0.3)
+                        verify_customer(hash_uuid(data), int(time.time()))
+                await asyncio.sleep(0.1)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except (serial.SerialException, Exception) as e:
         logger.error(f"Error: {e}")
-
-
-def convert_endian_format(uid: str, input_format: str = "hex", output_endian: str = OUTPUT_ENDIAN) -> str:
-    """
-    Converts the UID between decimal and hexadecimal formats and adjusts endianness.
-
-    Args:
-        uid (str): The input UID from the NFC reader.
-        input_format (str): The format of the input UID ("decimal" or "hex").
-        output_endian (str): The desired endianness ("big" or "little").
-
-    Returns:
-        str: The converted and normalized UID.
-    """
-    # Step 1: Convert to hexadecimal if input is decimal
-    if input_format == "decimal":
-        uid = format(int(uid), "X")  # Convert decimal to hexadecimal
-
-    # Step 2: Ensure the UID has even length for byte processing
-    if len(uid) % 2 != 0:
-        uid = "0" + uid
-
-    # Step 3: Reverse bytes for little-endian if needed
-    if output_endian == "little":
-        uid_bytes = [uid[i:i + 2] for i in range(0, len(uid), 2)]
-        uid = "".join(reversed(uid_bytes))
-
-    return uid
-
-
-def _detect_format_and_normalize(uid: str) -> str:
-    """
-    Detects the format (decimal/hexadecimal) and byte order, then normalizes to big-endian hexadecimal.
-    """
-    try:
-        # Step 1: Convert to hexadecimal if input is decimal
-        if uid.isdigit():
-            uid_hex = format(int(uid), 'X')  # Decimal to hex
-        else:
-            uid_hex = uid.upper()  # Assume already in hex
-
-        # Step 2: Detect and handle little-endian
-        # NFC UIDs are usually 4 or 8 bytes (8 or 16 hex characters)
-        if len(uid_hex) % 2 == 0:  # Ensure even length for byte processing
-            # Reconstruct big-endian order and check if it matches known patterns
-            reversed_hex = ''.join(reversed([uid_hex[i:i + 2] for i in range(0, len(uid_hex), 2)]))
-            # Use heuristic: reversed_hex should look more like a standard UID
-            if int(reversed_hex, 16) > int(uid_hex, 16):  # Heuristic to decide byte order
-                return reversed_hex
-        return uid_hex
-    except ValueError:
-        return "Invalid UID"
 
 
 
