@@ -499,7 +499,7 @@ if __name__ == "__main__":
     dev = init_qr_device()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), main_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), heartbeat()))
         else:
             loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
     except KeyboardInterrupt:
