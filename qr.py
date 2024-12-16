@@ -448,14 +448,13 @@ async def serial_device_event_loop():
                             await asyncio.sleep(0.1)
                             continue
                         verify_customer(hash_uuid(data), int(time.time()))
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.2)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except (serial.SerialException, Exception) as e:
-        logger.error(f"Error: {e}")
-
+        logger.exception(f"Error: {e}")
 
 
 def read_serial_device(device_name):
