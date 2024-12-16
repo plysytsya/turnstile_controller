@@ -53,8 +53,10 @@ def get_customers():
 
     customer_uuid_dict = {customer["customer_uuid"]: customer for customer in response.json()}
     card_number_dict = {customer["card_number"]: customer for customer in response.json() if customer.get("card_number")}
+    second_card_number_dict = {customer["second_card_number"]: customer for customer in response.json() if
+                               customer.get("second_card_number")}
     # merge the two dictionaries
-    return {**customer_uuid_dict, **card_number_dict}
+    return {**customer_uuid_dict, **card_number_dict, **second_card_number_dict}
 
 
 def make_request(method, url, headers=None, payload=None, retries=60, sleep_duration=10):
