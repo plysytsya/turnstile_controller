@@ -440,7 +440,7 @@ async def serial_device_event_loop():
                         qr_dict = json.loads(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
                         verify_customer(customer, qr_dict["timestamp"])
-                    except (json.JSONDecodeError, TypeError):
+                    except (json.JSONDecodeError, TypeError, AttributeError):
                         if len(data) > 15:
                             display_on_lcd("datos invalidos", "", timeout=2)
                             display_on_lcd("Escanea", "codigo QR...")
