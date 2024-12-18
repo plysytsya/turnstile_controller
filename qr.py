@@ -511,6 +511,7 @@ async def main_loop():
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     dev = init_qr_device()
+    refresh_token()
     try:
         if IS_SERIAL_DEVICE:
             loop.run_until_complete(asyncio.gather(serial_device_event_loop(), heartbeat()))
