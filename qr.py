@@ -69,7 +69,6 @@ ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
 HOSTNAME = os.getenv("HOSTNAME")
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
-JWT_TOKEN = os.getenv("JWT_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
 RELAY_PIN_DISPLAY = int(os.getenv("RELAY_PIN_DISPLAY")) if os.getenv("RELAY_PIN_DISPLAY") else None
@@ -248,8 +247,11 @@ def send_entrance_log(url, headers, payload, retries=3, sleep_duration=5):
             response = requests.put(url, headers=headers, json=payload)
             if response.status_code == 200:
                 logger.info(f"Entrance log sent successfully: {payload}")
+            elif response.status_code == 403:
+                logger.error(f"Permission denied when sending entrance log: {response.text}. headers sent: {headers}")
+                refresh_token()
             else:
-                logger.error(f"Failed to send entrance log: {response.text}")
+                logger.error(f"Failed to send entrance log: {response.text}. headers sent: {headers}")
             return response
         except requests.exceptions.RequestException as e:
             logger.warning(f"Internet connection error when sending entrance-log: {e}. Retrying...")
