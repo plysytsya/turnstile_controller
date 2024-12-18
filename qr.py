@@ -14,6 +14,8 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
+
+from heartbeat_monitor import IS_BIDIRECT
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
@@ -75,6 +77,7 @@ RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
+AS_HEX=os.getenv("AS_HEX").lower() == "true"
 
 if USE_LCD:
     try:
@@ -441,7 +444,7 @@ async def serial_device_event_loop():
             while True:
                 # Read data from the serial port
                 if ser.in_waiting > 0:
-                    data = ser.readline().decode('utf-8').strip()
+                    data = _interpret_serial_data(ser, AS_HEX)
                     logger.info(f"Received: {data}")
                     try:
                         qr_dict = json.loads(data)
@@ -464,24 +467,33 @@ async def serial_device_event_loop():
         logger.exception(f"Error: {e}")
 
 
-def read_serial_device(device_name):
-    # Find the QR device
-
-    try:
-        # Open the serial connection
-        with serial.Serial(device_name, baudrate=9600, timeout=0.1) as ser:
-            print(f"Reading from {device_name}...")
-            while True:
-                # Read data from the serial port
-                if ser.in_waiting > 0:
-                    data = ser.readline().decode('utf-8').strip()
-                    if data:
-                        print(f"Received: {data}")
-    except serial.SerialException as e:
-        print(f"Error: {e}")
+def _interpret_serial_data(ser, as_hex: bool):
+    ascii_data = ser.readline().decode('utf-8').strip()
+    if not ascii_data:
+        return None
+    if as_hex:
+        hex = _decimal_to_hex(ascii_data)
+    else:
+        raw_bytes = bytes.fromhex(ascii_data)
+        hex = ':'.join(f"{b:02x}" for b in raw_bytes)
+    return _hash_uuid(hex)
 
 
-def hash_uuid(input_string) -> str:
+def _decimal_to_hex(decimal_str):
+    # Convert the decimal string to an integer
+    decimal_value = int(decimal_str)
+    # Convert the integer to a hexadecimal string
+    hex_value = f"{decimal_value:08x}"
+    # Reverse the byte order (convert to big-endian)
+    reversed_hex = "".join(
+        hex_value[i:i+2] for i in range(len(hex_value)-2, -1, -2)
+    )
+    # Format as hex bytes with colons
+    hex_uid = ":".join(reversed_hex[i:i+2] for i in range(0, len(reversed_hex), 2))
+    return hex_uid
+
+
+def _hash_uuid(input_string) -> str:
     # Use uuid5 with a standard namespace (NAMESPACE_DNS) for consistent hashing
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, input_string))
 
