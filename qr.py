@@ -450,14 +450,8 @@ async def serial_device_event_loop():
                         qr_dict = json.loads(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
                         verify_customer(customer, qr_dict["timestamp"])
-                    except (json.JSONDecodeError, TypeError, AttributeError):
-                        if len(data) > 15:
-                            display_on_lcd("datos invalidos", "", timeout=2)
-                            display_on_lcd("Escanea", "codigo QR...")
-                            logger.warning(f"Invalid JSON data: {data}")
-                            await asyncio.sleep(0.1)
-                            continue
-                        verify_customer(hash_uuid(data), int(time.time()))
+                    except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
+                        verify_customer(data, int(time.time()))
                 await asyncio.sleep(0.2)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
