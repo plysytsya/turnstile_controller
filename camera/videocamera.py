@@ -274,6 +274,4 @@ if __name__ == "__main__":
         FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))
         FPS = int(os.getenv("FPS"))
 
-    camera  = VideoCamera(CameraSettings())
-    qr_data = {'uuid': uuid4()}
-    asyncio.run(camera.start_recording(qr_data))
+    run_camera(CameraSettings())
