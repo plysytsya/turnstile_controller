@@ -105,7 +105,7 @@ class VideoUploader:
         except OSError as e:
             logger.error(f"Failed to delete file {file_path_to_upload}: {e}")
 
-    async def upload(self):
+    async def upload(self, video_files):
         """Main loop to check the directory and upload files."""
         try:
             session = aioboto3.Session()
@@ -118,20 +118,10 @@ class VideoUploader:
                 # Ensure the bucket exists on startup
                 await self.ensure_bucket_exists(s3_client)
 
-                # List all files in the recording directory
-                files = [
-                    os.path.join(self.settings.RECORDING_DIR, f)
-                    for f in os.listdir(self.settings.RECORDING_DIR)
-                    if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
-                ]
-                video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
-
-                if video_files:
-                    logger.info(f"Found {len(video_files)} video files to upload...")
-                    tasks = [self.upload_file_to_s3(s3_client, file) for file in video_files]
-                    await asyncio.gather(*tasks)
-                else:
-                    logger.debug("No files found to upload.")
+                logger.info(f"Found {len(video_files)} video files to upload...")
+                for file in video_files:
+                    logger.info(f"Uploading {file}...")
+                    await self.upload_file_to_s3(s3_client, file)
         except asyncio.CancelledError:
             logger.info("Upload cancelled.")
             raise
@@ -144,7 +134,15 @@ class VideoUploader:
         """Run the upload loop continuously."""
         while True:
             try:
-                await self.upload()
+                # List all files in the recording directory
+                files = [
+                    os.path.join(self.settings.RECORDING_DIR, f)
+                    for f in os.listdir(self.settings.RECORDING_DIR)
+                    if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
+                ]
+                video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
+                if video_files:
+                    await self.upload(video_files)
             except asyncio.CancelledError:
                 logger.info("Upload loop cancelled.")
                 break
