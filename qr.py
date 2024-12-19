@@ -301,7 +301,7 @@ async def verify_customer(customer_uuid, timestamp):
     entrance_log_uuid = uuid.uuid4()
 
     if USE_CAMERA:
-        filename = f"{RECORDING_DIR}/{entrance_log_uuid}_{customer_uuid}_{timestamp}.txt"
+        filename = f"{RECORDING_DIR}/{entrance_log_uuid}"
         with open(filename, "w") as f:
             f.write("")
 
