@@ -78,6 +78,8 @@ OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
 AS_HEX=os.getenv("AS_HEX").lower() == "true"
 HAS_CAMERA = os.getenv("HAS_CAMERA").lower() == "true"
 USE_CAMERA = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
+if USE_CAMERA:
+    RECORDING_DIR = os.getenv("RECORDING_DIR")
 
 
 if USE_LCD:
@@ -86,19 +88,6 @@ if USE_LCD:
     except Exception as e:
         logger.warning(f"Error parsing LCD I2C address: {e}. Continuing without")
         USE_LCD = False
-
-
-if USE_CAMERA:
-    from videocamera import VideoCamera
-
-    RECORDING_DIR = os.getenv("RECORDING_DIR")
-    FRAME_WIDTH = os.getenv("FRAME_WIDTH")
-    FRAME_HEIGHT = os.getenv("FRAME_HEIGHT")
-    FPS = os.getenv("FPS")
-
-    camera = VideoCamera(
-        recording_dir=RECORDING_DIR, frame_width=int(FRAME_WIDTH), frame_height=int(FRAME_HEIGHT), fps=int(FPS)
-    )
 
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
@@ -306,15 +295,22 @@ def login():
 
 async def verify_customer(customer_uuid, timestamp):
     global jwt_token
-    entrance_log_uuid = uuid.uuid4()
-    asyncio.create_task(camera.start_recording({"uuid": entrance_log_uuid}))
 
     url = f"{HOSTNAME}/verify_customer/"
+
+    entrance_log_uuid = uuid.uuid4()
+
+    if USE_CAMERA:
+        filename = f"{RECORDING_DIR}/{entrance_log_uuid}_{customer_uuid}_{timestamp}.txt"
+        with open(filename, "w") as f:
+            f.write("")
+
     payload = {
         "customer_uuid": customer_uuid,
         "entrance_uuid": ENTRANCE_UUID,
         "direction": DIRECTION,
         "timestamp": timestamp,
+        "uuid": entrance_log_uuid,
     }
 
     headers = {
@@ -469,12 +465,8 @@ async def serial_device_event_loop():
                         qr_dict = json.loads(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
                         await verify_customer(customer, qr_dict["timestamp"])
-                        if USE_CAMERA:
-                            await asyncio.sleep(5)
                     except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                         await verify_customer(data, int(time.time()))
-                        if USE_CAMERA:
-                            await asyncio.sleep(5)
                 await asyncio.sleep(0.2)
     except OSError as e:
         lcd.display("No coneccion con", "lector, reinicio")
