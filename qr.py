@@ -244,8 +244,6 @@ def post_request(url, headers, payload, retries=10, sleep_duration=10):
 
 
 def send_entrance_log(url, headers, payload, retries=3, sleep_duration=5):
-    _uuid = generate_uuid_from_string(str(payload))
-    payload["uuid"] = _uuid
     for i in range(retries):
         try:
             response = requests.put(url, headers=headers, json=payload)
@@ -296,22 +294,22 @@ def login():
 async def verify_customer(customer_uuid, timestamp):
     global jwt_token
 
-    url = f"{HOSTNAME}/verify_customer/"
-
-    entrance_log_uuid = uuid.uuid4()
-
-    if USE_CAMERA:
-        filename = f"{RECORDING_DIR}/{entrance_log_uuid}"
-        with open(filename, "w") as f:
-            f.write("")
-
     payload = {
         "customer_uuid": customer_uuid,
         "entrance_uuid": ENTRANCE_UUID,
         "direction": DIRECTION,
         "timestamp": timestamp,
-        "uuid": entrance_log_uuid,
     }
+
+    entrance_log_uuid = generate_uuid_from_string(str(payload))
+    payload["uuid"] = entrance_log_uuid
+
+    if USE_CAMERA:
+        filename = f"{RECORDING_DIR}/{entrance_log_uuid}.txt"
+        with open(filename, "w") as f:
+            f.write("")
+
+    url = f"{HOSTNAME}/verify_customer/"
 
     headers = {
         "Authorization": f"Bearer {jwt_token}",
