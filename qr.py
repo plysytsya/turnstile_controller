@@ -305,9 +305,11 @@ async def verify_customer(customer_uuid, timestamp):
     payload["uuid"] = entrance_log_uuid
 
     if USE_CAMERA:
-        filename = f"{RECORDING_DIR}/{entrance_log_uuid}.txt"
-        with open(filename, "w") as f:
-            f.write("")
+        filename1 = f"{RECORDING_DIR}/{entrance_log_uuid}.txt"
+        filename2 = f"{RECORDING_DIR}/record.txt"
+        for filename in [filename1, filename2]:
+            with open(filename, "w") as f:
+                f.write("")
 
     url = f"{HOSTNAME}/verify_customer/"
 

@@ -1,3 +1,4 @@
+import shutil
 import time
 import asyncio
 import os
@@ -8,6 +9,7 @@ import setproctitle
 import sys
 import logging
 from systemd.journal import JournalHandler
+import aiofiles.os
 
 # Add the global Python library path to sys.path
 sys.path.append("/usr/lib/python3/dist-packages")
@@ -22,17 +24,17 @@ logger.propagate = False
 
 class VideoCamera:
     """Video camera class that records video upon QR data trigger."""
-    def __init__(self, recording_dir, frame_width, frame_height, fps):
-        self.RECORDING_DIR = recording_dir
-        self.FRAME_WIDTH = frame_width
-        self.FRAME_HEIGHT = frame_height
-        self.FPS = fps
+    def __init__(self, settings):
+        self.RECORDING_DIR = settings.RECORDING_DIR
+        self.FRAME_WIDTH = settings.FRAME_WIDTH
+        self.FRAME_HEIGHT = settings.FRAME_HEIGHT
+        self.FPS = settings.FPS
 
         # Video recording parameters
         self.VIDEO_CODEC = "avc1"  # Codec used for recording video
         self.VIDEO_FORMAT = "mp4"  # Final format of the recorded video files
 
-        self.RECORDING_DURATION = 5  # Duration to record after trigger (in seconds)
+        self.RECORDING_DURATION = 6  # Duration to record after trigger (in seconds)
         self.QR_DATA_CHECK_INTERVAL = 0.2  # Interval to check for QR data (in seconds)
 
         # Recording variables
@@ -45,7 +47,6 @@ class VideoCamera:
 
         # Adjust FPS based on actual camera performance during recording
         self.init_camera()
-        self.is_recording = False
 
     def init_camera(self):
         self.video = cv2.VideoCapture(0)
@@ -77,6 +78,34 @@ class VideoCamera:
             (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))),
         )
 
+    async def find_trigger(self):
+        """Check for the existence of the record.txt file to start processing."""
+        record_file_path = os.path.join(self.RECORDING_DIR, "record.txt")
+
+        # Try to open the record.txt file asynchronously
+        try:
+            async with aiofiles.open(record_file_path, mode="r"):
+                await aiofiles.os.remove(record_file_path)
+                # File exists; continue processing
+        except FileNotFoundError:
+            # record.txt does not exist, no trigger
+            return False
+
+        # record.txt exists; proceed with listing and deleting files
+        filenames = os.listdir(self.RECORDING_DIR)  # Synchronous call here
+        txt_files = [filename[:-4] for filename in filenames if filename.endswith('.txt')]
+
+        # Remove all .txt files asynchronously
+        for filename in filenames:
+            if filename.endswith('.txt'):
+                file_path = os.path.join(self.RECORDING_DIR, filename)
+                try:
+                    await aiofiles.os.remove(file_path)  # Asynchronous delete
+                except FileNotFoundError:
+                    logger.warning(f"File {file_path} already deleted.")
+
+        return txt_files
+
     def cleanup(self):
         """Release resources properly on exit."""
         if self.video and self.video.isOpened():
@@ -88,10 +117,10 @@ class VideoCamera:
         """Asynchronous method to check for QR data and start recording."""
         try:
             while True:
-                # Check for QR data trigger
-                qr_data = read_and_delete_multi_process_qr_data(global_qr_data, lock)
-                if qr_data:
-                    await self.start_recording(qr_data)
+                filenames = await self.find_trigger()
+                if filenames:
+                    data = {"uuid": filenames[0], "additional_uuids": filenames[1:]}
+                    await self.start_recording(data)
                 await asyncio.sleep(self.QR_DATA_CHECK_INTERVAL)
         except asyncio.CancelledError:
             logger.info("Run loop cancelled.")
@@ -104,10 +133,6 @@ class VideoCamera:
 
     async def start_recording(self, qr_data):
         """Start video recording."""
-        while self.recording:
-            await asyncio.sleep(0.1)
-        self.is_recording = True
-
         self.current_qr_data = qr_data  # Store QR data for later use
 
         start = time.time()
@@ -135,7 +160,6 @@ class VideoCamera:
                 await asyncio.sleep(sleep_time)
         await self.stop_recording()
         self.init_camera()
-        self.is_recording = False
 
     async def stop_recording(self):
         """Stop video recording."""
@@ -152,6 +176,11 @@ class VideoCamera:
                 os.rename(self.recording_file, new_filename)
                 self.recording_file = new_filename
                 logger.info(f"Recording saved as {new_filename}")
+                if self.current_qr_data.get("additional_uuids"):
+                    for additional_uuid in self.current_qr_data.get("additional_uuids"):
+                        new_filename = f"{self.RECORDING_DIR}/{additional_uuid}.{self.VIDEO_FORMAT}"
+                        shutil.copy(self.recording_file, new_filename)
+                        logger.info(f"Recording saved as {new_filename}")
             else:
                 logger.warning("No QR data available to rename the recording file.")
 
@@ -238,12 +267,13 @@ if __name__ == "__main__":
     stream_handler.setLevel(logging.DEBUG)
     logger.addHandler(stream_handler)
 
+    class CameraSettings:
+        """Configuration settings for camera video uploads and S3 integration."""
+        RECORDING_DIR = os.getenv("RECORDING_DIR")
+        FRAME_WIDTH = int(os.getenv("FRAME_WIDTH"))
+        FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))
+        FPS = int(os.getenv("FPS"))
 
-    camera  = VideoCamera(
-        recording_dir=os.getenv("RECORDING_DIR"),
-        frame_width=int(os.getenv("FRAME_WIDTH")),
-        frame_height=int(os.getenv("FRAME_HEIGHT")),
-        fps=int(os.getenv("FPS"))
-    )
+    camera  = VideoCamera(CameraSettings())
     qr_data = {'uuid': uuid4()}
     asyncio.run(camera.start_recording(qr_data))
