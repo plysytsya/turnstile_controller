@@ -257,6 +257,9 @@ def run_camera(settings, global_qr_data=None, lock=None):
 
 
 if __name__ == "__main__":
+    import setproctitle
+
+    setproctitle.setproctitle("pyvideorecorder")
     import dotenv
 
     # the path of the .env file which is in the deirectory that is one level up from the current directory
