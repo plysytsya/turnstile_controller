@@ -148,7 +148,7 @@ class VideoUploader:
                 break
             except Exception as e:
                 logger.exception(f"Exception in upload_loop {e}")
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
 
 
 # Example Usage
