@@ -181,6 +181,9 @@ class VideoCamera:
                         new_filename = f"{self.RECORDING_DIR}/{additional_uuid}.{self.VIDEO_FORMAT}"
                         shutil.copy(self.recording_file, new_filename)
                         logger.info(f"Recording saved as {new_filename}")
+                tmp_mp4_files = [f for f in os.listdir(self.RECORDING_DIR) if f.endswith('.mp4') and "temp" in f]
+                for tmp_file in tmp_mp4_files:
+                    os.remove(os.path.join(self.RECORDING_DIR, tmp_file))
             else:
                 logger.warning("No QR data available to rename the recording file.")
 
