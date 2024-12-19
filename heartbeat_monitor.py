@@ -4,6 +4,8 @@ import os
 import pathlib
 import asyncio
 import subprocess
+import time
+
 from aiofiles import open as aio_open
 from dotenv import load_dotenv
 from systemd.journal import JournalHandler
@@ -66,20 +68,17 @@ async def restart_service():
 async def monitor_heartbeat():
     while True:
         if IS_BIDIRECT:
-            heartbeat_status = all(
-                await asyncio.gather(*[_is_alive(filename) for filename in HEARTBEAT_FILENAMES])
-            )
+            heartbeat_status = await _is_alive(HEARTBEAT_FILENAMES[0]) and await _is_alive(HEARTBEAT_FILENAMES[1])
         else:
-            a_alive, b_alive = await asyncio.gather(
-                _is_alive(HEARTBEAT_FILENAMES[0]),
-                _is_alive(HEARTBEAT_FILENAMES[1])
-            )
+            a_alive = await _is_alive(HEARTBEAT_FILENAMES[0])
+            b_alive = await _is_alive(HEARTBEAT_FILENAMES[1])
             heartbeat_status = a_alive or b_alive
 
         if not heartbeat_status:
             logger.warning("One or more devices are not alive.")
             await restart_service()
         await asyncio.sleep(SLEEP_INTERVAL)
+
 
 if __name__ == "__main__":
     asyncio.run(monitor_heartbeat())
