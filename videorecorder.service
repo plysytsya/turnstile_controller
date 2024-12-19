@@ -5,7 +5,7 @@ After=network.target
 [Service]
 TimeoutStopSec=3s
 RestartSec=10
-ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/camera/videorecorder.py
+ExecStart=bash /home/manager/turnstile_controller/camera/kill_videorecorder.sh && /home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/camera/videorecorder.py
 User=manager
 Restart=always
 WorkingDirectory=/home/
