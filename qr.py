@@ -463,9 +463,8 @@ async def serial_device_event_loop():
                     data = _interpret_serial_data(ser, AS_HEX)
                     logger.info(f"Received: {data}")
                     if "config" in data:
-                        config_data = json.loads(data)
                         display_on_lcd("aplicando", "configuracion", timeout=2)
-                        response = apply_config(config_data)
+                        response = apply_config(data)
                         logger.info(f"Config response: {response}")
                         if USE_LCD:
                             display_on_lcd("ajuste", "aplicado", timeout=2)
