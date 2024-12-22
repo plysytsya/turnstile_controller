@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
 
+from configurator import apply_config
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
@@ -445,7 +446,7 @@ async def keyboard_event_loop(device):
                             logger.error("Invalid JSON data.")
                             output_string = ""
     except OSError as e:
-        lcd.display("No coneccion con", "lector, reinicio")
+        display_on_lcd("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
@@ -464,12 +465,16 @@ async def serial_device_event_loop():
                     try:
                         qr_dict = json.loads(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
+                        config = qr_dict.get("config")
+                        if config:
+                            display_on_lcd("aplicando", "configuracion", timeout=2)
+                            apply_config(config)
                         await verify_customer(customer, qr_dict["timestamp"])
                     except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                         await verify_customer(data, int(time.time()))
                 await asyncio.sleep(0.2)
     except OSError as e:
-        lcd.display("No coneccion con", "lector, reinicio")
+        display_on_lcd("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
     except (serial.SerialException, Exception) as e:
