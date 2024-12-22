@@ -1,5 +1,6 @@
 import json
 import subprocess
+from pathlib import Path
 
 
 def apply_config(config):
@@ -24,8 +25,10 @@ def apply_wifi_config(SSID, password):
         return e.stderr.decode('utf-8')
 
 
-def write_env_file(env_file_str):
-    with open("/home/manager/turnstile_controller/.env", "w") as f:
-        f.write(env_file_str)
+def write_env_file(env_dict):
+    env_str = ""
+    for key, value in env_dict.items():
+        env_str += f'{key}="{value}"\n'
+    Path("/home/manager/turnstile_controller/.env").write_text(env_str)
     reboot_cmd = "sudo reboot"
     subprocess.run(reboot_cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
