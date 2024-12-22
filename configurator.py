@@ -31,4 +31,4 @@ def write_env_file(env_dict):
         env_str += f'{key}="{value}"\n'
     Path("/home/manager/turnstile_controller/.env").write_text(env_str)
     reboot_cmd = "sudo reboot"
-    subprocess.run(reboot_cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #subprocess.run(reboot_cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
