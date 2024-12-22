@@ -7,6 +7,8 @@ def apply_config(config):
     config = config_data["config"]
     if "wifi" in config:
         return apply_wifi_config(config["wifi"]["SSID"], config["wifi"]["password"])
+    if "env" in config:
+        return write_env_file(config["env"])
     return config
 
 
@@ -20,3 +22,10 @@ def apply_wifi_config(SSID, password):
             return "OK"
     except subprocess.CalledProcessError as e:
         return e.stderr.decode('utf-8')
+
+
+def write_env_file(env_file_str):
+    with open("/home/manager/turnstile_controller/.env", "w") as f:
+        f.write(env_file_str)
+    reboot_cmd = "sudo reboot"
+    subprocess.run(reboot_cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
