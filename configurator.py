@@ -11,9 +11,12 @@ def apply_config(config):
 
 
 def apply_wifi_config(SSID, password):
-    command = f"nmcli device wifi list && sudo nmcli dev wifi connect {SSID} password {password}"
+    command = f"sudo nmcli device wifi list && sudo nmcli dev wifi connect {SSID} password {password}"
+    verify_command = "sudo nmcli device show --active"
     try:
-        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return result.stdout.decode('utf-8')
+        subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(verify_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if SSID in result.stdout.decode('utf-8'):
+            return "OK"
     except subprocess.CalledProcessError as e:
         return e.stderr.decode('utf-8')
