@@ -4,9 +4,10 @@ import subprocess
 
 def apply_config(config):
     config_data = json.loads(config)
+    config = config_data["config"]
     if "wifi" in config:
-        return apply_wifi_config(config_data["wifi"]["SSID"], config_data["wifi"]["password"])
-    return config_data
+        return apply_wifi_config(config["wifi"]["SSID"], config["wifi"]["password"])
+    return config
 
 
 def apply_wifi_config(SSID, password):
