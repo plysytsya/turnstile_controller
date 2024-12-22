@@ -462,13 +462,13 @@ async def serial_device_event_loop():
                 if ser.in_waiting > 0:
                     data = _interpret_serial_data(ser, AS_HEX)
                     logger.info(f"Received: {data}")
+                    if "config" in data:
+                        config_data = json.loads(data)
+                        display_on_lcd("aplicando", "configuracion", timeout=2)
+                        apply_config(config_data)
                     try:
                         qr_dict = json.loads(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
-                        config = qr_dict.get("config")
-                        if config:
-                            display_on_lcd("aplicando", "configuracion", timeout=2)
-                            apply_config(config)
                         await verify_customer(customer, qr_dict["timestamp"])
                     except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                         await verify_customer(data, int(time.time()))
