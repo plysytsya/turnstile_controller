@@ -486,6 +486,7 @@ async def serial_device_event_loop():
 
 def _interpret_serial_data(ser, as_hex: bool):
     ascii_data = ser.readline().decode('utf-8').strip()
+    logger.info(f"Received: {ascii_data}")
     is_json = ascii_data.startswith("{") and ascii_data.endswith("}")
     if is_json:
         return ascii_data
