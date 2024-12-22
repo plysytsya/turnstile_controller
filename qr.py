@@ -466,6 +466,7 @@ async def serial_device_event_loop():
                         config_data = json.loads(data)
                         display_on_lcd("aplicando", "configuracion", timeout=2)
                         apply_config(config_data)
+                        continue
                     try:
                         qr_dict = json.loads(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
