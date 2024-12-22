@@ -466,7 +466,9 @@ async def serial_device_event_loop():
                         config_data = json.loads(data)
                         display_on_lcd("aplicando", "configuracion", timeout=2)
                         response = apply_config(config_data)
-                        display_on_lcd(str(response), "", timeout=2)
+                        logger.info(f"Config response: {response}")
+                        if USE_LCD:
+                            display_on_lcd("ajuste", "aplicado", timeout=2)
                         continue
                     try:
                         qr_dict = json.loads(data)
