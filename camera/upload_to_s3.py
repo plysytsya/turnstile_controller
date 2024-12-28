@@ -162,6 +162,7 @@ if __name__ == "__main__":
 
     class Settings:
         """Configuration settings for camera video uploads and S3 integration."""
+
         S3_BUCKET = os.getenv("S3_BUCKET")
         S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
         S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")

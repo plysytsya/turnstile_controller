@@ -34,11 +34,12 @@ logger.info(
     f"SERVICE_TO_RESTART: {SERVICE_TO_RESTART}"
 )
 
+
 async def _is_alive(filepath: pathlib.Path) -> bool:
     if not filepath.exists():
         return False
     try:
-        async with aio_open(filepath, mode='r') as f:
+        async with aio_open(filepath, mode="r") as f:
             content = await f.read()
             data = json.loads(content)
         timestamp = data.get("timestamp")
@@ -51,12 +52,17 @@ async def _is_alive(filepath: pathlib.Path) -> bool:
         logger.error(f"Error reading or parsing heartbeat file {filepath}: {e}")
         return False
 
+
 async def restart_service():
     """Restart the given systemd service."""
     logger.warning("Attempting to restart service qr_script.service...")
     process = await asyncio.create_subprocess_exec(
-        "sudo", "systemctl", "restart", SERVICE_TO_RESTART,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        "sudo",
+        "systemctl",
+        "restart",
+        SERVICE_TO_RESTART,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
     stdout, stderr = await process.communicate()
 
@@ -64,6 +70,7 @@ async def restart_service():
         logger.warning(f"Service {SERVICE_TO_RESTART} restarted successfully: {stdout.decode().strip()}")
     else:
         logger.error(f"Failed to restart service {SERVICE_TO_RESTART}: {stderr.decode().strip()}")
+
 
 async def monitor_heartbeat():
     while True:

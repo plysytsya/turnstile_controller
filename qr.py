@@ -44,6 +44,7 @@ class DirectionFilter(logging.Filter):
         record.msg = f"{DIRECTION} - {record.msg}"
         return True
 
+
 logging.setLoggerClass(SentryLogger)
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
@@ -76,7 +77,7 @@ RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
-AS_HEX=os.getenv("AS_HEX").lower() == "true"
+AS_HEX = os.getenv("AS_HEX").lower() == "true"
 HAS_CAMERA = os.getenv("HAS_CAMERA").lower() == "true"
 USE_CAMERA = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
 if USE_CAMERA:
@@ -103,7 +104,12 @@ GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 if USE_LCD:
     # Initialize LCD
     try:
-        lcd = LCDController(use_lcd=USE_LCD, lcd_address=LCD_I2C_ADDRESS, dark_mode=DARK_MODE, relay_pin=RELAY_PIN_DISPLAY)
+        lcd = LCDController(
+            use_lcd=USE_LCD,
+            lcd_address=LCD_I2C_ADDRESS,
+            dark_mode=DARK_MODE,
+            relay_pin=RELAY_PIN_DISPLAY,
+        )
         lcd.display("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:
@@ -485,7 +491,7 @@ async def serial_device_event_loop():
 
 
 def _interpret_serial_data(ser, as_hex: bool):
-    ascii_data = ser.readline().decode('utf-8').strip()
+    ascii_data = ser.readline().decode("utf-8").strip()
 
     if not ascii_data:
         return None
@@ -499,7 +505,7 @@ def _interpret_serial_data(ser, as_hex: bool):
         hex = _decimal_to_hex(ascii_data)
     else:
         raw_bytes = bytes.fromhex(ascii_data)
-        hex = ':'.join(f"{b:02x}" for b in raw_bytes)
+        hex = ":".join(f"{b:02x}" for b in raw_bytes)
     return _hash_uuid(hex)
 
 
@@ -509,11 +515,9 @@ def _decimal_to_hex(decimal_str):
     # Convert the integer to a hexadecimal string
     hex_value = f"{decimal_value:08x}"
     # Reverse the byte order (convert to big-endian)
-    reversed_hex = "".join(
-        hex_value[i:i+2] for i in range(len(hex_value)-2, -1, -2)
-    )
+    reversed_hex = "".join(hex_value[i : i + 2] for i in range(len(hex_value) - 2, -1, -2))
     # Format as hex bytes with colons
-    hex_uid = ":".join(reversed_hex[i:i+2] for i in range(0, len(reversed_hex), 2))
+    hex_uid = ":".join(reversed_hex[i : i + 2] for i in range(0, len(reversed_hex), 2))
     return hex_uid
 
 

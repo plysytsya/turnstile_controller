@@ -24,6 +24,7 @@ logger.propagate = False
 
 class VideoCamera:
     """Video camera class that records video upon QR data trigger."""
+
     def __init__(self, settings):
         self.RECORDING_DIR = settings.RECORDING_DIR
         self.FRAME_WIDTH = settings.FRAME_WIDTH
@@ -75,7 +76,10 @@ class VideoCamera:
             self.recording_file,
             self.fourcc,
             self.FPS,
-            (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))),
+            (
+                int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+            ),
         )
 
     async def find_trigger(self):
@@ -93,11 +97,11 @@ class VideoCamera:
 
         # record.txt exists; proceed with listing and deleting files
         filenames = os.listdir(self.RECORDING_DIR)  # Synchronous call here
-        txt_files = [filename[:-4] for filename in filenames if filename.endswith('.txt')]
+        txt_files = [filename[:-4] for filename in filenames if filename.endswith(".txt")]
 
         # Remove all .txt files asynchronously
         for filename in filenames:
-            if filename.endswith('.txt'):
+            if filename.endswith(".txt"):
                 file_path = os.path.join(self.RECORDING_DIR, filename)
                 try:
                     await aiofiles.os.remove(file_path)  # Asynchronous delete
@@ -144,7 +148,9 @@ class VideoCamera:
         # Record frames for RECORDING_DURATION seconds
         frame_interval = 1.0 / self.FPS
 
-        logger.info(f"Started recording: {qr_data.get('uuid')}.{self.VIDEO_FORMAT}. Took {time.time() - start:.2f} seconds to init.")
+        logger.info(
+            f"Started recording: {qr_data.get('uuid')}.{self.VIDEO_FORMAT}. Took {time.time() - start:.2f} seconds to init."
+        )
         while time.time() < end_time:
             frame_start_time = time.time()
 
@@ -171,7 +177,7 @@ class VideoCamera:
             self.recording = False
 
             if self.current_qr_data:
-                uuid = self.current_qr_data.get('uuid', 'unknown')
+                uuid = self.current_qr_data.get("uuid", "unknown")
                 new_filename = f"{self.RECORDING_DIR}/{uuid}.{self.VIDEO_FORMAT}"
                 os.rename(self.recording_file, new_filename)
                 self.recording_file = new_filename
@@ -181,7 +187,7 @@ class VideoCamera:
                         new_filename = f"{self.RECORDING_DIR}/{additional_uuid}.{self.VIDEO_FORMAT}"
                         shutil.copy(self.recording_file, new_filename)
                         logger.info(f"Recording saved as {new_filename}")
-                tmp_mp4_files = [f for f in os.listdir(self.RECORDING_DIR) if f.endswith('.mp4') and "temp" in f]
+                tmp_mp4_files = [f for f in os.listdir(self.RECORDING_DIR) if f.endswith(".mp4") and "temp" in f]
                 for tmp_file in tmp_mp4_files:
                     os.remove(os.path.join(self.RECORDING_DIR, tmp_file))
             else:
@@ -275,6 +281,7 @@ if __name__ == "__main__":
 
     class CameraSettings:
         """Configuration settings for camera video uploads and S3 integration."""
+
         RECORDING_DIR = os.getenv("RECORDING_DIR")
         FRAME_WIDTH = int(os.getenv("FRAME_WIDTH"))
         FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))

@@ -33,7 +33,7 @@ def read_serial_device(device_name, as_hex: bool):
             while True:
                 if ser.in_waiting > 0:
                     # Read data and clean it
-                    ascii_data = ser.readline().decode('utf-8').strip()
+                    ascii_data = ser.readline().decode("utf-8").strip()
                     if ascii_data:
                         if as_hex:
                             print(f"Received (ASCII): {ascii_data}")
@@ -45,12 +45,12 @@ def read_serial_device(device_name, as_hex: bool):
                             # Convert ASCII-encoded hex to raw bytes
                             raw_bytes = bytes.fromhex(ascii_data)
                             print(f"raw bytes: {raw_bytes}")
-                            hex_output = ':'.join(f"{b:02x}" for b in raw_bytes)
+                            hex_output = ":".join(f"{b:02x}" for b in raw_bytes)
                             print(f"Decoded Hex: {hex_output}")
 
                             # Extract and display UID0-UID3 (first 4 bytes)
                             uid_bytes = raw_bytes[:4]
-                            uid_hex = ':'.join(f"{b:02x}" for b in uid_bytes)
+                            uid_hex = ":".join(f"{b:02x}" for b in uid_bytes)
                             print(f"UID0-UID3: {uid_hex}")
 
                         except ValueError:
@@ -65,11 +65,9 @@ def decimal_to_hex(decimal_str):
     # Convert the integer to a hexadecimal string
     hex_value = f"{decimal_value:08x}"
     # Reverse the byte order (convert to big-endian)
-    reversed_hex = "".join(
-        hex_value[i:i+2] for i in range(len(hex_value)-2, -1, -2)
-    )
+    reversed_hex = "".join(hex_value[i : i + 2] for i in range(len(hex_value) - 2, -1, -2))
     # Format as hex bytes with colons
-    hex_uid = ":".join(reversed_hex[i:i+2] for i in range(0, len(reversed_hex), 2))
+    hex_uid = ":".join(reversed_hex[i : i + 2] for i in range(0, len(reversed_hex), 2))
     return hex_uid
 
 

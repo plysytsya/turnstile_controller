@@ -22,6 +22,7 @@ logger.propagate = False
 
 class VideoCamera:
     """Video camera class that records video upon QR data trigger."""
+
     def __init__(self, settings):
         self.RECORDING_DIR = settings.RECORDING_DIR
         self.FRAME_WIDTH = settings.FRAME_WIDTH
@@ -73,7 +74,10 @@ class VideoCamera:
             self.recording_file,
             self.fourcc,
             self.FPS,
-            (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))),
+            (
+                int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+            ),
         )
 
     def cleanup(self):
@@ -114,7 +118,9 @@ class VideoCamera:
         # Record frames for RECORDING_DURATION seconds
         frame_interval = 1.0 / self.FPS
 
-        logger.info(f"Started recording: {qr_data.get('uuid')}.{self.VIDEO_FORMAT}. Took {time.time() - start:.2f} seconds to init.")
+        logger.info(
+            f"Started recording: {qr_data.get('uuid')}.{self.VIDEO_FORMAT}. Took {time.time() - start:.2f} seconds to init."
+        )
         while time.time() < end_time:
             frame_start_time = time.time()
 
@@ -141,7 +147,7 @@ class VideoCamera:
             self.recording = False
 
             if self.current_qr_data:
-                uuid = self.current_qr_data.get('uuid', 'unknown')
+                uuid = self.current_qr_data.get("uuid", "unknown")
                 new_filename = f"{self.RECORDING_DIR}/{uuid}.{self.VIDEO_FORMAT}"
                 os.rename(self.recording_file, new_filename)
                 self.recording_file = new_filename
@@ -234,12 +240,12 @@ if __name__ == "__main__":
 
     class CameraSettings:
         """Configuration settings for camera video uploads and S3 integration."""
+
         RECORDING_DIR = os.getenv("RECORDING_DIR")
         FRAME_WIDTH = int(os.getenv("FRAME_WIDTH"))
         FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))
         FPS = int(os.getenv("FPS"))
 
-    camera  = VideoCamera(CameraSettings())
-    qr_data = {'uuid': uuid4()}
+    camera = VideoCamera(CameraSettings())
+    qr_data = {"uuid": uuid4()}
     asyncio.run(camera.start_recording(qr_data))
-
