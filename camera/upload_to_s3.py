@@ -76,7 +76,7 @@ class VideoUploader:
         s3_key = file_name
 
         # If flipping is required
-        if getattr(self.settings, "FLIP_VIDEO", False):
+        if getattr(self.settings, "FLIP_VIDEO", False) and "flipped" not in file_name:
             # Create a temporary flipped file
             flipped_file_path = file_path + ".flipped.mp4"
             logger.info(f"Flipping and mirroring video {file_name} before upload...")
