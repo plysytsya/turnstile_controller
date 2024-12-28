@@ -486,13 +486,15 @@ async def serial_device_event_loop():
 
 def _interpret_serial_data(ser, as_hex: bool):
     ascii_data = ser.readline().decode('utf-8').strip()
+
+    if not ascii_data:
+        return None
+
     logger.info(f"Received: {ascii_data}")
     is_json = ascii_data.startswith("{") and ascii_data.endswith("}")
     if is_json:
         return ascii_data
 
-    if not ascii_data:
-        return None
     if as_hex:
         hex = _decimal_to_hex(ascii_data)
     else:
