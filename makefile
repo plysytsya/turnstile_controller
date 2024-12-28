@@ -1,4 +1,4 @@
-.PHONY: install-qr uninstall-qr install-heartbeat uninstall-heartbeat restart-heartbeat logs-heartbeat install-cronjob uninstall-cronjob watch-cronjob status-cronjob trigger-cronjob list-services logs-qr logs-cronjob venv install-upload uninstall-upload restart-upload logs-upload
+.PHONY: install-qr uninstall-qr install-heartbeat uninstall-heartbeat restart-heartbeat logs-heartbeat install-cronjob uninstall-cronjob watch-cronjob status-cronjob trigger-cronjob list-services logs-qr logs-cronjob venv install-upload uninstall-upload restart-upload logs-upload install-videorecorder uninstall-videorecorder restart-videorecorder logs-videorecorder
 
 # Instalar el script QR como un servicio
 install-qr:
@@ -107,3 +107,26 @@ list-services:
 # Activar el entorno virtual
 venv:
 	@source ~/turnstile_controller/venv/bin/activate
+
+# Instalar el servicio de grabación de video (Videorecorder Service)
+install-videorecorder:
+	sudo cp /home/manager/turnstile_controller/videorecorder.service /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable videorecorder
+	sudo systemctl start videorecorder
+	sudo systemctl status videorecorder
+
+# Desinstalar el servicio de grabación de video (Videorecorder Service)
+uninstall-videorecorder:
+	sudo systemctl stop videorecorder
+	sudo systemctl disable videorecorder
+	sudo rm /etc/systemd/system/videorecorder.service
+	sudo systemctl daemon-reload
+	sudo systemctl reset-failed
+
+restart-videorecorder:
+	sudo systemctl restart videorecorder.service
+
+# Observar el registro del servicio de grabación de video en tiempo real
+logs-videorecorder:
+	journalctl -u videorecorder -f

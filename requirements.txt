@@ -1,6 +1,8 @@
 # install opencv like this:
 # first install the c++ binary: sudo apt-get install libopencv-dev
 # then install python bindings: sudo apt-get install python3-opencv
+# install systemd:
+# sudo apt install libsystemd-dev
 requests
 rpi-lcd
 unidecode
@@ -16,5 +18,4 @@ python-dotenv
 setproctitle
 aiohttp
 tenacity
-systemd-python  # sudo apt install libsystemd-dev
 sentry_sdk

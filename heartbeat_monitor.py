@@ -2,9 +2,11 @@ import json
 import logging
 import os
 import pathlib
+import asyncio
 import subprocess
 import time
 
+from aiofiles import open as aio_open
 from dotenv import load_dotenv
 from systemd.journal import JournalHandler
 
@@ -21,8 +23,8 @@ HEARTBEAT_FILENAMES = [
     CURRENT_DIR / "heartbeat-A.json",
     CURRENT_DIR / "heartbeat-B.json",
 ]
-MAX_HEARTBEAT_DELAY = 30
-SLEEP_INTERVAL = 20
+MAX_HEARTBEAT_DELAY = 120
+SLEEP_INTERVAL = 120
 SERVICE_TO_RESTART = "qr_script.service"
 
 logger.info(
@@ -32,12 +34,13 @@ logger.info(
     f"SERVICE_TO_RESTART: {SERVICE_TO_RESTART}"
 )
 
-
-def _is_alive(filepath: pathlib.Path) -> bool:
+async def _is_alive(filepath: pathlib.Path) -> bool:
     if not filepath.exists():
         return False
     try:
-        data = json.loads(filepath.read_text())
+        async with aio_open(filepath, mode='r') as f:
+            content = await f.read()
+            data = json.loads(content)
         timestamp = data.get("timestamp")
         if timestamp is None:
             raise ValueError("Missing 'timestamp' in heartbeat file")
@@ -48,30 +51,34 @@ def _is_alive(filepath: pathlib.Path) -> bool:
         logger.error(f"Error reading or parsing heartbeat file {filepath}: {e}")
         return False
 
-
-def restart_service():
+async def restart_service():
     """Restart the given systemd service."""
-    logging.warning("Attempting to restart service qr_script.service...")
-    # Use sudo to restart the service
-    result = subprocess.run(
-        ["sudo", "systemctl", "restart", "qr_script.service"],
-        check=True,
-        capture_output=True,
-        text=True,
+    logger.warning("Attempting to restart service qr_script.service...")
+    process = await asyncio.create_subprocess_exec(
+        "sudo", "systemctl", "restart", SERVICE_TO_RESTART,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
-    logging.warning(f"Service qr_script.service restarted successfully: {result.stdout}")
+    stdout, stderr = await process.communicate()
 
+    if process.returncode == 0:
+        logger.warning(f"Service {SERVICE_TO_RESTART} restarted successfully: {stdout.decode().strip()}")
+    else:
+        logger.error(f"Failed to restart service {SERVICE_TO_RESTART}: {stderr.decode().strip()}")
 
-if __name__ == "__main__":
+async def monitor_heartbeat():
     while True:
         if IS_BIDIRECT:
-            heartbeat_status = all(_is_alive(filename) for filename in HEARTBEAT_FILENAMES)
+            heartbeat_status = await _is_alive(HEARTBEAT_FILENAMES[0]) and await _is_alive(HEARTBEAT_FILENAMES[1])
         else:
-            a_alive = _is_alive(HEARTBEAT_FILENAMES[0])
-            b_alive = _is_alive(HEARTBEAT_FILENAMES[1])
+            a_alive = await _is_alive(HEARTBEAT_FILENAMES[0])
+            b_alive = await _is_alive(HEARTBEAT_FILENAMES[1])
             heartbeat_status = a_alive or b_alive
 
         if not heartbeat_status:
             logger.warning("One or more devices are not alive.")
-            restart_service()
-        time.sleep(20)
+            await restart_service()
+        await asyncio.sleep(SLEEP_INTERVAL)
+
+
+if __name__ == "__main__":
+    asyncio.run(monitor_heartbeat())
