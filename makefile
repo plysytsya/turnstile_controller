@@ -132,9 +132,9 @@ logs-videorecorder:
 	journalctl -u videorecorder -f
 
 restart-frp:
-    sudo systemctl daemon-reload
-    sudo systemctl restart frpc.service
-    sudo systemctl status frpc.service
+	sudo systemctl daemon-reload
+	sudo systemctl restart frpc.service
+	sudo systemctl status frpc.service
 
 logs-frp:
-    sudo journalctl -u frpc.service -f
+	sudo journalctl -u frpc.service -f
