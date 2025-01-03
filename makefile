@@ -130,3 +130,11 @@ restart-videorecorder:
 # Observar el registro del servicio de grabación de video en tiempo real
 logs-videorecorder:
 	journalctl -u videorecorder -f
+
+restart-frp:
+    sudo systemctl daemon-reload
+    sudo systemctl restart frpc.service
+    sudo systemctl status frpc.service
+
+logs-frp:
+    sudo journalctl -u frpc.service -f
