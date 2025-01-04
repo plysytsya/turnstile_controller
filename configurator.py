@@ -15,7 +15,7 @@ def apply_config(config):
 
 def apply_wifi_config(SSID, password):
     command = f'sudo nmcli device wifi list && sudo nmcli dev wifi connect "{SSID}" password "{password}"'
-    verify_command = "sudo nmcli device show --active"
+    verify_command = "sudo nmcli connection show --active"
     try:
         subprocess.run(
             command,
