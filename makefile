@@ -138,3 +138,7 @@ restart-frp:
 
 logs-frp:
 	sudo journalctl -u frpc.service -f
+
+install-frp:
+    sudo systemctl enable /etc/systemd/system/frpc.service
+    sudo systemctl start frpc.service
