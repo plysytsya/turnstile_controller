@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import pathlib
+import re
 import sys
 import threading
 import time
@@ -476,7 +477,11 @@ async def serial_device_event_loop():
                             display_on_lcd("ajuste", "aplicado", timeout=2)
                         continue
                     try:
-                        qr_dict = json.loads(data)
+                        qr_dict = _load_json_data(data)
+                        if not qr_dict:
+                            display_on_lcd("Datos", "invalidos", timeout=2)
+                            continue
+
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
                         await verify_customer(customer, qr_dict["timestamp"])
                     except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
@@ -490,6 +495,21 @@ async def serial_device_event_loop():
         logger.exception(f"Error: {e}")
 
 
+def _load_json_data(raw_data):
+    try:
+        return json.loads(raw_data)
+    except json.JSONDecodeError:
+        # regex pattern to match a valid JSON string
+        pattern = r"\{.*?\}"
+        match = re.search(pattern, raw_data)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError:
+                pass
+    return None
+
+
 def _interpret_serial_data(ser, as_hex: bool):
     ascii_data = ser.readline().decode("utf-8").strip()
 
@@ -497,7 +517,7 @@ def _interpret_serial_data(ser, as_hex: bool):
         return None
 
     logger.info(f"Received: {ascii_data}")
-    is_json = ascii_data.startswith("{") and ascii_data.endswith("}")
+    is_json = "{" in ascii_data and "}" in ascii_data
     if is_json:
         return ascii_data
 
