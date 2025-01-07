@@ -478,10 +478,6 @@ async def serial_device_event_loop():
                         continue
                     try:
                         qr_dict = _load_json_data(data)
-                        if not qr_dict:
-                            display_on_lcd("Datos", "invalidos", timeout=2)
-                            continue
-
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
                         await verify_customer(customer, qr_dict["timestamp"])
                     except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
@@ -503,11 +499,7 @@ def _load_json_data(raw_data):
         pattern = r"\{.*?\}"
         match = re.search(pattern, raw_data)
         if match:
-            try:
-                return json.loads(match.group(0))
-            except json.JSONDecodeError:
-                pass
-    return None
+            return json.loads(match.group(0))
 
 
 def _interpret_serial_data(ser, as_hex: bool):
