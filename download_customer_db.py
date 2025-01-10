@@ -6,7 +6,7 @@ import time
 import requests
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 HOSTNAME = os.getenv("HOSTNAME")
 USERNAME = os.getenv("USERNAME")

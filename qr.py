@@ -372,6 +372,11 @@ def get_valid_response(url, headers, payload, customer_uuid):
         payload["response_code"] = status_code
         send_entrance_log(url, headers, payload, retries=15)
         return None
+    elif status_code == "OutsideSchedule":
+        payload["response_code"] = status_code
+        send_entrance_log(url, headers, payload, retries=15)
+        display_on_lcd("Fuera del", "horario", timeout=2)
+        return None
     else:
         response = post_request(url, headers, payload, retries=5)
         logger.info(f"Response: {response.json()}")
@@ -391,10 +396,35 @@ def _find_customer_in_cache(customer_uuid):
     if customer:
         if customer["active_membership"] or customer["is_staff"]:
             logger.info(f"Found customer {customer_uuid} in cache.")
+            if customer.get("entrance_schedules"):
+                if not is_in_schedule(customer):
+                    return "OutsideSchedule", None
             return "UserExists", customer
         else:
             return "MembershipInactive", None
     return "UserDoesNotExist", None
+
+
+def is_in_schedule(customer):
+    current_time = time.localtime()
+    current_day = current_time.tm_wday
+    current_hour = current_time.tm_hour
+    current_minute = current_time.tm_min
+
+    for schedule in customer["entrance_schedules"]:
+        if current_day in schedule["days_of_week"]:
+            start_time, end_time = schedule["start_time"][:5], schedule["end_time"][:5]
+            start_hour, start_minute = map(int, start_time.split(":"))
+            end_hour, end_minute = map(int, end_time.split(":"))
+
+            if start_hour < current_hour < end_hour:
+                return True
+            elif start_hour == current_hour and start_minute <= current_minute:
+                return True
+            elif end_hour == current_hour and current_minute <= end_minute:
+                return True
+
+    return False
 
 
 def refresh_token():

@@ -10,7 +10,7 @@ smbus2
 pyserial
 pyzmq
 setproctitle
-systemd-python  # sudo apt install libsystemd-dev
+#systemd-python  # sudo apt install libsystemd-dev
 rpi-lcd
 unidecode
 sentry_sdk
