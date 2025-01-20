@@ -134,12 +134,16 @@ class VideoUploader:
         """Run the upload loop continuously."""
         while True:
             try:
-                # List all files in the recording directory
-                files = [
-                    os.path.join(self.settings.RECORDING_DIR, f)
-                    for f in os.listdir(self.settings.RECORDING_DIR)
-                    if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
-                ]
+                # List all files in the recording directory and sort them by modification time (newest first)
+                files = sorted(
+                    [
+                        os.path.join(self.settings.RECORDING_DIR, f)
+                        for f in os.listdir(self.settings.RECORDING_DIR)
+                        if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
+                    ],
+                    key=lambda x: os.path.getmtime(x),
+                    reverse=True
+                )
                 video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
                 if video_files:
                     await self.upload(video_files)
