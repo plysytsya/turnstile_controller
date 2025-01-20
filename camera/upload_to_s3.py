@@ -91,20 +91,15 @@ class VideoUploader:
         else:
             file_path_to_upload = file_path
 
-        try:
-            logger.info(f"Uploading {os.path.basename(file_path_to_upload)} as {s3_key} to bucket {bucket_name}...")
-            await s3_client.upload_file(file_path_to_upload, bucket_name, s3_key)
-            logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
-        except Exception as e:
-            logger.error(f"Failed to upload {file_name}: {e}")
-        try:
-            # Delete local files
-            os.remove(file_path)
-            if file_path_to_upload != file_path:
-                os.remove(file_path_to_upload)
-            logger.info(f"Deleted local file(s) related to {file_name}")
-        except Exception as e:
-            logger.error(f"Failed to delete {file_name}: {e}")
+        logger.info(f"Uploading {os.path.basename(file_path_to_upload)} as {s3_key} to bucket {bucket_name}...")
+        await s3_client.upload_file(file_path_to_upload, bucket_name, s3_key)
+        logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
+
+        # Delete local files
+        os.remove(file_path)
+        if file_path_to_upload != file_path:
+            os.remove(file_path_to_upload)
+        logger.info(f"Deleted local file(s) related to {file_name}")
 
 
     async def upload(self, video_files):
