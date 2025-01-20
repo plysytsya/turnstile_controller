@@ -5,6 +5,7 @@ import sys
 import aioboto3
 from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
+from botocore.config import Config
 
 # Add the global Python library path to sys.path to use cv2 just like in the videorecorder
 sys.path.append("/usr/lib/python3/dist-packages")
@@ -107,6 +108,12 @@ class VideoUploader:
 
     async def upload(self, video_files):
         """Main loop to check the directory and upload files."""
+        config = Config(
+            retries={"max_attempts": 1, "mode": "standard"},
+            connect_timeout=10,  # Seconds
+            read_timeout=30,  # Seconds
+        )
+
         try:
             session = aioboto3.Session()
             async with session.client(
@@ -114,6 +121,7 @@ class VideoUploader:
                 aws_access_key_id=self.settings.S3_ACCESS_KEY,
                 aws_secret_access_key=self.settings.S3_SECRET_ACCESS_KEY,
                 endpoint_url=self.settings.S3_ENDPOINT_URL,
+                config=config,
             ) as s3_client:
                 # Ensure the bucket exists on startup
                 await self.ensure_bucket_exists(s3_client)
