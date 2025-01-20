@@ -111,8 +111,8 @@ class VideoUploader:
         """Main loop to check the directory and upload files."""
         config = Config(
             retries={"max_attempts": 1, "mode": "standard"},
-            connect_timeout=30,  # Seconds
-            read_timeout=300,  # Seconds
+            connect_timeout=10,  # Seconds
+            read_timeout=30,  # Seconds
         )
 
         session = aioboto3.Session()
