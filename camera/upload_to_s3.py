@@ -97,37 +97,11 @@ class VideoUploader:
         await s3_client.upload_file(file_path_to_upload, bucket_name, s3_key)
         logger.info(f"Successfully uploaded {file_name} to {bucket_name}/{s3_key}.")
 
-        # Add 90-day expiration lifecycle
-        await self.set_lifecycle_policy(s3_client, bucket_name, s3_key)
-
         # Delete local files
         os.remove(file_path)
         if file_path_to_upload != file_path:
             os.remove(file_path_to_upload)
         logger.info(f"Deleted local file(s) related to {file_name}")
-
-    async def set_lifecycle_policy(self, s3_client, bucket_name, s3_key):
-        """Set a 90-day expiration lifecycle policy for the uploaded file."""
-        lifecycle_policy = {
-            'Rules': [
-                {
-                    'ID': 'Delete after 90 days',
-                    'Filter': {'Prefix': s3_key},
-                    'Status': 'Enabled',
-                    'Expiration': {'Days': 90},
-                },
-            ]
-        }
-        try:
-            logger.info(f"Setting lifecycle policy for bucket {bucket_name}...")
-            await s3_client.put_bucket_lifecycle_configuration(
-                Bucket=bucket_name,
-                LifecycleConfiguration=lifecycle_policy
-            )
-            logger.info("Lifecycle policy set successfully.")
-        except ClientError as e:
-            logger.error(f"Failed to set lifecycle policy: {e}")
-            raise
 
     async def upload(self, video_files):
         """Main loop to check the directory and upload files."""
