@@ -115,53 +115,38 @@ class VideoUploader:
             read_timeout=300,  # Seconds
         )
 
-        try:
-            session = aioboto3.Session()
-            async with session.client(
-                "s3",
-                aws_access_key_id=self.settings.S3_ACCESS_KEY,
-                aws_secret_access_key=self.settings.S3_SECRET_ACCESS_KEY,
-                endpoint_url=self.settings.S3_ENDPOINT_URL,
-                config=config,
-            ) as s3_client:
-                # Ensure the bucket exists on startup
-                await self.ensure_bucket_exists(s3_client)
+        session = aioboto3.Session()
+        async with session.client(
+            "s3",
+            aws_access_key_id=self.settings.S3_ACCESS_KEY,
+            aws_secret_access_key=self.settings.S3_SECRET_ACCESS_KEY,
+            endpoint_url=self.settings.S3_ENDPOINT_URL,
+            config=config,
+        ) as s3_client:
+            # Ensure the bucket exists on startup
+            await self.ensure_bucket_exists(s3_client)
 
-                logger.info(f"Found {len(video_files)} video files to upload...")
-                for file in video_files:
-                    logger.info(f"Uploading {file}...")
-                    await self.upload_file_to_s3(s3_client, file)
-                    break  # better to not keep uploading because there might be a newer one with higher prio
-        except asyncio.CancelledError:
-            logger.info("Upload cancelled.")
-            raise
-        except Exception as e:
-            logger.exception(f"Exception in upload_loop {e}")
-        finally:
-            logger.debug("Upload exiting.")
-
+            logger.info(f"Found {len(video_files)} video files to upload...")
+            for file in video_files:
+                logger.info(f"Uploading {file}...")
+                await self.upload_file_to_s3(s3_client, file)
+                break  # better to not keep uploading because there might be a newer one with higher prio
     async def upload_loop(self):
         """Run the upload loop continuously."""
         while True:
-            try:
                 # List all files in the recording directory and sort them by modification time (newest first)
-                files = sorted(
-                    [
-                        os.path.join(self.settings.RECORDING_DIR, f)
-                        for f in os.listdir(self.settings.RECORDING_DIR)
-                        if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
-                    ],
-                    key=lambda x: os.path.getmtime(x),
-                    reverse=True
-                )
-                video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
-                if video_files:
-                    await self.upload(video_files)
-            except asyncio.CancelledError:
-                logger.info("Upload loop cancelled.")
-                break
-            except Exception as e:
-                logger.exception(f"Exception in upload_loop {e}")
+            files = sorted(
+                [
+                    os.path.join(self.settings.RECORDING_DIR, f)
+                    for f in os.listdir(self.settings.RECORDING_DIR)
+                    if os.path.isfile(os.path.join(self.settings.RECORDING_DIR, f))
+                ],
+                key=lambda x: os.path.getmtime(x),
+                reverse=True
+            )
+            video_files = [f for f in files if f.endswith(".mp4") and not "temp" in f]
+            if video_files:
+                await self.upload(video_files)
             await asyncio.sleep(5)
 
 
