@@ -122,6 +122,7 @@ class VideoUploader:
                 for file in video_files:
                     logger.info(f"Uploading {file}...")
                     await self.upload_file_to_s3(s3_client, file)
+                    break  # better to not keep uploading because there might be a newer one with higher prio
         except asyncio.CancelledError:
             logger.info("Upload cancelled.")
             raise
