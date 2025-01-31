@@ -553,7 +553,11 @@ def _interpret_serial_data(ser, as_hex: bool):
 
 def _decimal_to_hex(decimal_str):
     # Convert the decimal string to an integer
-    decimal_value = int(decimal_str)
+    try:
+        decimal_value = int(decimal_str)
+    except ValueError:
+        cleaned_decimal_str = "".join([char for char in decimal_str if char.isdigit()])
+        decimal_value = int(cleaned_decimal_str)
     # Convert the integer to a hexadecimal string
     hex_value = f"{decimal_value:08x}"
     # Reverse the byte order (convert to big-endian)
