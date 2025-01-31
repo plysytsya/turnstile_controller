@@ -493,12 +493,12 @@ async def serial_device_event_loop():
     display_on_lcd("Escanea", "codigo QR...")
 
     try:
-        with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.1) as ser:
+        with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
             while True:
                 # Read data from the serial port
                 if ser.in_waiting > 0:
                     data = _interpret_serial_data(ser, AS_HEX)
-                    logger.info(f"Received: {data}")
+                    logger.info(f"Interpreted data: {data}")
                     if "config" in data:
                         display_on_lcd("aplicando", "configuracion", timeout=2)
                         response = apply_config(data)
