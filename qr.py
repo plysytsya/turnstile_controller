@@ -497,7 +497,11 @@ async def serial_device_event_loop():
             while True:
                 # Read data from the serial port
                 if ser.in_waiting > 0:
-                    data = _interpret_serial_data(ser, AS_HEX)
+                    try:
+                        data = _interpret_serial_data(ser, AS_HEX)
+                    except Exception as e:
+                        logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
+                        continue
                     logger.info(f"Interpreted data: {data}")
                     if "config" in data:
                         display_on_lcd("aplicando", "configuracion", timeout=2)
@@ -517,8 +521,6 @@ async def serial_device_event_loop():
         display_on_lcd("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
-    except (serial.SerialException, Exception) as e:
-        logger.exception(f"Error: {e}")
 
 
 def _load_json_data(raw_data):
