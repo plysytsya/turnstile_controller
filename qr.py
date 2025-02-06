@@ -75,6 +75,9 @@ USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
 RELAY_PIN_DISPLAY = int(os.getenv("RELAY_PIN_DISPLAY")) if os.getenv("RELAY_PIN_DISPLAY") else None
 RELAY_TOGGLE_DURATION = int(os.getenv("RELAY_TOGGLE_DURATION", 1))
+RELAY_TRIGGER = os.getenv("RELAY_TRIGGER", "HIGH")
+RELAY_ON = GPIO.HIGH if RELAY_TRIGGER == "HIGH" else GPIO.LOW
+RELAY_OFF = GPIO.LOW if RELAY_TRIGGER == "HIGH" else GPIO.HIGH
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
@@ -110,6 +113,7 @@ if USE_LCD:
             lcd_address=LCD_I2C_ADDRESS,
             dark_mode=DARK_MODE,
             relay_pin=RELAY_PIN_DISPLAY,
+            relay_trigger=RELAY_TRIGGER,
         )
         lcd.display("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
@@ -172,10 +176,10 @@ def toggle_relay(duration=RELAY_TOGGLE_DURATION, open_n_times=OPEN_N_TIMES):
     logger.info(f"Toggling relay PIN {relay_pin}")
     open_duration = duration / open_n_times
     for _ in range(open_n_times):
-        GPIO.output(relay_pin, GPIO.HIGH)
+        GPIO.output(relay_pin, RELAY_ON)
         time.sleep(open_duration)
     for i in range(10):
-        GPIO.output(relay_pin, GPIO.LOW)
+        GPIO.output(relay_pin, RELAY_OFF)
 
 
 def unpack_barcode(barcode_data):

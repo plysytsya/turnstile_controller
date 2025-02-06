@@ -16,6 +16,7 @@ class LCDController:
         lcd_address=None,
         dark_mode=False,
         relay_pin=None,
+        relay_trigger="HIGH"
     ):
         self.use_lcd = use_lcd
         self.max_char_count = max_char_count
@@ -24,12 +25,14 @@ class LCDController:
         if use_lcd:
             self.lcd = LCD(lcd_address)
         self.dark_mode = dark_mode
+        self.on_trigger = GPIO.HIGH if relay_trigger == "HIGH" else GPIO.LOW
+        self.off_trigger = GPIO.LOW if relay_trigger == "HIGH" else GPIO.HIGH
         if dark_mode and relay_pin:
             self.relay_pin = relay_pin
             GPIO.setup(relay_pin, GPIO.OUT)
-            GPIO.output(relay_pin, GPIO.HIGH)
+            GPIO.output(relay_pin, self.on_trigger)
             time.sleep(0.5)
-            GPIO.output(relay_pin, GPIO.LOW)
+            GPIO.output(relay_pin, self.off_trigger)
 
     def clear(self):
         if self.use_lcd:
@@ -51,7 +54,7 @@ class LCDController:
             return
 
         if self.dark_mode and self.relay_pin:
-            GPIO.output(self.relay_pin, GPIO.HIGH)
+            GPIO.output(self.relay_pin, self.on_trigger)
 
         if not self.use_lcd:
             logging.info(line1)
@@ -70,7 +73,7 @@ class LCDController:
                 time.sleep(timeout - self.scroll_delay)
                 self.lcd.clear()
                 if self.dark_mode and self.relay_pin:
-                    GPIO.output(self.relay_pin, GPIO.LOW)
+                    GPIO.output(self.relay_pin, self.off_trigger)
                     self.lcd = LCD(self.lcd_address)
 
 
