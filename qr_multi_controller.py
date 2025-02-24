@@ -8,7 +8,6 @@ import os
 import subprocess
 import sys
 import time
-import evdev
 
 import dotenv
 from pathlib import Path
@@ -40,8 +39,8 @@ load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 processes = []
 
 for qr_reader in devices:
-    if len(devices) == 3 and isinstance(qr_reader, evdev.device.InputDevice):
-        logger.info(f"Found extended device: {qr_reader}")
+    if len(devices) == 3 and not isinstance(qr_reader, SerialDevice):
+        logger.info(f"Found 3rd keyboard device: {qr_reader}")
         direction = "C"
         entrance_uuid = os.getenv("ENTRANCE_UUID_C")
         lcd_address = None
