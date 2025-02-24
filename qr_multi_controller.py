@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import time
+import evdev
 
 import dotenv
 from pathlib import Path
@@ -39,7 +40,13 @@ load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 processes = []
 
 for qr_reader in devices:
-    if qr_reader.is_extended:
+    if len(devices) == 3 and isinstance(qr_reader, evdev.device.InputDevice):
+        logger.info(f"Found extended device: {qr_reader}")
+        direction = "C"
+        entrance_uuid = os.getenv("ENTRANCE_UUID_C")
+        lcd_address = None
+        relay_pin = os.getenv("RELAY_PIN_C", "21")
+    elif qr_reader.is_extended:
         logger.info(f"Found extended device: {qr_reader}")
         direction = EXTENDED_USB_DEVICE_DIRECTION
         lcd_address = DISPLAY_X27_DIRECTION
