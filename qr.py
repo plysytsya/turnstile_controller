@@ -479,14 +479,28 @@ async def keyboard_event_loop(device):
 
                     if keycode == "KEY_ENTER":
                         logger.info(f"Received raw data: {output_string}")
+
                         try:
-                            output_string = "{" + output_string.lstrip("{")
-                            qr_dict = json.loads(output_string)
-                            shared_list.append(qr_dict)
-                            output_string = ""
-                        except json.JSONDecodeError:
-                            logger.error("Invalid JSON data.")
-                            output_string = ""
+                            data = _process_ascii_data(output_string, AS_HEX)
+                        except Exception as e:
+                            logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
+                            continue
+                        logger.info(f"Interpreted data: {data}")
+                        if "config" in data:
+                            display_on_lcd("aplicando", "configuracion", timeout=2)
+                            response = apply_config(data)
+                            logger.info(f"Config response: {response}")
+                            if USE_LCD:
+                                display_on_lcd("ajuste", "aplicado", timeout=2)
+                            continue
+
+                        try:
+                            qr_dict = _load_json_data(data)
+                            customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
+                            await verify_customer(customer, qr_dict["timestamp"])
+                        except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
+                            await verify_customer(data, int(time.time()))
+
     except OSError as e:
         display_on_lcd("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
@@ -546,6 +560,10 @@ def _interpret_serial_data(ser, as_hex: bool):
         return None
 
     logger.info(f"Received: {ascii_data}")
+    return _process_ascii_data(ascii_data, as_hex)
+
+
+def _process_ascii_data(ascii_data: str, as_hex: bool):
     is_json = "{" in ascii_data and "}" in ascii_data
     if is_json:
         return ascii_data
