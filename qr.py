@@ -478,6 +478,7 @@ async def keyboard_event_loop(device):
                         output_string += character
 
                     if keycode == "KEY_ENTER":
+                        logger.info(f"Received raw data: {output_string}")
                         try:
                             output_string = "{" + output_string.lstrip("{")
                             qr_dict = json.loads(output_string)
