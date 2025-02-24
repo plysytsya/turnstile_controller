@@ -484,6 +484,7 @@ async def keyboard_event_loop(device):
                             data = _process_ascii_data(output_string, AS_HEX)
                         except Exception as e:
                             logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
+                            output_string = ""
                             continue
                         logger.info(f"Interpreted data: {data}")
                         if "config" in data:
@@ -492,6 +493,7 @@ async def keyboard_event_loop(device):
                             logger.info(f"Config response: {response}")
                             if USE_LCD:
                                 display_on_lcd("ajuste", "aplicado", timeout=2)
+                            output_string = ""
                             continue
 
                         try:
@@ -500,6 +502,8 @@ async def keyboard_event_loop(device):
                             await verify_customer(customer, qr_dict["timestamp"])
                         except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                             await verify_customer(data, int(time.time()))
+                        finally:
+                            output_string = ""
 
     except OSError as e:
         display_on_lcd("No coneccion con", "lector, reinicio")
