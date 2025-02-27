@@ -74,7 +74,7 @@ def find_serial_devices():
 
     # If there are exactly 2 devices and both are flagged as extended,
     # try to differentiate them using the numeric value extracted from the location.
-    if len(devices) == 2 and all(dev.is_extended for dev in devices):
+    if len(devices) == 2 and (all(dev.is_extended for dev in devices) or all(not dev.is_extended for dev in devices)):
         if DEBUG:
             print(
                 "[DEBUG] Fallback triggered: Both devices flagged as extended, invoking new algorithm using location strings.")
