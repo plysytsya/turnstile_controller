@@ -72,12 +72,18 @@ def find_serial_devices():
         for dev in devices:
             print(f"  {dev}")
 
-    # If there are exactly 2 devices and both are flagged as extended,
+    # If there's only one device, mark it as not extended by default.
+    if len(devices) == 1:
+        if DEBUG:
+            print("[DEBUG] Only one device found. Marking as not extended.")
+        devices[0].is_extended = False
+
+    # If there are exactly 2 devices and both are flagged the same way,
     # try to differentiate them using the numeric value extracted from the location.
     if len(devices) == 2 and (all(dev.is_extended for dev in devices) or all(not dev.is_extended for dev in devices)):
         if DEBUG:
             print(
-                "[DEBUG] Fallback triggered: Both devices flagged as extended, invoking new algorithm using location strings.")
+                "[DEBUG] Fallback triggered: Both devices flagged the same, invoking new algorithm using location strings.")
         new_values = []
         for dev in devices:
             val = get_location_value(dev.location)
@@ -105,7 +111,7 @@ def find_serial_devices():
                     "[DEBUG] New location values are equal or insufficient for differentiation. Retaining original heuristic.")
     else:
         if DEBUG:
-            print("[DEBUG] Fallback not applicable. Either not exactly 2 devices or not all flagged as extended.")
+            print("[DEBUG] Fallback not applicable. Either not exactly 2 devices or not all flagged the same way.")
 
     if DEBUG:
         print("[DEBUG] Final device list:")
