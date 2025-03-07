@@ -3,9 +3,8 @@ Description=My qr.py script
 After=network.target
 
 [Service]
-TimeoutStopSec=0    # Don't wait, kill it immediately
-KillMode=mixed      # Kill main process first, then subprocesses
-RestartSec=0        # Restart instantly
+TimeoutStopSec=3
+RestartSec=0
 Restart=always
 ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/qr_multi_controller.py
 User=manager
