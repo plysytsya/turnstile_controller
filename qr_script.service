@@ -3,11 +3,12 @@ Description=My qr.py script
 After=network.target
 
 [Service]
-TimeoutStopSec=3s
-RestartSec=10
+TimeoutStopSec=0    # Don't wait, kill it immediately
+KillMode=mixed      # Kill main process first, then subprocesses
+RestartSec=0        # Restart instantly
+Restart=always
 ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/qr_multi_controller.py
 User=manager
-Restart=always
 #ExecStopPost=/usr/bin/python3 /home/pi/restart_msg.py  # This will run when the service is stopped/restarted
 #StandardOutput=append:/home/pi/scan.log
 #StandardError=append:/home/pi/scan_error.log
