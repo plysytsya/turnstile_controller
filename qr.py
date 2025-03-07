@@ -34,6 +34,7 @@ DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
 DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
+QUICK_RESTART_ON_USB_CONN_ERROR = os.getenv("QUICK_RESTART_ON_USB_CONN_ERROR", "False").lower() == "true"
 MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
 HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
@@ -511,6 +512,21 @@ async def keyboard_event_loop(device):
         sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
 
+async def wait_for_usb_connection(timeout=0.2, max_attempts=50):
+    """
+    Try to open the serial port repeatedly until successful or max_attempts is reached.
+    """
+    attempts = 0
+    while attempts < max_attempts:
+        try:
+            # Try opening the connection; if it works, immediately close it.
+            with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=timeout) as ser:
+                return True
+        except OSError:
+            attempts += 1
+            await asyncio.sleep(timeout)
+    return False
+
 async def serial_device_event_loop():
     global shared_list
     display_on_lcd("Escanea", "codigo QR...")
@@ -541,9 +557,19 @@ async def serial_device_event_loop():
                         await verify_customer(data, int(time.time()))
                 await asyncio.sleep(0.2)
     except OSError as e:
-        display_on_lcd("No coneccion con", "lector, reinicio")
-        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
-        sys.exit(1)  # Exit with non-zero code to signal failure to systemd
+        if QUICK_RESTART_ON_USB_CONN_ERROR:
+            logger.warning("Lost connection to USB device. Verifying reconnection...")
+            if await wait_for_usb_connection(timeout=0.2, max_attempts=10):
+                logger.info("USB device reconnected. Restarting event loop.")
+                await serial_device_event_loop()
+            else:
+                display_on_lcd("No coneccion con", "lector, reinicio")
+                logger.error("Could not re-establish USB connection after timeout.")
+                sys.exit(1)
+        else:
+            display_on_lcd("No coneccion con", "lector, reinicio")
+            logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
+            sys.exit(1)  # Exit with non-zero code to signal failure to systemd
 
 
 def _load_json_data(raw_data):
