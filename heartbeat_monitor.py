@@ -74,16 +74,27 @@ async def restart_service():
 
 async def monitor_heartbeat():
     while True:
+        # Check each service's heartbeat individually.
+        a_alive = await _is_alive(HEARTBEAT_FILENAMES[0])
+        b_alive = await _is_alive(HEARTBEAT_FILENAMES[1])
+
+        # Determine the overall status based on the bidirectional flag.
         if IS_BIDIRECT:
-            heartbeat_status = await _is_alive(HEARTBEAT_FILENAMES[0]) and await _is_alive(HEARTBEAT_FILENAMES[1])
+            heartbeat_status = a_alive and b_alive
         else:
-            a_alive = await _is_alive(HEARTBEAT_FILENAMES[0])
-            b_alive = await _is_alive(HEARTBEAT_FILENAMES[1])
             heartbeat_status = a_alive or b_alive
 
+        # If overall heartbeat fails, log which one is not alive.
         if not heartbeat_status:
-            logger.warning("One or more devices are not alive.")
+            if not a_alive and not b_alive:
+                logger.warning("Both A and B are not alive.")
+            elif not a_alive:
+                logger.warning("Service A is not alive.")
+            elif not b_alive:
+                logger.warning("Service B is not alive.")
+            logger.warning("Restarting qr-script.")
             await restart_service()
+
         await asyncio.sleep(SLEEP_INTERVAL)
 
 
