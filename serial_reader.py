@@ -3,7 +3,7 @@ import serial.tools.list_ports
 import threading
 import binascii
 
-DEBUG = True  # Enable debugging output
+DEBUG = False  # Enable debugging output
 
 
 class SerialDevice:

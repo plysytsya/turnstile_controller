@@ -13,7 +13,6 @@ import dotenv
 from pathlib import Path
 from systemd.journal import JournalHandler
 
-from find_device import find_qr_devices
 from serial_reader import find_serial_devices, SerialDevice
 from i2cdetect import detect_i2c_device_not_27
 
@@ -30,9 +29,9 @@ UNEXTENDED_USB_DEVICE_DIRECTION = "A"
 # Get the directory of the current file
 current_dir = Path(__file__).parent
 
-keyboard_devices = find_qr_devices()
+
 serial_devices = find_serial_devices()
-devices = keyboard_devices + serial_devices
+devices = serial_devices
 
 load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 
