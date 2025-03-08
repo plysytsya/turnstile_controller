@@ -70,8 +70,8 @@ def find_serial_devices():
             devices.append(SerialDevice(ports[1].device, is_extended=True, location=ports[1].location))
             devices.append(SerialDevice(ports[0].device, is_extended=False, location=ports[0].location))
         else:
-            devices.append(SerialDevice(ports[0].device, is_extended=False, location=ports[0].location))
-            devices.append(SerialDevice(ports[1].device, is_extended=True, location=ports[1].location))
+            devices.append(SerialDevice(ports[1].device, is_extended=False, location=ports[1].location))
+            devices.append(SerialDevice(ports[0].device, is_extended=True, location=ports[0].location))
         return devices
 
     for port in ports:
