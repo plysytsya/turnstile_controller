@@ -66,12 +66,12 @@ def find_serial_devices():
             print(f"found extended devices because location lengths are different")
 
         # the longer one is extended
-        if lengths[1] > lengths[0]:
-            devices.append(SerialDevice(ports[1].device, is_extended=True, location=ports[1].location))
-            devices.append(SerialDevice(ports[0].device, is_extended=False, location=ports[0].location))
-        else:
-            devices.append(SerialDevice(ports[1].device, is_extended=False, location=ports[1].location))
+        if lengths[0] > lengths[1]:
             devices.append(SerialDevice(ports[0].device, is_extended=True, location=ports[0].location))
+            devices.append(SerialDevice(ports[1].device, is_extended=False, location=ports[1].location))
+        else:
+            devices.append(SerialDevice(ports[0].device, is_extended=False, location=ports[0].location))
+            devices.append(SerialDevice(ports[1].device, is_extended=True, location=ports[1].location))
         return devices
 
     for port in ports:
