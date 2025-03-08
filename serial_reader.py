@@ -72,12 +72,6 @@ def find_serial_devices():
         for dev in devices:
             print(f"  {dev}")
 
-    # If there's only one device, mark it as not extended by default.
-    if len(devices) == 1:
-        if DEBUG:
-            print("[DEBUG] Only one device found. Marking as not extended.")
-        devices[0].is_extended = False
-
     # If there are exactly 2 devices and both are flagged the same way,
     # try to differentiate them using the numeric value extracted from the location.
     if len(devices) == 2 and (all(dev.is_extended for dev in devices) or all(not dev.is_extended for dev in devices)):
