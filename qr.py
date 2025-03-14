@@ -508,6 +508,7 @@ async def keyboard_event_loop(device):
     except OSError as e:
         display_on_lcd("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
+        sentry_sdk.flush(0.1)
         os._exit(1)  # Exit with non-zero code to signal failure to systemd
 
 
