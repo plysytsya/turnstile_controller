@@ -26,6 +26,7 @@ EXTENDED_USB_DEVICE_DIRECTION = "B"
 DISPLAY_X27_DIRECTION = "0x27"
 
 UNEXTENDED_USB_DEVICE_DIRECTION = "A"
+USE_USB_HUB = os.getenv("USE_USB_HUB", "True").lower() == "true"
 
 # Get the directory of the current file
 current_dir = Path(__file__).parent
@@ -39,7 +40,7 @@ load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 processes = []
 
 for qr_reader in devices:
-    if qr_reader.is_extended or (
+    if qr_reader.is_extended and USE_USB_HUB or (
             len(keyboard_devices) == 1 and len(serial_devices) == 1 and not isinstance(qr_reader, SerialDevice)
     ):
         if isinstance(qr_reader, SerialDevice):
