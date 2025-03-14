@@ -16,12 +16,14 @@ import RPi.GPIO as GPIO
 import serial
 
 from configurator import apply_config
+from find_device import find_qr_devices
 from i2cdetect import detect_i2c_device_not_27
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
 import sentry_sdk
 
+from serial_reader import find_serial_devices
 from utils import SentryLogger
 
 sentry_sdk.init(
@@ -32,6 +34,11 @@ sentry_sdk.init(
 
 load_dotenv()
 
+
+class NoDeviceFoundError(Exception):
+    pass
+
+
 DIRECTION = os.getenv("DIRECTION")
 if DIRECTION == "A":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
@@ -41,12 +48,22 @@ if DIRECTION == "A":
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
     os.environ["IS_SERIAL_DEVICE"] = "True"
+    devices = find_serial_devices()
+    if devices:
+        os.environ["QR_USB_DEVICE_PATH"] = devices[0].path
+    else:
+        raise NoDeviceFoundError("No serial device found.")
 elif DIRECTION == "B":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_B")
     os.environ["LCD_I2C_ADDRESS"] = "0x27"
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_B", "10")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_B", "20")
     os.environ["IS_SERIAL_DEVICE"] = "False"
+    devices = find_qr_devices()
+    if devices:
+        os.environ["QR_USB_DEVICE_PATH"] = devices[0].path
+    else:
+        raise NoDeviceFoundError("No keyboard-QR device found.")
 
 
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
