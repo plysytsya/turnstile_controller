@@ -498,64 +498,24 @@ async def keyboard_event_loop(device):
     output_string = ""
     display_on_lcd("Escanea", "codigo QR...")
 
-    try:
-        async for event in device.async_read_loop():
-            if event.type == evdev.ecodes.EV_KEY:
-                categorized_event = categorize(event)
-                if categorized_event.keystate == KeyEvent.key_up:
-                    keycode = categorized_event.keycode
-                    character = KEYMAP.get(keycode, "")
+    async for event in device.async_read_loop():
+        if event.type == evdev.ecodes.EV_KEY:
+            categorized_event = categorize(event)
+            if categorized_event.keystate == KeyEvent.key_up:
+                keycode = categorized_event.keycode
+                character = KEYMAP.get(keycode, "")
 
-                    if character:
-                        output_string += character
+                if character:
+                    output_string += character
 
-                    if keycode == "KEY_ENTER":
-                        logger.info(f"Received raw data: {output_string}")
+                if keycode == "KEY_ENTER":
+                    logger.info(f"Received raw data: {output_string}")
 
-                        try:
-                            data = _process_ascii_data(output_string, AS_HEX)
-                        except Exception as e:
-                            logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
-                            output_string = ""
-                            continue
-                        logger.info(f"Interpreted data: {data}")
-                        if "config" in data:
-                            display_on_lcd("aplicando", "configuracion", timeout=2)
-                            response = apply_config(data)
-                            logger.info(f"Config response: {response}")
-                            if USE_LCD:
-                                display_on_lcd("ajuste", "aplicado", timeout=2)
-                            output_string = ""
-                            continue
-
-                        try:
-                            qr_dict = _load_json_data(data)
-                            customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
-                            await verify_customer(customer, qr_dict["timestamp"])
-                        except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
-                            await verify_customer(data, int(time.time()))
-                        finally:
-                            output_string = ""
-
-    except OSError as e:
-        display_on_lcd("No coneccion con", "lector, reinicio")
-        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
-        os.remove(HEARTBEAT_FILE_PATH)
-
-
-async def serial_device_event_loop():
-    global shared_list
-    display_on_lcd("Escanea", "codigo QR...")
-
-    try:
-        with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
-            while True:
-                # Read data from the serial port
-                if ser.in_waiting > 0:
                     try:
-                        data = _interpret_serial_data(ser, AS_HEX)
+                        data = _process_ascii_data(output_string, AS_HEX)
                     except Exception as e:
-                        logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
+                        logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
+                        output_string = ""
                         continue
                     logger.info(f"Interpreted data: {data}")
                     if "config" in data:
@@ -564,18 +524,47 @@ async def serial_device_event_loop():
                         logger.info(f"Config response: {response}")
                         if USE_LCD:
                             display_on_lcd("ajuste", "aplicado", timeout=2)
+                        output_string = ""
                         continue
+
                     try:
                         qr_dict = _load_json_data(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
                         await verify_customer(customer, qr_dict["timestamp"])
                     except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                         await verify_customer(data, int(time.time()))
-                await asyncio.sleep(0.2)
-    except OSError as e:
-        display_on_lcd("No coneccion con", "lector, reinicio")
-        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
-        os.remove(HEARTBEAT_FILE_PATH)
+                    finally:
+                        output_string = ""
+
+
+async def serial_device_event_loop():
+    global shared_list
+    display_on_lcd("Escanea", "codigo QR...")
+
+    with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
+        while True:
+            # Read data from the serial port
+            if ser.in_waiting > 0:
+                try:
+                    data = _interpret_serial_data(ser, AS_HEX)
+                except Exception as e:
+                    logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
+                    continue
+                logger.info(f"Interpreted data: {data}")
+                if "config" in data:
+                    display_on_lcd("aplicando", "configuracion", timeout=2)
+                    response = apply_config(data)
+                    logger.info(f"Config response: {response}")
+                    if USE_LCD:
+                        display_on_lcd("ajuste", "aplicado", timeout=2)
+                    continue
+                try:
+                    qr_dict = _load_json_data(data)
+                    customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
+                    await verify_customer(customer, qr_dict["timestamp"])
+                except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
+                    await verify_customer(data, int(time.time()))
+            await asyncio.sleep(0.2)
 
 
 def _load_json_data(raw_data):
