@@ -30,6 +30,8 @@ sentry_sdk.init(
     traces_sample_rate=1.0,
 )
 
+load_dotenv()
+
 DIRECTION = os.getenv("DIRECTION")
 if DIRECTION == "A":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
@@ -73,9 +75,6 @@ if ENABLE_STREAM_HANDLER:
 
 # Example log message
 logger.info(f"Starting QR script. My direction is {DIRECTION}")
-
-
-load_dotenv()
 
 jwt_token = None
 
