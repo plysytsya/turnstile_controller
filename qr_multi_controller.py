@@ -46,8 +46,13 @@ for qr_reader in devices:
         lcd_address = None
         relay_pin = os.getenv("RELAY_PIN_C", "21")
         display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_C", "26")
-    elif qr_reader.is_extended:
-        logger.info(f"Found extended device: {qr_reader}")
+    elif qr_reader.is_extended or (
+            len(keyboard_devices) == 1 and len(serial_devices) == 1 and not isinstance(qr_reader, SerialDevice)
+    ):
+        if isinstance(qr_reader, SerialDevice):
+            logger.info(f"Found extended device: {qr_reader}")
+        else:
+            logger.info(f"Found keyboard device: {qr_reader}")
         direction = EXTENDED_USB_DEVICE_DIRECTION
         lcd_address = DISPLAY_X27_DIRECTION
         entrance_uuid = os.getenv("ENTRANCE_UUID_B")
