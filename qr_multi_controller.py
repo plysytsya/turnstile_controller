@@ -84,7 +84,7 @@ for qr_reader in devices:
 
     logging.warning(f"Starging subprocess {direction} with env-vars: {env}")
     env_without_none_values = {k: v for k, v in env.items() if v is not None}
-    p = subprocess.Popen(cmd, env=env_without_none_values)
+    p = subprocess.Popen(cmd, env=env_without_none_values, start_new_session=True)
     processes.append(p)
     time.sleep(1)
 
