@@ -70,6 +70,7 @@ async def restart_service():
         logger.warning(f"Service {SERVICE_TO_RESTART} restarted successfully: {stdout.decode().strip()}")
     else:
         logger.error(f"Failed to restart service {SERVICE_TO_RESTART}: {stderr.decode().strip()}")
+        raise Exception("restart error")
 
 
 async def monitor_heartbeat():

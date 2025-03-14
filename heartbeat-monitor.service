@@ -7,7 +7,7 @@ After=network.target
 ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/heartbeat_monitor.py
 
 Restart=always
-RestartSec=10
+RestartSec=5
 WorkingDirectory=/home/manager/turnstile_controller/
 
 [Install]
