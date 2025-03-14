@@ -4,7 +4,6 @@ import logging
 import os
 import pathlib
 import re
-import sys
 import threading
 import time
 import uuid
@@ -17,6 +16,7 @@ import RPi.GPIO as GPIO
 import serial
 
 from configurator import apply_config
+from i2cdetect import detect_i2c_device_not_27
 from keymap import KEYMAP
 from lcd_controller import LCDController
 from systemd.journal import JournalHandler
@@ -31,6 +31,18 @@ sentry_sdk.init(
 )
 
 DIRECTION = os.getenv("DIRECTION")
+if DIRECTION == "A":
+    os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
+    os.environ["LCD_I2C_ADDRESS"] = detect_i2c_device_not_27(1)
+    os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
+    os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
+elif DIRECTION == "B":
+    os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_B")
+    os.environ["LCD_I2C_ADDRESS"] = "0x27"
+    os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_B", "10")
+    os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_B", "20")
+
+
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
 DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
