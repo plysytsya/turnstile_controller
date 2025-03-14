@@ -466,7 +466,7 @@ async def heartbeat():
 async def run_keyboard_event_loop_with_retry():
     async for attempt in AsyncRetrying(
             stop=stop_after_attempt(RETRIES_ON_OS_ERROR),
-            retry=retry_if_exception_type(OSError),
+            retry=retry_if_exception_type(Exception),
             before_sleep=before_sleep_log(logger, logging.INFO),
             reraise=True
     ):
@@ -515,6 +515,7 @@ async def _run_keyboard_listener(device):
                         await verify_customer(data, int(time.time()))
                     finally:
                         output_string = ""
+                        await asyncio.sleep(0.5)
 
 
 async def run_serial_device_event_loop_with_retry():
