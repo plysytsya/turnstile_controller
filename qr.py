@@ -15,6 +15,7 @@ import requests
 from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
+from tenacity import AsyncRetrying, stop_after_attempt, retry_if_exception_type, before_sleep_log
 
 from configurator import apply_config
 from keymap import KEYMAP
@@ -33,6 +34,7 @@ sentry_sdk.init(
 DIRECTION = os.getenv("DIRECTION")
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
+RETRIES_ON_OS_ERROR = int(os.getenv("RETRY_ON_OS_ERROR", "3"))
 DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
 MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
@@ -461,70 +463,39 @@ async def heartbeat():
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 
-async def keyboard_event_loop(device):
-    global shared_list
+async def run_keyboard_event_loop_with_retry():
+    async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(RETRIES_ON_OS_ERROR),
+            retry=retry_if_exception_type(OSError),
+            before_sleep=before_sleep_log(logger, logging.INFO),
+            reraise=True
+    ):
+        with attempt:
+            # Reinitialize the device on each retry.
+            device = init_qr_device()
+            await _run_keyboard_listener(device)
+
+
+async def _run_keyboard_listener(device):
     output_string = ""
-    display_on_lcd("Escanea", "codigo QR...")
+    async for event in device.async_read_loop():
+        if event.type == evdev.ecodes.EV_KEY:
+            categorized_event = categorize(event)
+            if categorized_event.keystate == KeyEvent.key_up:
+                keycode = categorized_event.keycode
+                character = KEYMAP.get(keycode, "")
 
-    try:
-        async for event in device.async_read_loop():
-            if event.type == evdev.ecodes.EV_KEY:
-                categorized_event = categorize(event)
-                if categorized_event.keystate == KeyEvent.key_up:
-                    keycode = categorized_event.keycode
-                    character = KEYMAP.get(keycode, "")
+                if character:
+                    output_string += character
 
-                    if character:
-                        output_string += character
+                if keycode == "KEY_ENTER":
+                    logger.info(f"Received raw data: {output_string}")
 
-                    if keycode == "KEY_ENTER":
-                        logger.info(f"Received raw data: {output_string}")
-
-                        try:
-                            data = _process_ascii_data(output_string, AS_HEX)
-                        except Exception as e:
-                            logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
-                            output_string = ""
-                            continue
-                        logger.info(f"Interpreted data: {data}")
-                        if "config" in data:
-                            display_on_lcd("aplicando", "configuracion", timeout=2)
-                            response = apply_config(data)
-                            logger.info(f"Config response: {response}")
-                            if USE_LCD:
-                                display_on_lcd("ajuste", "aplicado", timeout=2)
-                            output_string = ""
-                            continue
-
-                        try:
-                            qr_dict = _load_json_data(data)
-                            customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
-                            await verify_customer(customer, qr_dict["timestamp"])
-                        except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
-                            await verify_customer(data, int(time.time()))
-                        finally:
-                            output_string = ""
-
-    except OSError as e:
-        display_on_lcd("No coneccion con", "lector, reinicio")
-        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
-        sentry_sdk.flush(0.1)
-        os._exit(1)  # Exit with non-zero code to signal failure to systemd
-
-
-async def serial_device_event_loop():
-    global shared_list
-    display_on_lcd("Escanea", "codigo QR...")
-
-    try:
-        with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
-            while True:
-                # Read data from the serial port
-                if ser.in_waiting > 0:
                     try:
-                        data = _interpret_serial_data(ser, AS_HEX)
+                        data = _process_ascii_data(output_string, AS_HEX)
                     except Exception as e:
-                        logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
+                        logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
+                        output_string = ""
                         continue
                     logger.info(f"Interpreted data: {data}")
                     if "config" in data:
@@ -533,18 +504,59 @@ async def serial_device_event_loop():
                         logger.info(f"Config response: {response}")
                         if USE_LCD:
                             display_on_lcd("ajuste", "aplicado", timeout=2)
+                        output_string = ""
                         continue
+
                     try:
                         qr_dict = _load_json_data(data)
                         customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
                         await verify_customer(customer, qr_dict["timestamp"])
                     except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                         await verify_customer(data, int(time.time()))
-                await asyncio.sleep(0.2)
-    except OSError as e:
-        display_on_lcd("No coneccion con", "lector, reinicio")
-        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
-        sys.exit(1)  # Exit with non-zero code to signal failure to systemd
+                    finally:
+                        output_string = ""
+
+
+async def run_serial_device_event_loop_with_retry():
+    # Using Tenacity's AsyncRetrying to retry three times on OSError.
+    async for attempt in AsyncRetrying(
+        stop=stop_after_attempt(RETRIES_ON_OS_ERROR),
+        retry=retry_if_exception_type(OSError),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True
+    ):
+        with attempt:
+            # Reinitialize the serial device on each retry.
+            await serial_device_event_loop()
+
+
+async def serial_device_event_loop():
+    display_on_lcd("Escanea", "codigo QR...")
+
+    with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
+        while True:
+            # Read data from the serial port
+            if ser.in_waiting > 0:
+                try:
+                    data = _interpret_serial_data(ser, AS_HEX)
+                except Exception as e:
+                    logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
+                    continue
+                logger.info(f"Interpreted data: {data}")
+                if "config" in data:
+                    display_on_lcd("aplicando", "configuracion", timeout=2)
+                    response = apply_config(data)
+                    logger.info(f"Config response: {response}")
+                    if USE_LCD:
+                        display_on_lcd("ajuste", "aplicado", timeout=2)
+                    continue
+                try:
+                    qr_dict = _load_json_data(data)
+                    customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
+                    await verify_customer(customer, qr_dict["timestamp"])
+                except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
+                    await verify_customer(data, int(time.time()))
+            await asyncio.sleep(0.2)
 
 
 def _load_json_data(raw_data):
@@ -618,12 +630,15 @@ async def main_loop():
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    dev = init_qr_device()
     refresh_token()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(run_serial_device_event_loop_with_retry(), heartbeat()))
         else:
-            loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
+            dev = init_qr_device()
+            loop.run_until_complete(asyncio.gather(run_keyboard_event_loop_with_retry(dev), main_loop(), heartbeat()))
+    except OSError:
+        logger.error(f"No connection to qr-reader. Exiting...")
+        sys.exit(1)
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
