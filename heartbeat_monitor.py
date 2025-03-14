@@ -24,7 +24,7 @@ HEARTBEAT_FILENAMES = [
     CURRENT_DIR / "heartbeat-B.json",
 ]
 MAX_HEARTBEAT_DELAY = 120
-SLEEP_INTERVAL = 120
+SLEEP_INTERVAL = 2
 SERVICE_TO_RESTART = "qr_script.service"
 
 logger.info(

@@ -35,19 +35,19 @@ serial_devices = find_serial_devices()
 devices = keyboard_devices + serial_devices
 
 load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
+USE_USB_HUB = os.getenv("USE_USB_HUB", "True").lower() == "true"
+
 
 processes = []
 
 for qr_reader in devices:
-    if len(devices) == 3 and not isinstance(qr_reader, SerialDevice):
-        logger.info(f"Found 3rd keyboard device: {qr_reader}")
-        direction = "C"
-        entrance_uuid = os.getenv("ENTRANCE_UUID_C")
-        lcd_address = None
-        relay_pin = os.getenv("RELAY_PIN_C", "21")
-        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_C", "26")
-    elif qr_reader.is_extended:
-        logger.info(f"Found extended device: {qr_reader}")
+    if qr_reader.is_extended and USE_USB_HUB or (
+            len(keyboard_devices) == 1 and len(serial_devices) == 1 and not isinstance(qr_reader, SerialDevice)
+    ):
+        if isinstance(qr_reader, SerialDevice):
+            logger.info(f"Found extended device: {qr_reader}")
+        else:
+            logger.info(f"Found keyboard device: {qr_reader}")
         direction = EXTENDED_USB_DEVICE_DIRECTION
         lcd_address = DISPLAY_X27_DIRECTION
         entrance_uuid = os.getenv("ENTRANCE_UUID_B")
@@ -84,7 +84,7 @@ for qr_reader in devices:
 
     logging.warning(f"Starging subprocess {direction} with env-vars: {env}")
     env_without_none_values = {k: v for k, v in env.items() if v is not None}
-    p = subprocess.Popen(cmd, env=env_without_none_values)
+    p = subprocess.Popen(cmd, env=env_without_none_values, start_new_session=True)
     processes.append(p)
     time.sleep(1)
 

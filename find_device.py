@@ -1,10 +1,12 @@
 import logging
+import os
+
 from systemd.journal import JournalHandler
 import re
 
 from evdev import InputDevice, list_devices
 
-
+USE_USB_HUB = os.getenv("USE_USB_HUB", "True").lower() == "true"
 # Set up the logger
 logger = logging.getLogger("qr_logger")
 logger.setLevel(logging.INFO)
@@ -27,7 +29,7 @@ def find_qr_devices():
 
         if any(name.lower() in device.name.lower() for name in device_name_substrings):
             logger.info(f"Found device: {device}")
-            is_extended = is_usb_extended_device(device)
+            is_extended = False if not USE_USB_HUB else is_usb_extended_device(device)
             if is_extended:
                 logger.info(f"{device.path} is connected to usb-extender")
             device.is_extended = is_extended

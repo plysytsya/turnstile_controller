@@ -1,9 +1,12 @@
+import os
+
 import serial
 import serial.tools.list_ports
 import threading
 import binascii
 
 DEBUG = True  # Enable debugging output
+USE_USB_HUB = os.getenv("USE_USB_HUB", "True").lower() == "true"
 
 
 class SerialDevice:
@@ -56,6 +59,12 @@ def get_location_value(location_str):
 def find_serial_devices():
     devices = []
     ports = serial.tools.list_ports.comports()
+
+    if not USE_USB_HUB:
+        for port in ports:
+            devices.append(SerialDevice(port.device, False, port.location))
+        print("[DEBUG] Skipping USB hub detection.")
+        return devices
 
     if DEBUG:
         print("[DEBUG] Found ports:")
