@@ -39,14 +39,7 @@ load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
 processes = []
 
 for qr_reader in devices:
-    if len(devices) == 3 and not isinstance(qr_reader, SerialDevice):
-        logger.info(f"Found 3rd keyboard device: {qr_reader}")
-        direction = "C"
-        entrance_uuid = os.getenv("ENTRANCE_UUID_C")
-        lcd_address = None
-        relay_pin = os.getenv("RELAY_PIN_C", "21")
-        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_C", "26")
-    elif qr_reader.is_extended or (
+    if qr_reader.is_extended or (
             len(keyboard_devices) == 1 and len(serial_devices) == 1 and not isinstance(qr_reader, SerialDevice)
     ):
         if isinstance(qr_reader, SerialDevice):
