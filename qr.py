@@ -635,8 +635,7 @@ if __name__ == "__main__":
         if IS_SERIAL_DEVICE:
             loop.run_until_complete(asyncio.gather(run_serial_device_event_loop_with_retry(), heartbeat()))
         else:
-            dev = init_qr_device()
-            loop.run_until_complete(asyncio.gather(run_keyboard_event_loop_with_retry(dev), main_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(run_keyboard_event_loop_with_retry(), main_loop(), heartbeat()))
     except OSError:
         logger.error(f"No connection to qr-reader. Exiting...")
         sys.exit(1)
