@@ -26,7 +26,6 @@ EXTENDED_USB_DEVICE_DIRECTION = "B"
 DISPLAY_X27_DIRECTION = "0x27"
 
 UNEXTENDED_USB_DEVICE_DIRECTION = "A"
-USE_USB_HUB = os.getenv("USE_USB_HUB", "True").lower() == "true"
 
 # Get the directory of the current file
 current_dir = Path(__file__).parent
@@ -36,6 +35,8 @@ serial_devices = find_serial_devices()
 devices = keyboard_devices + serial_devices
 
 load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
+USE_USB_HUB = os.getenv("USE_USB_HUB", "True").lower() == "true"
+
 
 processes = []
 
