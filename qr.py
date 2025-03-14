@@ -40,11 +40,13 @@ if DIRECTION == "A":
         os.environ["LCD_I2C_ADDRESS"] = i2c_address_a
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
+    os.environ["IS_SERIAL_DEVICE"] = "True"
 elif DIRECTION == "B":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_B")
     os.environ["LCD_I2C_ADDRESS"] = "0x27"
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_B", "10")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_B", "20")
+    os.environ["IS_SERIAL_DEVICE"] = "False"
 
 
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
