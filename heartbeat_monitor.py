@@ -23,7 +23,7 @@ HEARTBEAT_FILENAMES = [
     CURRENT_DIR / "heartbeat-A.json",
     CURRENT_DIR / "heartbeat-B.json",
 ]
-MAX_HEARTBEAT_DELAY = 120
+MAX_HEARTBEAT_DELAY = 3
 SLEEP_INTERVAL = 2
 SERVICE_TO_RESTART = "qr_script.service"
 
