@@ -5,6 +5,7 @@
 # sudo apt install libsystemd-dev
 requests
 rpi-lcd
+spidev
 unidecode
 python-dotenv
 evdev
