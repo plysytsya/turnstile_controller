@@ -1,3 +1,5 @@
+import time
+
 import spidev
 import RPi.GPIO as GPIO
 
@@ -6,7 +8,7 @@ import RPi.GPIO as GPIO
 CE_PIN = 25  # Change this if using a different CE pin
 CSN_PIN = 8  # CE0 (Physical pin 24)
 
-# Initialize SPI
+# Initialize SPII conne
 spi = spidev.SpiDev()
 spi.open(0, 0)  # Open SPI bus 0, device 0 (CS0)
 spi.max_speed_hz = 4000000  # Set SPI speed (4 MHz)
@@ -26,8 +28,15 @@ def read_register(reg):
 def check_nrf24():
     """Check if the nRF24L01 is wired correctly."""
     try:
+        # Activate the module by setting CE HIGH (temporary)
+        GPIO.output(CE_PIN, GPIO.HIGH)
+        time.sleep(0.01)  # Give the module time to power up
+
         # Read the STATUS register (0x07)
         status = read_register(0x07)
+
+        # Deactivate CE after reading
+        GPIO.output(CE_PIN, GPIO.LOW)
 
         if status != 0xFF:  # If response is not 0xFF, the module is detected
             print(f"✅ nRF24L01 detected! STATUS register: 0x{status:02X}")
@@ -39,6 +48,7 @@ def check_nrf24():
     finally:
         spi.close()  # Close SPI
         GPIO.cleanup()  # Clean up GPIO
+
 
 
 # Run the test
