@@ -1,30 +1,39 @@
-from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
+#!/usr/bin/env python
 import time
+from nrf24 import NRF24
+import RPi.GPIO as GPIO
 
-# CE on GPIO 26, CSN on SPI CE0 (GPIO 8)
-radio = RF24(26, 0)
+# Define two pipes (addresses) as lists of 5 integers each.
+pipes = [[0xe7, 0xe7, 0xe7, 0xe7, 0xe7],  # Writing pipe address
+         [0xc2, 0xc2, 0xc2, 0xc2, 0xc2]]  # Reading pipe address (for ACKs)
 
-address = b'1Node'
+radio = NRF24()
 
 def setup():
-    if not radio.begin():
-        raise RuntimeError("radio hardware is not responding")
-    radio.setPALevel(RF24_PA_LOW)
-    radio.setDataRate(RF24_1MBPS)
-    radio.openWritingPipe(address)
-    radio.stopListening()
+    # Initialize the radio: SPI bus 0, CE pin 26.
+    radio.begin(0, 26)
+    radio.setPayloadSize(32)         # Use fixed payload size of 32 bytes
+    radio.setChannel(0x76)             # Set an RF channel (example: 0x76)
+    radio.setDataRate(NRF24.BR_1MBPS)  # Set data rate to 1 MBPS
+    radio.setPALevel(NRF24.PA_LOW)     # Set power amplifier level to low
+    radio.openWritingPipe(pipes[0])
+    radio.stopListening()            # Stop listening to become a transmitter
+    radio.printDetails()             # Print configuration details for debugging
     print("Sender ready.")
 
 def send_message(message):
-    result = radio.write(message.encode('utf-8'))
+    # Convert the message to a list of ASCII values and pad it to 32 bytes.
+    data = list(message.encode('utf-8'))
+    while len(data) < 32:
+        data.append(0)
+    result = radio.write(data)
     if result:
-        print(f"Sent: {message}")
+        print("Sent: {}".format(message))
     else:
-        radio.printDetails()
         print("Send failed")
 
 if __name__ == '__main__':
     setup()
     while True:
-        send_message("Hello Pi Receiver!")
+        send_message("Hello from sender!")
         time.sleep(1)

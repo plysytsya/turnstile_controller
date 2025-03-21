@@ -1,25 +1,36 @@
-from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
+#!/usr/bin/env python
 import time
+from nrf24 import NRF24
+import RPi.GPIO as GPIO
 
-# CE = GPIO26, CSN = SPI0_CE0
-radio = RF24(26, 0)
-address = b"1Node"
+# Use the same pipe addresses as in the sender.
+pipes = [[0xe7, 0xe7, 0xe7, 0xe7, 0xe7],  # (not used in RX mode)
+         [0xc2, 0xc2, 0xc2, 0xc2, 0xc2]]  # Reading pipe address
+
+radio = NRF24()
 
 def setup():
-    radio.begin()
-    radio.setPALevel(RF24_PA_LOW)
-    radio.setDataRate(RF24_1MBPS)
-    radio.openReadingPipe(1, address)
-    radio.startListening()
-    print("Receiver ready and listening...")
+    # Initialize the radio on SPI bus 0 with CE on GPIO26.
+    radio.begin(0, 26)
+    radio.setPayloadSize(32)
+    radio.setChannel(0x76)
+    radio.setDataRate(NRF24.BR_1MBPS)
+    radio.setPALevel(NRF24.PA_LOW)
+    radio.openReadingPipe(1, pipes[1])
+    radio.startListening()           # Start listening for incoming data
+    radio.printDetails()             # Print configuration details for debugging
+    print("Receiver ready.")
 
 def listen():
     while True:
         if radio.available():
-            buffer = bytearray(32)
-            length = radio.read(buffer)
-            print("Received:", buffer[:length].decode('utf-8'))
-        time.sleep(0.5)
+            received_message = []
+            # Read the payload (32 bytes).
+            radio.read(received_message, radio.getPayloadSize())
+            # Convert the list of integers to a string, ignoring padding zeros.
+            message = "".join(chr(i) for i in received_message if i != 0)
+            print("Received: {}".format(message))
+        time.sleep(0.1)
 
 if __name__ == '__main__':
     setup()
