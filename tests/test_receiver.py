@@ -1,29 +1,26 @@
-import RF24
+from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
 import time
 
-import struct
+# CE = GPIO26, CSN = SPI0_CE0
+radio = RF24(26, 0)
+address = b"1Node"
 
-pipes = [0x52, 0x78, 0x41, 0x41, 0x41]
-pipesbytes = bytearray(pipes)
+def setup():
+    radio.begin()
+    radio.setPALevel(RF24_PA_LOW)
+    radio.setDataRate(RF24_1MBPS)
+    radio.openReadingPipe(1, address)
+    radio.startListening()
+    print("Receiver ready and listening...")
 
-radio = RF24.RF24()
-radio.begin(25, 0)  # Set CE and IRQ pins
-radio.setPALevel(RF24.RF24_PA_MAX)
-radio.setDataRate(RF24.RF24_250KBPS)
-radio.setChannel(0x4c)
-radio.openReadingPipe(1, pipesbytes)
-radio.startListening()
-radio.printDetails()
+def listen():
+    while True:
+        if radio.available():
+            buffer = bytearray(32)
+            length = radio.read(buffer)
+            print("Received:", buffer[:length].decode('utf-8'))
+        time.sleep(0.5)
 
-# radio.powerUp()
-cont = 0
-
-while True:
-    pipe = [1]
-
-    while not radio.available():
-        time.sleep(0.250)
-
-    recv_buffer = bytearray([])
-    recv_buffer = radio.read(32)
-    print(recv_buffer)
+if __name__ == '__main__':
+    setup()
+    listen()
