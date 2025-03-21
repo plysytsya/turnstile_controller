@@ -1,25 +1,24 @@
-from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
-import time
+# bluez_listener.py
+# pip install PyBluez-updated
+import bluetooth
 
-# CE = GPIO26, CSN = SPI0_CE0
-radio = RF24(26, 0)
-address = b"1Node"
+server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+server_sock.bind(("", 1))
+server_sock.listen(1)
 
-def setup():
-    radio.begin()
-    radio.setPALevel(RF24_PA_LOW)
-    radio.setDataRate(RF24_1MBPS)
-    radio.openReadingPipe(1, address)
-    radio.startListening()
-    print("Receiver ready and listening...")
+print("Waiting for connection on RFCOMM channel 1...")
+client_sock, address = server_sock.accept()
+print(f"Accepted connection from {address}")
 
-def listen():
+try:
     while True:
-        if radio.available():
-            payload = radio.read()
-            print("Received:", payload.decode('utf-8').strip('\x00'))
-        time.sleep(0.5)
+        data = client_sock.recv(1024)
+        if not data:
+            break
+        print(f"Received: {data.decode()}")
+except OSError:
+    print("Disconnected.")
 
-if __name__ == '__main__':
-    setup()
-    listen()
+print("Closing sockets...")
+client_sock.close()
+server_sock.close()

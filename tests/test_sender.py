@@ -1,29 +1,24 @@
-from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
+# bluez_auto_sender.py
+# pip install PyBluez-updated
+import bluetooth
 import time
 
-# CE on GPIO 26, CSN on SPI CE0 (GPIO 8)
-radio = RF24(26, 0)
+server_mac = 'B8:27:EB:A0:7E:6D'  # Replace with your server Pi's MAC
+port = 1
 
-address = b'1Node'
+sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+sock.connect((server_mac, port))
+print("Connected to server. Sending messages every 2 seconds...")
 
-def setup():
-    if not radio.begin():
-        raise RuntimeError("radio hardware is not responding")
-    radio.setPALevel(RF24_PA_LOW)
-    radio.setDataRate(RF24_1MBPS)
-    radio.openWritingPipe(address)
-    radio.stopListening()
-    print("Sender ready.")
-
-def send_message(message):
-    result = radio.write(message.encode('utf-8'))
-    if result:
-        print(f"Sent: {message}")
-    else:
-        print("Send failed")
-
-if __name__ == '__main__':
-    setup()
+try:
+    counter = 0
     while True:
-        send_message("Hello Pi Receiver!")
-        time.sleep(10)
+        message = f"Hello {counter}"
+        sock.send(message)
+        print(f"Sent: {message}")
+        counter += 1
+        time.sleep(2)
+except KeyboardInterrupt:
+    print("\nStopped.")
+
+sock.close()
