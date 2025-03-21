@@ -16,9 +16,8 @@ def setup():
 def listen():
     while True:
         if radio.available():
-            buffer = bytearray(32)
-            length = radio.read(buffer)
-            print("Received:", buffer[:length].decode('utf-8'))
+            payload = radio.read()
+            print("Received:", payload.decode('utf-8').strip('\x00'))
         time.sleep(0.5)
 
 if __name__ == '__main__':
