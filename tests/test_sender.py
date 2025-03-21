@@ -1,4 +1,4 @@
-from pyrf24 import RF24
+from pyrf24 import RF24, RF24_PA_LOW, RF24_1MBPS
 import time
 
 # CE on GPIO 26, CSN on SPI CE0 (GPIO 8)
@@ -6,16 +6,14 @@ radio = RF24(26, 0)
 
 address = b'1Node'
 
-
 def setup():
-    radio.begin()
-    radio.setPALevel(RF24.PA_LOW)
-    radio.setDataRate(RF24.BR_1MBPS)
-    radio.setRetries(5, 15)
+    if not radio.begin():
+        raise RuntimeError("radio hardware is not responding")
+    radio.setPALevel(RF24_PA_LOW)
+    radio.setDataRate(RF24_1MBPS)
     radio.openWritingPipe(address)
     radio.stopListening()
     print("Sender ready.")
-
 
 def send_message(message):
     result = radio.write(message.encode('utf-8'))
@@ -23,7 +21,6 @@ def send_message(message):
         print(f"Sent: {message}")
     else:
         print("Send failed")
-
 
 if __name__ == '__main__':
     setup()
