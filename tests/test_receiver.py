@@ -1,6 +1,6 @@
 import time
 import pigpio
-from nrf24 import NRF24
+from nrf24 import NRF24, RF24_DATA_RATE, RF24_PA
 
 pi = pigpio.pi()
 if not pi.connected:
@@ -9,8 +9,8 @@ if not pi.connected:
 radio = NRF24(pi, ce=26)
 radio.set_address_bytes(5)
 radio.set_channel(76)
-radio.set_data_rate("1MBPS")  # ✅ Use string, not constant
-radio.set_pa_level("LOW")     # ✅ Same here
+radio.set_data_rate(RF24_DATA_RATE.RATE_1MBPS)
+radio.set_pa_level(RF24_PA.LOW)
 radio.open_reading_pipe(1, b"1Node")
 radio.start_listening()
 
