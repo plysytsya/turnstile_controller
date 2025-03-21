@@ -1,24 +1,29 @@
+import RF24
 import time
-import pigpio
-from nrf24 import NRF24, RF24_DATA_RATE, RF24_PA
 
-pi = pigpio.pi()
-if not pi.connected:
-    raise IOError("Can't connect to pigpio daemon!")
+import struct
 
-radio = NRF24(pi, ce=26)
-radio.set_address_bytes(5)
-radio.set_channel(76)
-radio.set_data_rate(RF24_DATA_RATE.RATE_1MBPS)
-radio.set_pa_level(RF24_PA.LOW)
-radio.open_reading_pipe(1, b"1Node")
-radio.start_listening()
+pipes = [0x52, 0x78, 0x41, 0x41, 0x41]
+pipesbytes = bytearray(pipes)
 
-print("Receiver ready.")
+radio = RF24.RF24()
+radio.begin(25, 0)  # Set CE and IRQ pins
+radio.setPALevel(RF24.RF24_PA_MAX)
+radio.setDataRate(RF24.RF24_250KBPS)
+radio.setChannel(0x4c)
+radio.openReadingPipe(1, pipesbytes)
+radio.startListening()
+radio.printDetails()
+
+# radio.powerUp()
+cont = 0
 
 while True:
-    if radio.available():
-        pipe = radio.rx_pipe()
-        payload = radio.read()
-        print("Received:", payload.decode('utf-8').strip('\x00'))
-    time.sleep(0.1)
+    pipe = [1]
+
+    while not radio.available():
+        time.sleep(0.250)
+
+    recv_buffer = bytearray([])
+    recv_buffer = radio.read(32)
+    print(recv_buffer)
