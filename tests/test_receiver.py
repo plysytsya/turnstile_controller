@@ -1,5 +1,6 @@
 # bluez_listener.py
 # pip install PyBluez-updated
+# bluetoothctl help
 import bluetooth
 
 server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
