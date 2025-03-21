@@ -20,3 +20,4 @@ setproctitle
 aiohttp
 tenacity
 sentry_sdk
+nrf24

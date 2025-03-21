@@ -1,37 +1,24 @@
-#!/usr/bin/env python
 import time
+import pigpio
 from nrf24 import NRF24
-import RPi.GPIO as GPIO
 
-# Use the same pipe addresses as in the sender.
-pipes = [[0xe7, 0xe7, 0xe7, 0xe7, 0xe7],  # (not used in RX mode)
-         [0xc2, 0xc2, 0xc2, 0xc2, 0xc2]]  # Reading pipe address
+pi = pigpio.pi()
+if not pi.connected:
+    raise IOError("Can't connect to pigpio daemon!")
 
-radio = NRF24()
+radio = NRF24(pi, ce=26)
+radio.set_address_bytes(5)
+radio.open_reading_pipe(1, b"1Node")
+radio.set_channel(76)
+radio.set_data_rate(NRF24.DATA_RATE_1MBPS)
+radio.set_pa_level(NRF24.PA_LOW)
+radio.start_listening()
 
-def setup():
-    # Initialize the radio on SPI bus 0 with CE on GPIO26.
-    radio.begin(0, 26)
-    radio.setPayloadSize(32)
-    radio.setChannel(0x76)
-    radio.setDataRate(NRF24.BR_1MBPS)
-    radio.setPALevel(NRF24.PA_LOW)
-    radio.openReadingPipe(1, pipes[1])
-    radio.startListening()           # Start listening for incoming data
-    radio.printDetails()             # Print configuration details for debugging
-    print("Receiver ready.")
+print("Receiver ready.")
 
-def listen():
-    while True:
-        if radio.available():
-            received_message = []
-            # Read the payload (32 bytes).
-            radio.read(received_message, radio.getPayloadSize())
-            # Convert the list of integers to a string, ignoring padding zeros.
-            message = "".join(chr(i) for i in received_message if i != 0)
-            print("Received: {}".format(message))
-        time.sleep(0.1)
-
-if __name__ == '__main__':
-    setup()
-    listen()
+while True:
+    if radio.available():
+        pipe = radio.rx_pipe()
+        payload = radio.read()
+        print("Received:", payload.decode('utf-8').strip('\x00'))
+    time.sleep(0.1)
