@@ -20,6 +20,7 @@ def send_message(message):
     if result:
         print(f"Sent: {message}")
     else:
+        radio.printDetails()
         print("Send failed")
 
 if __name__ == '__main__':
