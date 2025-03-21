@@ -26,4 +26,4 @@ if __name__ == '__main__':
     setup()
     while True:
         send_message("Hello Pi Receiver!")
-        time.sleep(1)
+        time.sleep(10)
