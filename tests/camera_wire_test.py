@@ -5,7 +5,7 @@ import RPi.GPIO as GPIO
 
 
 # Define CE and CSN pins
-CE_PIN = 25  # Change this if using a different CE pin
+CE_PIN = 26  # Change this if using a different CE pin
 CSN_PIN = 8  # CE0 (Physical pin 24)
 
 # Initialize SPII conne
@@ -26,29 +26,30 @@ def read_register(reg):
 
 
 def check_nrf24():
-    """Check if the nRF24L01 is wired correctly."""
+    """Verifica si el módulo nRF24L01 está cableado correctamente."""
     try:
-        # Activate the module by setting CE HIGH (temporary)
+        # Activar el módulo configurando CE en ALTO (temporalmente)
         GPIO.output(CE_PIN, GPIO.HIGH)
-        time.sleep(0.01)  # Give the module time to power up
+        time.sleep(0.01)  # Dar tiempo al módulo para encenderse
 
-        # Read the STATUS register (0x07)
+        # Leer el registro STATUS (0x07)
         status = read_register(0x07)
 
-        # Deactivate CE after reading
+        # Desactivar CE después de la lectura
         GPIO.output(CE_PIN, GPIO.LOW)
 
-        if status != 0xFF:  # If response is not 0xFF, the module is detected
-            print(f"✅ nRF24L01 detected! STATUS register: 0x{status:02X}")
+        if status != 0xFF:  # Si la respuesta no es 0xFF, el módulo está detectado
+            print(f"✅ nRF24L01 detectado correctamente. Registro STATUS: 0x{status:02X}")
+            print("⚠️ ATENCIÓN: El script no controla el estado del pin GPIO 26. "
+                  "Verifique que esté correctamente conectado.")
         else:
-            print("❌ No response from nRF24L01. Check your wiring!")
+            print("❌ No hay respuesta del nRF24L01. ¡Revisa tu cableado!")
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Error: {e}")
     finally:
-        spi.close()  # Close SPI
-        GPIO.cleanup()  # Clean up GPIO
-
+        spi.close()  # Cerrar SPI
+        GPIO.cleanup()  # Limpiar GPIO
 
 
 # Run the test

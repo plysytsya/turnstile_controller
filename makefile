@@ -6,7 +6,8 @@
 	venv \
 	install-upload uninstall-upload restart-upload logs-upload \
 	install-videorecorder uninstall-videorecorder restart-videorecorder logs-videorecorder \
-	restart-frp logs-frp install-frp
+	restart-frp logs-frp install-frp \
+	test-isp
 
 ############################
 # QR Script A Targets
@@ -185,3 +186,10 @@ logs-frp:
 install-frp:
 	sudo systemctl enable /etc/systemd/system/frpc.service
 	sudo systemctl start frpc.service
+
+############################
+# Testing Targets
+############################
+
+test-isp:
+	/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/tests/camera_wire_test.py
