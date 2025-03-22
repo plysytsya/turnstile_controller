@@ -2,6 +2,8 @@ import logging
 import os
 import asyncio
 import json
+import time
+
 import bluetooth
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_delay, wait_fixed, RetryError
@@ -70,6 +72,13 @@ async def scan_and_send(recording_dir: str):
                     timestamp = int(timestamp_str)
                 except ValueError:
                     continue  # Skip files with invalid timestamp
+
+                # Check if the timestamp is older than 3 seconds
+                now = int(time.time())
+                if now - timestamp > 3:
+                    logger.warning(f"File {filename} is too old ({now - timestamp}s), deleting.")
+                    os.remove(file_path)
+                    continue
 
                 # Build JSON payload: [entrance_log_uuid, timestamp]
                 payload = [entrance_log_uuid, timestamp]
