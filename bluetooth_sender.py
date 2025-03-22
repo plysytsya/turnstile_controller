@@ -36,7 +36,10 @@ async def send_with_reconnect(payload: str):
         except Exception as close_err:
             logger.error(f"Error closing socket: {close_err}")
         # Reconnect using environment parameters
-        server_mac = os.getenv("BLUETOOTH_MAC", "B8:27:EB:A0:7E:6D")
+        server_mac = os.getenv("BLUETOOTH_MAC")
+        if not server_mac:
+            logger.error("Error: BLUETOOTH_MAC environment variable is not set.")
+            return
         port = int(os.getenv("BLUETOOTH_PORT", 1))
         sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
         sock.connect((server_mac, port))
