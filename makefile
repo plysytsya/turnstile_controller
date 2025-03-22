@@ -1,6 +1,12 @@
 .PHONY: \
-	install-qr-a uninstall-qr-a restart-qr-a logs-qr-a \
-	install-qr-b uninstall-qr-b restart-qr-b logs-qr-b \
+	install-qr-a \
+	uninstall-qr-a \
+	restart-qr-a \
+	logs-qr-a \
+	install-qr-b \
+	uninstall-qr-b \
+	restart-qr-b \
+	logs-qr-b \
 	install-heartbeat uninstall-heartbeat restart-heartbeat logs-heartbeat \
 	install-cronjob uninstall-cronjob watch-cronjob status-cronjob trigger-cronjob list-services \
 	venv \
