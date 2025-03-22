@@ -3,10 +3,13 @@ import os
 import asyncio
 import json
 import bluetooth
+from dotenv import load_dotenv
 from tenacity import retry, stop_after_delay, wait_fixed, RetryError
 
 from utils import SentryLogger
 from systemd.journal import JournalHandler
+
+load_dotenv()
 
 # Set up our special logger
 logging.setLoggerClass(SentryLogger)
