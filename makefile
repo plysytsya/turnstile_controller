@@ -13,14 +13,14 @@
 	install-upload uninstall-upload restart-upload logs-upload \
 	install-videorecorder uninstall-videorecorder restart-videorecorder logs-videorecorder \
 	restart-frp logs-frp install-frp \
-	install-bluez-sender \
-	uninstall-bluez-sender \
-	restart-bluez-sender \
-	logs-bluez-sender \
-	install-bluez-receiver \
-	uninstall-bluez-receiver \
-	restart-bluez-receiver \
-	logs-bluez-receiver
+	install-mqtt-sender \
+	uninstall-mqtt-sender \
+	restart-mqtt-sender \
+	logs-mqtt-sender \
+	install-mqtt-receiver \
+	uninstall-mqtt-receiver \
+	restart-mqtt-receiver \
+	logs-mqtt-receiver
 
 ############################
 # QR Script A Targets
@@ -204,44 +204,44 @@ install-frp:
 # Bluetooth Sender Service Targets
 ############################
 
-install-bluez-sender:
-	sudo cp /home/manager/turnstile_controller/bluez-sender.service /etc/systemd/system/
+install-mqtt-sender:
+	sudo cp /home/manager/turnstile_controller/mqtt-sender.service /etc/systemd/system/
 	sudo systemctl daemon-reload
-	sudo systemctl enable bluez-sender
-	sudo systemctl start bluez-sender
-	sudo systemctl status bluez-sender
+	sudo systemctl enable mqtt-sender
+	sudo systemctl start mqtt-sender
+	sudo systemctl status mqtt-sender
 
-uninstall-bluez-sender:
-	sudo systemctl stop bluez-sender
-	sudo systemctl disable bluez-sender
-	sudo rm /etc/systemd/system/bluez-sender.service
+uninstall-mqtt-sender:
+	sudo systemctl stop mqtt-sender
+	sudo systemctl disable mqtt-sender
+	sudo rm /etc/systemd/system/mqtt-sender.service
 	sudo systemctl daemon-reload
 	sudo systemctl reset-failed
 
-restart-bluez-sender:
-	sudo systemctl restart bluez-sender.service
+restart-mqtt-sender:
+	sudo systemctl restart mqtt-sender.service
 
-logs-bluez-sender:
-	journalctl -u bluez-sender -f
+logs-mqtt-sender:
+	journalctl -u mqtt-sender -f
 
 ############################
 
-install-bluez-receiver:
-	sudo cp /home/manager/turnstile_controller/bluez-receiver.service /etc/systemd/system/
+install-mqtt-receiver:
+	sudo cp /home/manager/turnstile_controller/mqtt-receiver.service /etc/systemd/system/
 	sudo systemctl daemon-reload
-	sudo systemctl enable bluez-receiver
-	sudo systemctl start bluez-receiver
-	sudo systemctl status bluez-receiver
+	sudo systemctl enable mqtt-receiver
+	sudo systemctl start mqtt-receiver
+	sudo systemctl status mqtt-receiver
 
-uninstall-bluez-receiver:
-	sudo systemctl stop bluez-receiver
-	sudo systemctl disable bluez-receiver
-	sudo rm /etc/systemd/system/bluez-receiver.service
+uninstall-mqtt-receiver:
+	sudo systemctl stop mqtt-receiver
+	sudo systemctl disable mqtt-receiver
+	sudo rm /etc/systemd/system/mqtt-receiver.service
 	sudo systemctl daemon-reload
 	sudo systemctl reset-failed
 
-restart-bluez-receiver:
-	sudo systemctl restart bluez-receiver.service
+restart-mqtt-receiver:
+	sudo systemctl restart mqtt-receiver.service
 
-logs-bluez-receiver:
-	journalctl -u bluez-receiver -f
+logs-mqtt-receiver:
+	journalctl -u mqtt-receiver -f

@@ -1,24 +1,46 @@
-# bluez_auto_sender.py
-# pip install PyBluez-updated
-import bluetooth
+import paho.mqtt.client as mqtt
 import time
 
-server_mac = 'B8:27:EB:A0:7E:6D'  # Replace with your server Pi's MAC
-port = 1
+client = mqtt.Client()
+client.connect("fmscamara.local", 1883, 60)
 
-sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-sock.connect((server_mac, port))
-print("Connected to server. Sending messages every 2 seconds...")
+while True:
+    client.publish("home/raspberry", "Hello from Raspberry Pi!")
+    time.sleep(5)
 
-try:
-    counter = 0
-    while True:
-        message = f"Hello {counter}"
-        sock.send(message)
-        print(f"Sent: {message}")
-        counter += 1
-        time.sleep(2)
-except KeyboardInterrupt:
-    print("\nStopped.")
 
-sock.close()
+"""
+install mqtt broker
+
+sudo apt update
+sudo apt install mosquitto mosquitto-clients
+sudo systemctl enable mosquitto
+sudo systemctl start mosquitto
+
+update the configuration file
+
+sudo nano /etc/mosquitto/mosquitto.conf
+
+#######
+# Place your local configuration in /etc/mosquitto/conf.d/
+#
+# A full description of the configuration file is at
+# /usr/share/doc/mosquitto/examples/mosquitto.conf.example
+
+pid_file /run/mosquitto/mosquitto.pid
+
+persistence true
+persistence_location /var/lib/mosquitto/
+
+log_dest file /var/log/mosquitto/mosquitto.log
+
+include_dir /etc/mosquitto/conf.d
+
+listener 1883 0.0.0.0
+
+allow_anonymous true
+#######
+sudo systemctl restart mosquitto
+
+install paho-mqtt==2.1.0
+"""
