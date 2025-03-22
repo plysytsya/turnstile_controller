@@ -35,7 +35,9 @@ async def send_with_reconnect(payload: str):
     global sock
     async with sock_lock:
         try:
-            sock.send(payload)
+            # Append a newline as a delimiter to ensure messages don't get concatenated.
+            payload_with_delimiter = payload + "\n"
+            sock.send(payload_with_delimiter.encode('utf-8'))
             logger.info(f"Sent payload: {payload}")
         except Exception as send_err:
             logger.error(f"Send failed: {send_err}. Attempting reconnect...")
