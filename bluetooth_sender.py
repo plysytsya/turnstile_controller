@@ -62,6 +62,7 @@ async def scan_and_send(recording_dir: str):
     while True:
         for filename in os.listdir(recording_dir):
             if filename.endswith('.txt') and filename != "record.txt":
+                logger.info(f"Found file: {filename}")
                 file_path = os.path.join(recording_dir, filename)
                 entrance_log_uuid = filename[:-4]
                 logger.info(f"Sending file {filename} with UUID {entrance_log_uuid}")
