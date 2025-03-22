@@ -16,7 +16,7 @@ if not RECORDING_DIR:
     raise ValueError("RECORDING_DIR environment variable not set.")
 
 # Constants
-POLL_INTERVAL_MS = 30  # Poll interval in milliseconds
+POLL_INTERVAL_MS = 30  # Poll interval in milliseconds (not used for socket timeout)
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
@@ -35,17 +35,14 @@ async def accept_connection(server_sock):
 async def handle_client(client_sock):
     """
     Handles a connected Bluetooth client.
-    Polls for incoming data with a POLL_INTERVAL_MS async sleep between iterations.
+    Receives data using a blocking call via asyncio.to_thread.
     When valid data is received, writes a file named {uuid}.txt containing the timestamp,
     and touches record.txt in the RECORDING_DIR.
     """
-    client_sock.settimeout(POLL_INTERVAL_MS / 1000)
     while True:
-        await asyncio.sleep(POLL_INTERVAL_MS / 1000)
         try:
+            # Block until data is received (similar to the working bluez_listener.py)
             data = await asyncio.to_thread(client_sock.recv, 1024)
-        except socket.timeout:
-            continue
         except Exception as e:
             logger.error("Error receiving data: %s", e)
             break
@@ -104,13 +101,11 @@ async def bluetooth_service():
 
     server_sock.close()
 
-
 def main():
     try:
         asyncio.run(bluetooth_service())
     except Exception as e:
         logger.exception("Bluetooth service encountered an error: %s", e)
-
 
 if __name__ == "__main__":
     main()
