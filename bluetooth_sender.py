@@ -11,7 +11,13 @@ from tenacity import retry, stop_after_delay, wait_fixed, RetryError
 from utils import SentryLogger
 from systemd.journal import JournalHandler
 
+# Load environment variables
 load_dotenv()
+
+# === Constants ===
+SCAN_INTERVAL_MS = 30          # Interval between scan cycles
+PING_INTERVAL_SECONDS = 20     # Interval between connection health pings
+MAX_TRANSMISSION_TIME = 1.0    # Max allowed time (in seconds) for a Bluetooth send operation
 
 # Set up our special logger
 logging.setLoggerClass(SentryLogger)
@@ -48,70 +54,75 @@ async def send_with_reconnect(payload: str):
         port = int(os.getenv("BLUETOOTH_PORT", 1))
         sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
         sock.connect((server_mac, port))
-        # Re-raise the exception to trigger a retry attempt
         raise send_err
-
 
 async def scan_and_send(recording_dir: str):
     """
     Scans the specified directory for files matching the pattern and sends the JSON payload.
     Uses the send_with_reconnect function to enforce a 2-second send deadline.
+    If the transmission takes longer than MAX_TRANSMISSION_TIME seconds, the script exits.
     """
     while True:
         for filename in os.listdir(recording_dir):
-            # Check for expected pattern: {entrance_log_uuid}_{timestamp}.txt
-            import time  # ensure this import is present at the top
-
-            # In scan_and_send, replace the old parsing block with:
-
             if filename.endswith('.txt') and filename != "record.txt":
                 file_path = os.path.join(recording_dir, filename)
-
-                # Extract the entrance_log_uuid from the filename (strip the .txt extension)
                 entrance_log_uuid = filename[:-4]
-
-                # Deduce the timestamp from the file's metadata (modification time)
                 file_mtime = int(os.path.getmtime(file_path))
                 now = int(time.time())
 
-                # If the file is older than 3 seconds, delete it and skip processing
                 if now - file_mtime > 3:
                     logger.warning(f"File {filename} is older than 3 seconds (age: {now - file_mtime}s), deleting.")
                     os.remove(file_path)
                     continue
 
-                # Build JSON payload: [entrance_log_uuid, file_mtime]
                 payload = [entrance_log_uuid, file_mtime]
                 json_payload = json.dumps(payload)
 
                 try:
-                    # Attempt to send with retries (within a 2-second window)
+                    start_time = time.time()
                     await send_with_reconnect(json_payload)
+                    elapsed = time.time() - start_time
+                    if elapsed > MAX_TRANSMISSION_TIME:
+                        logger.error(f"Transmission took too long: {elapsed:.3f}s, exiting to force restart.")
+                        raise Exception("Transmission timeout")
                 except RetryError as retry_err:
                     logger.error(f"Failed to send payload within 2 seconds: {retry_err}. Deleting file.")
-                    # Delete the file and propagate error so journalctl can restart the process
                     os.remove(file_path)
                     raise retry_err
                 else:
-                    # If send was successful, remove the file
                     os.remove(file_path)
-        # Async sleep for 30ms between scans
-        await asyncio.sleep(0.03)
+        await asyncio.sleep(SCAN_INTERVAL_MS / 1000)
 
+async def send_ping():
+    """
+    Sends a ping payload every PING_INTERVAL_SECONDS to verify Bluetooth connection.
+    Exits if ping takes too long, so journalctl can restart the service.
+    """
+    while True:
+        await asyncio.sleep(PING_INTERVAL_SECONDS)
+        try:
+            ping_payload = json.dumps(["ping", int(time.time())])
+            start_time = time.time()
+            await send_with_reconnect(ping_payload)
+            elapsed = time.time() - start_time
+            if elapsed > MAX_TRANSMISSION_TIME:
+                logger.error(f"Ping transmission took too long: {elapsed:.3f}s, exiting to force restart.")
+                raise Exception("Ping transmission timeout")
+            logger.info("Ping sent successfully.")
+        except Exception as e:
+            logger.error(f"Failed to send ping: {e}. Exiting to force restart.")
+            raise e
 
 async def main():
     global sock
-    # Get recording directory from environment variable
     recording_dir = os.getenv("RECORDING_DIR")
     if not recording_dir:
         logger.error("Error: RECORDING_DIR environment variable is not set.")
         return
 
-    # Get Bluetooth connection parameters
     server_mac = os.getenv("BLUETOOTH_MAC", "B8:27:EB:A0:7E:6D")
     port = int(os.getenv("BLUETOOTH_PORT", 1))
 
-    # Establish a Bluetooth RFCOMM connection that remains open
     try:
         sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
         sock.connect((server_mac, port))
@@ -121,12 +132,15 @@ async def main():
         raise conn_err
 
     try:
-        await scan_and_send(recording_dir)
+        await asyncio.gather(
+            scan_and_send(recording_dir),
+            send_ping()
+        )
     except asyncio.CancelledError as e:
-        logger.error(f"Scanner task cancelled: {e}")
+        logger.error(f"Task cancelled: {e}")
     finally:
         sock.close()
-        print("Bluetooth socket closed.")
+        logger.info("Bluetooth socket closed.")
 
 if __name__ == "__main__":
     asyncio.run(main())
