@@ -4,6 +4,8 @@ import os
 import time
 import logging
 import socket
+from uuid import UUID
+
 import bluetooth
 from systemd.journal import JournalHandler
 from dotenv import load_dotenv
@@ -57,6 +59,11 @@ async def handle_client(client_sock):
             # Expect payload of format: [uuid, timestamp]
             if isinstance(payload, list) and len(payload) == 2:
                 uuid_val = payload[0]
+                try:
+                    UUID(uuid_val)
+                except ValueError:
+                    logger.info("Invalid UUID received: %s", uuid_val)
+                    continue
                 timestamp_val = payload[1]
                 file_path = os.path.join(RECORDING_DIR, f"{uuid_val}.txt")
                 with open(file_path, "w") as f:
