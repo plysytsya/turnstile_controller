@@ -28,33 +28,30 @@ logger.addHandler(journal_handler)
 
 # Global socket variable (used by our retry routine)
 sock = None
+sock_lock = asyncio.Lock()
 
 @retry(stop=stop_after_delay(2), wait=wait_fixed(0.1))
 async def send_with_reconnect(payload: str):
-    """
-    Attempts to send the payload.
-    If sending fails, tries to reconnect and re-raises the exception
-    so that Tenacity can retry the send until 2 seconds have elapsed.
-    """
     global sock
-    try:
-        sock.send(payload)
-        logger.info(f"Sent payload: {payload}")
-    except Exception as send_err:
-        logger.error(f"Send failed: {send_err}. Attempting reconnect...")
+    async with sock_lock:
         try:
-            sock.close()
-        except Exception as close_err:
-            logger.error(f"Error closing socket: {close_err}")
-        # Reconnect using environment parameters
-        server_mac = os.getenv("BLUETOOTH_MAC")
-        if not server_mac:
-            logger.error("Error: BLUETOOTH_MAC environment variable is not set.")
-            return
-        port = int(os.getenv("BLUETOOTH_PORT", 1))
-        sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        sock.connect((server_mac, port))
-        raise send_err
+            sock.send(payload)
+            logger.info(f"Sent payload: {payload}")
+        except Exception as send_err:
+            logger.error(f"Send failed: {send_err}. Attempting reconnect...")
+            try:
+                sock.close()
+            except Exception as close_err:
+                logger.error(f"Error closing socket: {close_err}")
+            server_mac = os.getenv("BLUETOOTH_MAC")
+            if not server_mac:
+                logger.error("Error: BLUETOOTH_MAC environment variable is not set.")
+                return
+            port = int(os.getenv("BLUETOOTH_PORT", 1))
+            sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+            sock.connect((server_mac, port))
+            raise send_err
+
 
 async def scan_and_send(recording_dir: str):
     """
