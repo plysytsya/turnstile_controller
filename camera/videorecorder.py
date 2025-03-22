@@ -3,9 +3,7 @@ import time
 import asyncio
 import os
 import signal
-from uuid import uuid4
 
-import setproctitle
 import sys
 import logging
 from systemd.journal import JournalHandler

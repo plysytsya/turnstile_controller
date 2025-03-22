@@ -1,0 +1,14 @@
+[Unit]
+Description=Bluetooth Sender Service
+After=network.target
+
+[Service]
+ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/bluetooth_receiver.py
+WorkingDirectory=/home/manager/turnstile_controller
+User=manager
+Restart=always
+RestartSec=0
+TimeoutStopSec=3
+
+[Install]
+WantedBy=multi-user.target

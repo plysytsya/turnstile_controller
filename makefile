@@ -10,7 +10,11 @@
 	install-bluez-sender \
 	uninstall-bluez-sender \
 	restart-bluez-sender \
-	logs-bluez-sender
+	logs-bluez-sender \
+	install-bluez-receiver \
+	uninstall-bluez-receiver \
+	restart-bluez-receiver \
+	logs-bluez-receiver
 
 ############################
 # QR Script A Targets
@@ -213,3 +217,25 @@ restart-bluez-sender:
 
 logs-bluez-sender:
 	journalctl -u bluez-sender -f
+
+############################
+
+install-bluez-receiver:
+	sudo cp /home/manager/turnstile_controller/bluez-receiver.service /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable bluez-receiver
+	sudo systemctl start bluez-receiver
+	sudo systemctl status bluez-receiver
+
+uninstall-bluez-receiver:
+	sudo systemctl stop bluez-receiver
+	sudo systemctl disable bluez-receiver
+	sudo rm /etc/systemd/system/bluez-receiver.service
+	sudo systemctl daemon-reload
+	sudo systemctl reset-failed
+
+restart-bluez-receiver:
+	sudo systemctl restart bluez-receiver.service
+
+logs-bluez-receiver:
+	journalctl -u bluez-receiver -f
