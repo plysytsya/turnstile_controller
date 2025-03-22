@@ -51,6 +51,7 @@ async def send_with_reconnect(payload: str):
         # Re-raise the exception to trigger a retry attempt
         raise send_err
 
+
 async def scan_and_send(recording_dir: str):
     """
     Scans the specified directory for files matching the pattern and sends the JSON payload.
@@ -59,29 +60,28 @@ async def scan_and_send(recording_dir: str):
     while True:
         for filename in os.listdir(recording_dir):
             # Check for expected pattern: {entrance_log_uuid}_{timestamp}.txt
-            if filename.endswith('.txt') and '_' in filename:
+            import time  # ensure this import is present at the top
+
+            # In scan_and_send, replace the old parsing block with:
+
+            if filename.endswith('.txt') and filename != "record.txt":
                 file_path = os.path.join(recording_dir, filename)
-                parts = filename.split('_')
-                if len(parts) != 2:
-                    continue  # Skip files not following the expected format
 
-                entrance_log_uuid = parts[0]
-                timestamp_str = parts[1].replace('.txt', '')
+                # Extract the entrance_log_uuid from the filename (strip the .txt extension)
+                entrance_log_uuid = filename[:-4]
 
-                try:
-                    timestamp = int(timestamp_str)
-                except ValueError:
-                    continue  # Skip files with invalid timestamp
-
-                # Check if the timestamp is older than 3 seconds
+                # Deduce the timestamp from the file's metadata (modification time)
+                file_mtime = int(os.path.getmtime(file_path))
                 now = int(time.time())
-                if now - timestamp > 3:
-                    logger.warning(f"File {filename} is too old ({now - timestamp}s), deleting.")
+
+                # If the file is older than 3 seconds, delete it and skip processing
+                if now - file_mtime > 3:
+                    logger.warning(f"File {filename} is older than 3 seconds (age: {now - file_mtime}s), deleting.")
                     os.remove(file_path)
                     continue
 
-                # Build JSON payload: [entrance_log_uuid, timestamp]
-                payload = [entrance_log_uuid, timestamp]
+                # Build JSON payload: [entrance_log_uuid, file_mtime]
+                payload = [entrance_log_uuid, file_mtime]
                 json_payload = json.dumps(payload)
 
                 try:
@@ -97,6 +97,7 @@ async def scan_and_send(recording_dir: str):
                     os.remove(file_path)
         # Async sleep for 30ms between scans
         await asyncio.sleep(0.03)
+
 
 async def main():
     global sock
