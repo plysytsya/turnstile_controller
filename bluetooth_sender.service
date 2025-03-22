@@ -1,0 +1,15 @@
+[Unit]
+Description=Bluetooth Sender Service
+After=network.target
+
+[Service]
+# Use the same Python interpreter as your QR script service
+ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/bluetooth_sender.py
+User=manager
+WorkingDirectory=/home/
+TimeoutStopSec=3
+RestartSec=0
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

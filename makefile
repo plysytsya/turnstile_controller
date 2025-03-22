@@ -7,7 +7,10 @@
 	install-upload uninstall-upload restart-upload logs-upload \
 	install-videorecorder uninstall-videorecorder restart-videorecorder logs-videorecorder \
 	restart-frp logs-frp install-frp \
-	test-spi
+	install-bluez-sender \
+	uninstall-bluez-sender \
+	restart-bluez-sender \
+	logs-bluez-sender
 
 ############################
 # QR Script A Targets
@@ -188,8 +191,25 @@ install-frp:
 	sudo systemctl start frpc.service
 
 ############################
-# Testing Targets
+# Bluetooth Sender Service Targets
 ############################
 
-test-spi:
-	/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/tests/camera_wire_test.py
+install-bluez-sender:
+	sudo cp /home/manager/turnstile_controller/bluez-sender.service /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable bluez-sender
+	sudo systemctl start bluez-sender
+	sudo systemctl status bluez-sender
+
+uninstall-bluez-sender:
+	sudo systemctl stop bluez-sender
+	sudo systemctl disable bluez-sender
+	sudo rm /etc/systemd/system/bluez-sender.service
+	sudo systemctl daemon-reload
+	sudo systemctl reset-failed
+
+restart-bluez-sender:
+	sudo systemctl restart bluez-sender.service
+
+logs-bluez-sender:
+	journalctl -u bluez-sender -f
