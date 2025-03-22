@@ -65,7 +65,6 @@ async def scan_and_send(recording_dir: str):
                 logger.info(f"Found file: {filename}")
                 file_path = os.path.join(recording_dir, filename)
                 entrance_log_uuid = filename[:-4]
-                logger.info(f"Sending file {filename} with UUID {entrance_log_uuid}")
                 file_mtime = int(os.path.getmtime(file_path))
                 now = int(time.time())
 
