@@ -8,6 +8,7 @@ import sys
 import logging
 from systemd.journal import JournalHandler
 import aiofiles.os
+import sentry_sdk
 
 # Add the global Python library path to sys.path
 sys.path.append("/usr/lib/python3/dist-packages")
@@ -18,6 +19,13 @@ logger = logging.getLogger("VideoCamera")
 journal_handler = JournalHandler()
 logger.addHandler(journal_handler)
 logger.propagate = False
+
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("SENTRY_ENV"),
+    traces_sample_rate=1.0,
+)
 
 
 class VideoCamera:
