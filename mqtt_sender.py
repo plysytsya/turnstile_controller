@@ -10,9 +10,16 @@ from tenacity import retry, stop_after_delay, wait_fixed, RetryError
 
 from utils import SentryLogger
 from systemd.journal import JournalHandler
+import sentry_sdk
 
 # Load environment variables
 load_dotenv()
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("SENTRY_ENV"),
+    traces_sample_rate=1.0,
+)
 
 # === Constants ===
 SCAN_INTERVAL_MS = 30          # Interval between scan cycles

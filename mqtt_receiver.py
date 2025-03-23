@@ -6,9 +6,17 @@ from uuid import UUID
 import paho.mqtt.client as mqtt
 from systemd.journal import JournalHandler
 from dotenv import load_dotenv
+import sentry_sdk
 
 # Load environment variables and ensure RECORDING_DIR is set
 load_dotenv()
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("SENTRY_ENV"),
+    traces_sample_rate=1.0,
+)
+
 RECORDING_DIR = os.getenv("RECORDING_DIR")
 if not RECORDING_DIR:
     raise ValueError("RECORDING_DIR environment variable not set.")

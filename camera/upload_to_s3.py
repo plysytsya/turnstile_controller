@@ -6,6 +6,7 @@ import aioboto3
 from botocore.exceptions import ClientError
 from systemd.journal import JournalHandler
 from botocore.config import Config
+import sentry_sdk
 
 # Add the global Python library path to sys.path to use cv2 just like in the videorecorder
 sys.path.append("/usr/lib/python3/dist-packages")
@@ -154,6 +155,12 @@ if __name__ == "__main__":
     path_to_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env")
 
     dotenv.load_dotenv(path_to_env)
+
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        environment=os.getenv("SENTRY_ENV"),
+        traces_sample_rate=1.0,
+    )
 
     class Settings:
         """Configuration settings for camera video uploads and S3 integration."""
