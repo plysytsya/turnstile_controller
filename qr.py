@@ -354,6 +354,7 @@ async def verify_customer(customer_uuid, timestamp):
         for filename in [filename1, filename2]:
             with open(filename, "w") as f:
                 f.write("")
+        time.sleep(0.2)
 
     url = f"{HOSTNAME}/verify_customer/"
 
