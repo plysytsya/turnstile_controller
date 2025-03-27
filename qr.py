@@ -354,6 +354,7 @@ async def verify_customer(customer_uuid, timestamp):
         for filename in [filename1, filename2]:
             with open(filename, "w") as f:
                 f.write("")
+        logger.info(f"sleeping for {CAMERA_SLEEP_DURATION} seconds.")
         await asyncio.sleep(CAMERA_SLEEP_DURATION)
 
     url = f"{HOSTNAME}/verify_customer/"
