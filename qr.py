@@ -118,7 +118,7 @@ HAS_CAMERA = os.getenv("HAS_CAMERA").lower() == "true"
 USE_CAMERA = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
 if USE_CAMERA:
     RECORDING_DIR = os.getenv("RECORDING_DIR")
-
+    CAMERA_SLEEP_DURATION = float(os.getenv("CAMERA_SLEEP_DURATION", 0.4))
 
 if USE_LCD:
     try:
@@ -354,7 +354,7 @@ async def verify_customer(customer_uuid, timestamp):
         for filename in [filename1, filename2]:
             with open(filename, "w") as f:
                 f.write("")
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(CAMERA_SLEEP_DURATION)
 
     url = f"{HOSTNAME}/verify_customer/"
 
