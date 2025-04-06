@@ -124,7 +124,9 @@ if USE_LCD:
     try:
         LCD_I2C_ADDRESS = int(os.getenv("LCD_I2C_ADDRESS", 0x27), 16)
     except Exception as e:
-        logger.warning(f"Error parsing LCD I2C address: {e}. Continuing without")
+        logger.warning(
+            f"Error parsing LCD I2C address: {e}. "
+            f"Continuing without. The Address is: {os.getenv('LCD_I2C_ADDRESS', 0x27)}")
         USE_LCD = False
 
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
