@@ -568,6 +568,11 @@ async def serial_device_event_loop():
                     await verify_customer(customer, qr_dict["timestamp"])
                 except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                     await verify_customer(data, int(time.time()))
+                # Final buffer flush post-verification (twice)
+                try:
+                    ser.reset_input_buffer()
+                except AttributeError:
+                    ser.flushInput()
             await asyncio.sleep(0.2)
 
 
