@@ -40,7 +40,7 @@ class NoDeviceFoundError(Exception):
 
 
 DIRECTION = os.getenv("DIRECTION")
-if DIRECTION == "A":
+if DIRECTION == "A" and os.getenv("USE_LCD") == "1":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
     i2c_address_a = detect_i2c_device_not_27(1)
     if i2c_address_a:
