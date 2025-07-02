@@ -129,7 +129,7 @@ if USE_LCD:
             f"Continuing without. The Address is: {os.getenv('LCD_I2C_ADDRESS', 0x27)}")
         USE_LCD = False
 
-QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
+QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH") or "/dev/ttySC1"
 
 logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
@@ -174,7 +174,7 @@ def init_qr_device():
     while time.time() < timeout_end_time:
         try:
             dev = (
-                serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.1)
+                serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2)
                 if IS_SERIAL_DEVICE
                 else InputDevice(QR_USB_DEVICE_PATH)
             )
