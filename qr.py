@@ -46,7 +46,7 @@ USE_RS232 = int(os.getenv("USE_RS232", 0))
 if DIRECTION == "A":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
     if USE_LCD:
-        os.environ["LCD_I2C_ADDRESS"] = os.getenv("LCD_I2C_ADDRESS_A") or detect_i2c_device_not_27(1)
+        os.environ["LCD_I2C_ADDRESS"] = detect_i2c_device_not_27(1) or "0x27"
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
     os.environ["IS_SERIAL_DEVICE"] = "True"
