@@ -41,6 +41,7 @@ class NoDeviceFoundError(Exception):
 
 DIRECTION = os.getenv("DIRECTION")
 USE_LCD = int(os.getenv("USE_LCD", 1))
+USE_RS232 = int(os.getenv("USE_RS232", 0))
 
 if DIRECTION == "A":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
@@ -51,11 +52,14 @@ if DIRECTION == "A":
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
     os.environ["IS_SERIAL_DEVICE"] = "True"
-    devices = find_serial_devices()
-    if devices:
-        os.environ["QR_USB_DEVICE_PATH"] = devices[0].path
+    if USE_RS232:
+        os.environ["QR_USB_DEVICE_PATH"] = "/dev/ttySC1"
     else:
-        raise NoDeviceFoundError("No serial device found.")
+        devices = find_serial_devices()
+        if devices:
+            os.environ["QR_USB_DEVICE_PATH"] = devices[0].path
+        else:
+            raise NoDeviceFoundError("No serial device found.")
 elif DIRECTION == "B":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_B")
     os.environ["LCD_I2C_ADDRESS"] = "0x27"
@@ -132,7 +136,7 @@ if USE_LCD:
             f"Continuing without. The Address is: {os.getenv('LCD_I2C_ADDRESS', 0x27)}")
         USE_LCD = False
 
-QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH") or "/dev/ttySC1"
+QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
 logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
