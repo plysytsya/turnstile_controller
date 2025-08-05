@@ -17,9 +17,19 @@ import serial
 
 from configurator import apply_config
 from find_device import find_qr_devices
-from i2cdetect import detect_i2c_device_not_27
+try:
+    from i2cdetect import detect_i2c_device_not_27
+except ImportError as e:
+    logging.warning(f"i2cdetect module not available: {e}")
+    detect_i2c_device_not_27 = None
+
 from keymap import KEYMAP
-from lcd_controller import LCDController
+
+try:
+    from lcd_controller import LCDController
+except ImportError as e:
+    logging.warning(f"LCD controller module not available: {e}")
+    LCDController = None
 from systemd.journal import JournalHandler
 import sentry_sdk
 
@@ -42,9 +52,16 @@ class NoDeviceFoundError(Exception):
 DIRECTION = os.getenv("DIRECTION")
 if DIRECTION == "A":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
-    i2c_address_a = detect_i2c_device_not_27(1)
-    if i2c_address_a:
-        os.environ["LCD_I2C_ADDRESS"] = i2c_address_a
+    try:
+        if detect_i2c_device_not_27:
+            i2c_address_a = detect_i2c_device_not_27(1)
+            if i2c_address_a:
+                os.environ["LCD_I2C_ADDRESS"] = i2c_address_a
+        else:
+            os.environ["USE_LCD"] = "0"
+            logging.warning("i2c detection not available")
+    except Exception as e:
+        logging.warning(f"Failed to detect i2c device: {e}")
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
     os.environ["IS_SERIAL_DEVICE"] = "True"
@@ -139,7 +156,7 @@ RELAY_PIN_QR_READER = 22  # Hopefully we never again have to use a relay to rest
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
-if USE_LCD:
+if USE_LCD and LCDController:
     # Initialize LCD
     try:
         lcd = LCDController(
@@ -157,6 +174,9 @@ if USE_LCD:
             f"address {LCD_I2C_ADDRESS}. Continuing without LCD: {e}"
         )
         USE_LCD = False
+elif USE_LCD and not LCDController:
+    logger.warning("LCD requested but LCDController not available. Continuing without LCD.")
+    USE_LCD = False
 
 
 def display_on_lcd(line1, line2, timeout=None):
