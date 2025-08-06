@@ -589,7 +589,18 @@ async def serial_device_event_loop():
                 except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                     await verify_customer(data, int(time.time()))
             await asyncio.sleep(0.2)
+            cleanup_serial_queue(ser)
 
+
+def cleanup_serial_queue(ser):
+    try:
+        ser.reset_input_buffer()
+    except AttributeError:
+        logger.warning("Serial device does not support reset_input_buffer. Flushing input instead.")
+        try:
+            ser.flushInput()
+        except Exception as e:
+            logger.warning(f"Failed to flush input buffer: {e}. Continuing without flushing.")
 
 def _load_json_data(raw_data):
     try:
