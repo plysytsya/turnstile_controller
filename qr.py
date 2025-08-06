@@ -588,8 +588,8 @@ async def serial_device_event_loop():
                     await verify_customer(customer, qr_dict["timestamp"])
                 except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
                     await verify_customer(data, int(time.time()))
+                    cleanup_serial_queue(ser)
             await asyncio.sleep(0.2)
-            cleanup_serial_queue(ser)
 
 
 def cleanup_serial_queue(ser):
