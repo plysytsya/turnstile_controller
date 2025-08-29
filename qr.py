@@ -250,16 +250,17 @@ def open_door_and_greet(first_name):
     logger.info(f"{greet_word}, {first_name}!")
     logger.info(f"Opening door...with pin {RELAY_PIN_DOOR}")
 
+    def display_greeting():
+        display_on_lcd(f"{greet_word}", first_name, timeout=3)
+        display_on_lcd("Escanea", "codigo QR")
+
     # Start a new thread to toggle the relay
-    relay_thread = threading.Thread(target=toggle_relay)
+    relay_thread = threading.Thread(target=toggle_relay, daemon=True)
     relay_thread.start()
 
-    # Continue with the display updates in the main thread
-    display_on_lcd(f"{greet_word}", first_name, timeout=3)
-    display_on_lcd("Escanea", "codigo QR")
-
-    # Optionally, wait for the relay thread to finish if necessary
-    # relay_thread.join()
+    # Start a new thread for the display greeting to avoid blocking
+    display_thread = threading.Thread(target=display_greeting, daemon=True)
+    display_thread.start()
 
     return True
 
