@@ -62,6 +62,8 @@ if DIRECTION == "A":
             logging.warning("i2c detection not available")
     except Exception as e:
         logging.warning(f"Failed to detect i2c device: {e}")
+        os.environ["USE_LCD"] = "0"
+        logging.warning("Setting USE_LCD to False due to I2C detection failure")
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
     os.environ["IS_SERIAL_DEVICE"] = "True"
@@ -145,6 +147,7 @@ if USE_LCD:
             f"Error parsing LCD I2C address: {e}. "
             f"Continuing without. The Address is: {os.getenv('LCD_I2C_ADDRESS', 0x27)}")
         USE_LCD = False
+        os.environ["USE_LCD"] = "0"
 
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
@@ -156,6 +159,7 @@ RELAY_PIN_QR_READER = 22  # Hopefully we never again have to use a relay to rest
 GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
 GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 
+lcd = None
 if USE_LCD and LCDController:
     # Initialize LCD
     try:
@@ -174,17 +178,29 @@ if USE_LCD and LCDController:
             f"address {LCD_I2C_ADDRESS}. Continuing without LCD: {e}"
         )
         USE_LCD = False
+        os.environ["USE_LCD"] = "0"
+        lcd = None
 elif USE_LCD and not LCDController:
     logger.warning("LCD requested but LCDController not available. Continuing without LCD.")
     USE_LCD = False
+    os.environ["USE_LCD"] = "0"
 
 
 def display_on_lcd(line1, line2, timeout=None):
-    if not USE_LCD:
+    global USE_LCD, lcd
+    if not USE_LCD or lcd is None:
         logger.info(line1)
         logger.info(line2)
     else:
-        lcd.display(line1, line2, timeout)
+        try:
+            lcd.display(line1, line2, timeout)
+        except Exception as e:
+            logger.warning(f"LCD display failed: {e}. Disabling LCD and continuing.")
+            USE_LCD = False
+            os.environ["USE_LCD"] = "0"
+            lcd = None
+            logger.info(line1)
+            logger.info(line2)
 
 
 def init_qr_device():
@@ -496,7 +512,11 @@ def refresh_token():
 
 def handle_keyboard_interrupt(vs):
     logger.warning("Keyboard interrupt received. Stopping video stream and exiting...")
-    lcd.clear()
+    if lcd is not None:
+        try:
+            lcd.clear()
+        except Exception as e:
+            logger.warning(f"Failed to clear LCD during shutdown: {e}")
     GPIO.cleanup()  # This will reset all GPIO ports you have used in this program back to input mode.
     exit()
 
