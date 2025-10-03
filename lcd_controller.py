@@ -210,6 +210,10 @@ class LCDController:
         scroll_positions = line_length - self.max_char_count + 1
         return [line[i : i + self.max_char_count] for i in range(scroll_positions)]
 
+    def display(self, line1: str, line2: str, timeout=2) -> None:
+        """Display method for compatibility with original qr.py"""
+        self.display_text_on_lcd_async(line1, line2, timeout)
+
     def display_text_on_lcd(self, line1, line2, timeout=None):
         if not self.use_lcd or not self.lcd:
             logging.info(f"Display: {line1} | {line2}")
