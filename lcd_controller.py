@@ -175,6 +175,7 @@ class LCDController:
                 
         self.dark_mode = dark_mode
         self.relay_line = None
+        self.relay_trigger = relay_trigger
         
         # Setup GPIO for display relay using gpiod
         if dark_mode and relay_pin:
@@ -211,8 +212,39 @@ class LCDController:
         return [line[i : i + self.max_char_count] for i in range(scroll_positions)]
 
     def display(self, line1: str, line2: str, timeout=2) -> None:
-        """Display method for compatibility with original qr.py"""
-        self.display_text_on_lcd_async(line1, line2, timeout)
+        """Display method for compatibility with original qr.py - matches main branch behavior"""
+        if self.dark_mode and timeout is None:
+            # Don't display continuous text in dark mode
+            return
+
+        if self.dark_mode and self.relay_line:
+            # Turn on display backlight relay
+            on_state = 0 if self.relay_trigger == "LOW" else 1
+            self.relay_line.set_value(on_state)
+
+        if not self.use_lcd or not self.lcd:
+            logging.info(line1)
+            logging.info(line2)
+        else:
+            try:
+                lines_to_scroll1 = self.scroll_text(line1)
+                lines_to_scroll2 = self.scroll_text(line2)
+
+                for i in range(max(len(lines_to_scroll1), len(lines_to_scroll2))):
+                    self.lcd.clear()
+                    self.lcd.text(unidecode(lines_to_scroll1[i % len(lines_to_scroll1)]), 1)
+                    self.lcd.text(unidecode(lines_to_scroll2[i % len(lines_to_scroll2)]), 2)
+                    time.sleep(self.scroll_delay)
+
+                if timeout is not None:
+                    time.sleep(timeout - self.scroll_delay)
+                    self.lcd.clear()
+                    if self.dark_mode and self.relay_line:
+                        # Turn off display backlight relay
+                        off_state = 1 if self.relay_trigger == "LOW" else 0
+                        self.relay_line.set_value(off_state)
+            except Exception as e:
+                logging.error(f"LCD display error: {e}")
 
     def display_text_on_lcd(self, line1, line2, timeout=None):
         if not self.use_lcd or not self.lcd:
