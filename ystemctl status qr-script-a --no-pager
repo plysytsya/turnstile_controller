@@ -1,0 +1,19 @@
+[0;1;32m●[0m qr_script_a.service - My qr.py script A
+     Loaded: loaded (]8;;file://odroid/etc/systemd/system/qr_script_a.service/etc/systemd/system/qr_script_a.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;32mactive (running)[0m since Fri 2025-10-03 13:52:28 UTC; 15ms ago
+   Main PID: 3755 ((python3))
+      Tasks: 1 (limit: 1946)
+     Memory: 1.5M (peak: 1.5M)
+        CPU: 9ms
+     CGroup: /system.slice/qr_script_a.service
+             └─[0;38;5;245m3755 "[(python3)]"[0m
+
+Oct 03 13:52:28 odroid systemd[1]: qr_script_a.service: Scheduled restart job, restart counter is at 4.
+Oct 03 13:52:28 odroid systemd[1]: Started qr_script_a.service - My qr.py script A.
+Oct 03 13:52:28 odroid (python3)[3755]: [0;1;31m[0;1;39m[0;1;31mqr_script_a.service: Failed to determine user credentials: No such process[0m
+Oct 03 13:52:28 odroid systemd[1]: [0;1;39m[0;1;31m[0;1;39mqr_script_a.service: Main process exited, code=exited, status=217/USER[0m
+Oct 03 13:52:28 odroid systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mqr_script_a.service: Failed with result 'exit-code'.[0m
+Oct 03 13:52:28 odroid systemd[1]: qr_script_a.service: Scheduled restart job, restart counter is at 5.
+Oct 03 13:52:28 odroid systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mqr_script_a.service: Start request repeated too quickly.[0m
+Oct 03 13:52:28 odroid systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mqr_script_a.service: Failed with result 'exit-code'.[0m
+Oct 03 13:52:28 odroid systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start qr_script_a.service - My qr.py script A.[0m

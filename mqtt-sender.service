@@ -3,9 +3,9 @@ Description=Bluetooth Sender Service
 After=network.target
 
 [Service]
-ExecStart=/home/manager/turnstile_controller/venv/bin/python3 /home/manager/turnstile_controller/mqtt_sender.py
-WorkingDirectory=/home/manager/turnstile_controller
-User=manager
+ExecStart=/root/turnstile_controller/.venv/bin/python3 /root/turnstile_controller/mqtt_sender.py
+WorkingDirectory=/root/turnstile_controller
+User=root
 Restart=always
 RestartSec=0
 TimeoutStopSec=3
