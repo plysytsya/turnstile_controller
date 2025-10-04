@@ -243,6 +243,8 @@ class LCDController:
                         # Turn off display backlight relay
                         off_state = 1 if self.relay_trigger == "LOW" else 0
                         self.relay_line.set_value(off_state)
+                        # Reset LCD object to prevent state corruption (matches main branch behavior)
+                        self.lcd = LCD(bus_num=self.i2c_bus, address=self.lcd_address)
             except Exception as e:
                 logging.error(f"LCD display error: {e}")
 
