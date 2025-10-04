@@ -227,6 +227,7 @@ class LCDController:
             logging.info(line2)
         else:
             try:
+                self.lcd.clear()
                 lines_to_scroll1 = self.scroll_text(line1)
                 lines_to_scroll2 = self.scroll_text(line2)
 
