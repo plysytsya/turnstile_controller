@@ -130,7 +130,17 @@ RELAY_OFF = GPIO.LOW if RELAY_TRIGGER == "HIGH" else GPIO.HIGH
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
-AS_HEX = os.getenv("AS_HEX").lower() == "true"
+AS_HEX = os.getenv("AS_HEX", "false").lower() == "true"
+AS_HEX_A = os.getenv("AS_HEX_A", "false").lower() == "true"
+AS_HEX_B = os.getenv("AS_HEX_B", "false").lower() == "true"
+
+# Determine the as_hex setting based on direction
+if DIRECTION == "A" and AS_HEX_A:
+    as_hex_setting = True
+elif DIRECTION == "B" and AS_HEX_B:
+    as_hex_setting = True
+else:
+    as_hex_setting = AS_HEX
 HAS_CAMERA = os.getenv("HAS_CAMERA").lower() == "true"
 USE_CAMERA = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
 if USE_CAMERA:
@@ -537,7 +547,7 @@ async def keyboard_event_loop(device):
                     logger.info(f"Received raw data: {output_string}")
 
                     try:
-                        data = _process_ascii_data(output_string, AS_HEX)
+                        data = _process_ascii_data(output_string, as_hex_setting)
                     except Exception as e:
                         logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
                         output_string = ""
@@ -571,7 +581,7 @@ async def serial_device_event_loop():
             # Read data from the serial port
             if ser.in_waiting > 0:
                 try:
-                    data = _interpret_serial_data(ser, AS_HEX)
+                    data = _interpret_serial_data(ser, as_hex_setting)
                 except Exception as e:
                     logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
                     continue
