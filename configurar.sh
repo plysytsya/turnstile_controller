@@ -357,12 +357,10 @@ configurar_control_acceso() {
         local value="$2"
         local file="$3"
 
-        # Escape básico para sed (/, &, \)
         local esc
         esc=$(printf '%s' "$value" | sed -e 's/[\/&\\]/\\&/g')
 
         if grep -qE "^${key}=" "$file"; then
-            # Reemplaza solo la primera ocurrencia
             sed -i "0,/^${key}=.*/s//${key}=${esc}/" "$file"
         else
             printf '\n%s=%s\n' "$key" "$value" >> "$file"
@@ -371,14 +369,13 @@ configurar_control_acceso() {
 
     # Backup antes de editar
     TS=$(date +%Y%m%d-%H%M%S)
-    ejecutar_sudo cp "$ENV_FILE" "${ENV_FILE}.bak.${TS}"
-    if [ $? -ne 0 ]; then
-        echo -e "${ROJO}Error: no se pudo crear backup.${NC}"
+    ejecutar_sudo cp "$ENV_FILE" "${ENV_FILE}.bak.${TS}" || {
+        echo -e "${ROJO}Error creando backup.${NC}"
         read -p "Presione Enter..."
         return
-    fi
+    }
 
-    # Editar usando sudo de forma segura (tmp -> copy back)
+    # Editar usando tmp
     TMP_ENV=$(mktemp)
     ejecutar_sudo cp "$ENV_FILE" "$TMP_ENV" || {
         echo -e "${ROJO}Error copiando .env a tmp.${NC}"
@@ -395,28 +392,11 @@ configurar_control_acceso() {
     ejecutar_sudo cp "$TMP_ENV" "$ENV_FILE"
     rm -f "$TMP_ENV"
 
-    if [ $? -ne 0 ]; then
-        echo -e "${ROJO}✗ Error guardando cambios en .env${NC}"
-        read -p "Presione Enter..."
-        return
-    fi
-
-    echo -e "${VERDE}✓ .env actualizado (backup: ${ENV_FILE}.bak.${TS}).${NC}"
-
-    # Opcional: reiniciar servicio turnstile si existe
+    echo -e "${VERDE}✓ .env actualizado correctamente.${NC}"
     echo ""
-    echo -e "${AMARILLO}¿Reiniciar servicio 'turnstile' para aplicar cambios? (s/n):${NC}"
-    read RESTART
-    if [[ "$RESTART" =~ ^[sS]$ ]]; then
-        ejecutar_sudo systemctl restart turnstile 2>/dev/null
-        if [ $? -eq 0 ]; then
-            echo -e "${VERDE}✓ Servicio turnstile reiniciado.${NC}"
-        else
-            echo -e "${AMARILLO}⚠ No se pudo reiniciar 'turnstile' (quizás no existe como servicio).${NC}"
-        fi
-    fi
-
+    echo -e "${AMARILLO}(Reinicie el sistema para que los cambios sean efectivos)${NC}"
     echo ""
+
     read -p "Presione Enter..."
 }
 
