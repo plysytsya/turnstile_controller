@@ -6,12 +6,12 @@ After=network.target
 TimeoutStopSec=3
 RestartSec=0
 Restart=always
-ExecStart=/root/turnstile_controller/.venv/bin/python3 /root/turnstile_controller/qr_multi_controller.py
+ExecStart=/manager/home/turnstile_controller/.venv/bin/python3 /manager/home/turnstile_controller/qr_multi_controller.py
 User=root
 #ExecStopPost=/usr/bin/python3 /home/pi/restart_msg.py  # This will run when the service is stopped/restarted
 #StandardOutput=append:/home/pi/scan.log
 #StandardError=append:/home/pi/scan_error.log
-WorkingDirectory=/root/turnstile_controller/
+WorkingDirectory=/manager/home/turnstile_controller/
 
 
 [Install]

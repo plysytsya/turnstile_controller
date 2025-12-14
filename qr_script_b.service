@@ -7,9 +7,9 @@ Environment="DIRECTION=B"
 TimeoutStopSec=3
 RestartSec=0
 Restart=always
-ExecStart=/root/turnstile_controller/.venv/bin/python3 /root/turnstile_controller/qr.py
+ExecStart=/manager/home/turnstile_controller/.venv/bin/python3 /manager/home/turnstile_controller/qr.py
 User=root
-WorkingDirectory=/root/turnstile_controller/
+WorkingDirectory=/manager/home/turnstile_controller/
 
 
 [Install]

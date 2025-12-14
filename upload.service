@@ -5,10 +5,10 @@ After=network.target
 [Service]
 TimeoutStopSec=3s
 RestartSec=10
-ExecStart=/root/turnstile_controller/.venv/bin/python3 /root/turnstile_controller/camera/upload_to_s3.py
+ExecStart=/manager/home/turnstile_controller/.venv/bin/python3 /manager/home/turnstile_controller/camera/upload_to_s3.py
 User=root
 Restart=always
-WorkingDirectory=/root/turnstile_controller/
+WorkingDirectory=/manager/home/turnstile_controller/
 
 
 [Install]
