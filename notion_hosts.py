@@ -180,11 +180,13 @@ def cmd_add_row(
         if puerto and port_exists(notion, ds_id, puerto):
             die(f"Port already exists: {puerto}", code=11)
 
+    ssh_cmd = f"ssh -p {puerto} {usuario}@{hostname}" if puerto else f"ssh {usuario}@{hostname}"
+
     props = {
         PROP_ALIAS: {"title": [{"text": {"content": alias}}]},
         PROP_USUARIO: {"rich_text": [{"text": {"content": usuario}}]},
         PROP_HOSTNAME: {"rich_text": [{"text": {"content": hostname}}]},
-        PROP_CMD: {"rich_text": [{"text": {"content": f"ssh {usuario}@{alias}"}}]},
+        PROP_CMD: {"rich_text": [{"text": {"content": ssh_cmd}}]},
     }
 
     if puerto:

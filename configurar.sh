@@ -40,7 +40,7 @@ mostrar_menu() {
     echo -e "${VERDE}Seleccione una opción:${NC}"
     echo ""
     echo "  [0] Configurar WiFi"
-    echo "  [1] Configurar SSH remoto"
+    echo "  [1] Configurar SSH remoto (FRP)"
     echo "  [2] Configurar control de acceso"
     echo ""
     echo "  [q] Salir"
@@ -88,29 +88,167 @@ configurar_wifi() {
 
 configurar_ssh() {
     mostrar_banner
-    echo -e "${AZUL}══════════════ CONFIGURACIÓN SSH ══════════════${NC}"
+    echo -e "${AZUL}══════════════ CONFIGURACIÓN SSH REMOTO (FRP) ══════════════${NC}"
     echo ""
-    echo "  [1] Ver estado SSH"
-    echo "  [2] Habilitar SSH"
-    echo "  [3] Deshabilitar SSH"
-    echo "  [4] Reiniciar SSH"
-    echo "  [5] Mostrar IP"
-    echo "  [0] Volver"
+
+    # Cargar variables de entorno y activar venv
+    SCRIPT_DIR="/home/manager/turnstile_controller"
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        set -a
+        source "$SCRIPT_DIR/.env"
+        set +a
+    else
+        echo -e "${ROJO}Error: No se encontró el archivo .env${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    if [ -f "$SCRIPT_DIR/venv/bin/activate" ]; then
+        source "$SCRIPT_DIR/venv/bin/activate"
+    else
+        echo -e "${ROJO}Error: No se encontró el virtualenv${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    # Obtener puertos existentes
+    echo -e "${AMARILLO}Obteniendo puertos existentes de Notion...${NC}"
+    PUERTOS_EXISTENTES=$("$SCRIPT_DIR/notion_hosts.py" list-ports 2>/dev/null)
+
+    if [ $? -ne 0 ]; then
+        echo -e "${ROJO}Error al obtener puertos de Notion.${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    echo -e "${VERDE}Puertos ya asignados:${NC}"
+    echo "────────────────────────────────────────────────────"
+    echo "$PUERTOS_EXISTENTES"
+    echo "────────────────────────────────────────────────────"
     echo ""
-    echo -e "${AMARILLO}Opción: ${NC}"
-    read OPC
-    case $OPC in
-        1) echo ""; ejecutar_sudo systemctl status ssh --no-pager ;;
-        2) ejecutar_sudo systemctl enable ssh; ejecutar_sudo systemctl start ssh; echo -e "${VERDE}SSH habilitado.${NC}" ;;
-        3) ejecutar_sudo systemctl stop ssh; ejecutar_sudo systemctl disable ssh; echo -e "${VERDE}SSH deshabilitado.${NC}" ;;
-        4) ejecutar_sudo systemctl restart ssh; echo -e "${VERDE}SSH reiniciado.${NC}" ;;
-        5) echo ""; ip -4 addr show | grep -E "inet " | awk '{print $2, $NF}' ;;
-        0) return ;;
-        *) echo -e "${ROJO}Opción inválida.${NC}" ;;
-    esac
+
+    # Generar puerto aleatorio que no exista (rango 6000-6999)
+    while true; do
+        NUEVO_PUERTO=$((6000 + RANDOM % 1000))
+        if ! echo "$PUERTOS_EXISTENTES" | grep -q "^${NUEVO_PUERTO}$"; then
+            break
+        fi
+    done
+
+    echo -e "${VERDE}Puerto generado automáticamente: ${NUEVO_PUERTO}${NC}"
+    echo ""
+
+    # Solicitar datos con valores por defecto
+    echo -e "${AMARILLO}Nombre (solo letras y números, sin espacios):${NC}"
+    read NOMBRE
+
+    # Validar nombre
+    if [ -z "$NOMBRE" ]; then
+        echo -e "${ROJO}Error: El nombre no puede estar vacío.${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    if ! [[ "$NOMBRE" =~ ^[a-zA-Z0-9]+$ ]]; then
+        echo -e "${ROJO}Error: El nombre solo puede contener letras y números.${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    echo -e "${AMARILLO}Usuario [manager]:${NC}"
+    read USUARIO
+    USUARIO=${USUARIO:-manager}
+
+    echo -e "${AMARILLO}Hostname [188.245.164.175]:${NC}"
+    read HOSTNAME_FRP
+    HOSTNAME_FRP=${HOSTNAME_FRP:-188.245.164.175}
+
+    echo -e "${AMARILLO}Puerto [${NUEVO_PUERTO}]:${NC}"
+    read PUERTO_INPUT
+    PUERTO=${PUERTO_INPUT:-$NUEVO_PUERTO}
+
+    echo ""
+    echo -e "${VERDE}Resumen de configuración:${NC}"
+    echo "────────────────────────────────────────────────────"
+    echo "  Nombre:   $NOMBRE"
+    echo "  Usuario:  $USUARIO"
+    echo "  Hostname: $HOSTNAME_FRP"
+    echo "  Puerto:   $PUERTO"
+    echo "────────────────────────────────────────────────────"
+    echo ""
+    echo -e "${AMARILLO}¿Confirmar configuración? (s/n):${NC}"
+    read CONFIRMAR
+
+    if [[ ! "$CONFIRMAR" =~ ^[sS]$ ]]; then
+        echo -e "${AMARILLO}Configuración cancelada.${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    # Actualizar /etc/frpc.ini
+    echo ""
+    echo -e "${AMARILLO}Actualizando /etc/frpc.ini...${NC}"
+
+    TMP_FRP=$(mktemp)
+    cat > "$TMP_FRP" << EOF
+[common]
+server_addr = ${HOSTNAME_FRP}
+server_port = 7000
+
+[ssh_${PUERTO}]
+type = tcp
+local_ip = 127.0.0.1
+local_port = 22
+remote_port = ${PUERTO}
+EOF
+
+    ejecutar_sudo cp "$TMP_FRP" /etc/frpc.ini
+    rm -f "$TMP_FRP"
+
+    if [ $? -eq 0 ]; then
+        echo -e "${VERDE}✓ /etc/frpc.ini actualizado.${NC}"
+    else
+        echo -e "${ROJO}✗ Error al actualizar /etc/frpc.ini${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    # Registrar en Notion
+    echo ""
+    echo -e "${AMARILLO}Registrando en Notion...${NC}"
+
+    RESULTADO=$("$SCRIPT_DIR/notion_hosts.py" add-row \
+        --alias "$NOMBRE" \
+        --usuario "$USUARIO" \
+        --hostname "$HOSTNAME_FRP" \
+        --puerto "$PUERTO" 2>&1)
+
+    if [ $? -eq 0 ]; then
+        echo -e "${VERDE}✓ $RESULTADO${NC}"
+    else
+        echo -e "${ROJO}✗ Error al registrar en Notion: $RESULTADO${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    # Reiniciar servicio frpc
+    echo ""
+    echo -e "${AMARILLO}Reiniciando servicio frpc...${NC}"
+    ejecutar_sudo systemctl restart frpc 2>/dev/null
+
+    if [ $? -eq 0 ]; then
+        echo -e "${VERDE}✓ Servicio frpc reiniciado.${NC}"
+    else
+        echo -e "${AMARILLO}⚠ No se pudo reiniciar frpc (puede que no esté como servicio).${NC}"
+    fi
+
+    echo ""
+    echo -e "${VERDE}════════════════════════════════════════════════════${NC}"
+    echo -e "${VERDE}Configuración completada. Ahora puedes conectarte con:${NC}"
+    echo -e "${AZUL}  ssh -p ${PUERTO} ${USUARIO}@${HOSTNAME_FRP}${NC}"
+    echo -e "${VERDE}════════════════════════════════════════════════════${NC}"
     echo ""
     read -p "Presione Enter..."
-    configurar_ssh
 }
 
 configurar_control_acceso() {
