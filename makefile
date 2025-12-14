@@ -28,7 +28,7 @@
 ############################
 
 install-qr-a:
-	sudo cp /manager/home/turnstile_controller/qr_script_a.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/qr_script_a.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable qr_script_a
 	sudo systemctl start qr_script_a
@@ -53,7 +53,7 @@ logs-qr-a:
 ############################
 
 install-qr-b:
-	sudo cp /manager/home/turnstile_controller/qr_script_b.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/qr_script_b.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable qr_script_b
 	sudo systemctl start qr_script_b
@@ -77,7 +77,7 @@ logs-qr-b:
 ############################
 
 install-heartbeat:
-	sudo cp /manager/home/turnstile_controller/heartbeat-monitor.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/heartbeat-monitor.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable heartbeat-monitor
 	sudo systemctl start heartbeat-monitor
@@ -101,8 +101,8 @@ logs-heartbeat:
 ############################
 
 install-cronjob:
-	sudo cp /manager/home/turnstile_controller/download_customer_db.service /etc/systemd/system/
-	sudo cp /manager/home/turnstile_controller/download_customer_db.timer /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/download_customer_db.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/download_customer_db.timer /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable download_customer_db.service
 	sudo systemctl enable download_customer_db.timer
@@ -141,7 +141,7 @@ venv:
 ############################
 
 install-upload:
-	sudo cp /manager/home/turnstile_controller/upload.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/upload.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable upload
 	sudo systemctl start upload
@@ -165,7 +165,7 @@ logs-upload:
 ############################
 
 install-videorecorder:
-	sudo cp /manager/home/turnstile_controller/videorecorder.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/videorecorder.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable videorecorder
 	sudo systemctl start videorecorder
@@ -205,7 +205,7 @@ install-frp:
 ############################
 
 install-mqtt-sender:
-	sudo cp /manager/home/turnstile_controller/mqtt-sender.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/mqtt-sender.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable mqtt-sender
 	sudo systemctl start mqtt-sender
@@ -227,7 +227,7 @@ logs-mqtt-sender:
 ############################
 
 install-mqtt-receiver:
-	sudo cp /manager/home/turnstile_controller/mqtt-receiver.service /etc/systemd/system/
+	sudo cp /home/manager/turnstile_controller/mqtt-receiver.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable mqtt-receiver
 	sudo systemctl start mqtt-receiver

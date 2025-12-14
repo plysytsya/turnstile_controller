@@ -20,12 +20,12 @@ git clone https://github.com/plysytsya/turnstile_controller.git
 sudo apt install python3-venv
 ```
 ```
-python3 -m venv /manager/home/turnstile_controller/venv
+python3 -m venv /home/manager/turnstile_controller/venv
 ```
 
 ## activar virtualenv
 ```
-source /manager/home/turnstile_controller/venv/bin/activate
+source /home/manager/turnstile_controller/venv/bin/activate
 ```
 
 ### Install dependencies

@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 # Execute the Heartbeat Monitor script
-ExecStart=/manager/home/turnstile_controller/.venv/bin/python3 /manager/home/turnstile_controller/heartbeat_monitor.py
+ExecStart=/home/manager/turnstile_controller/.venv/bin/python3 /home/manager/turnstile_controller/heartbeat_monitor.py
 
 Restart=always
 RestartSec=5
-WorkingDirectory=/manager/home/turnstile_controller/
+WorkingDirectory=/home/manager/turnstile_controller/
 
 [Install]
 WantedBy=multi-user.target

@@ -5,10 +5,10 @@ After=network.target
 [Service]
 TimeoutStopSec=3s
 RestartSec=10
-ExecStart=/manager/home/turnstile_controller/.venv/bin/python3 /manager/home/turnstile_controller/camera/videorecorder.py
+ExecStart=/home/manager/turnstile_controller/.venv/bin/python3 /home/manager/turnstile_controller/camera/videorecorder.py
 User=root
 Restart=always
-WorkingDirectory=/manager/home/turnstile_controller/
+WorkingDirectory=/home/manager/turnstile_controller/
 
 
 [Install]
