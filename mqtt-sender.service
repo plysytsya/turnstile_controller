@@ -5,7 +5,7 @@ After=network.target
 [Service]
 ExecStart=/home/manager/turnstile_controller/.venv/bin/python3 /home/manager/turnstile_controller/mqtt_sender.py
 WorkingDirectory=/home/manager/turnstile_controller
-User=root
+User=manager
 Restart=always
 RestartSec=0
 TimeoutStopSec=3

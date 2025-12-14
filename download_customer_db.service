@@ -4,7 +4,7 @@ Description=Download Customer Database Service
 [Service]
 Type=simple
 ExecStart=/home/manager/turnstile_controller/.venv/bin/python3 /home/manager/turnstile_controller/download_customer_db.py
-User=root
+User=manager
 WorkingDirectory=/home/manager/turnstile_controller/
 StandardOutput=journal
 StandardError=journal
