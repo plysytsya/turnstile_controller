@@ -253,31 +253,171 @@ EOF
 
 configurar_control_acceso() {
     mostrar_banner
-    echo -e "${AZUL}══════════════ CONTROL DE ACCESO ══════════════${NC}"
+    echo -e "${AZUL}══════════════ CONFIGURAR CONTROL DE ACCESO (.env) ══════════════${NC}"
     echo ""
-    echo "  [1] Ver estado del servicio"
-    echo "  [2] Iniciar servicio"
-    echo "  [3] Detener servicio"
-    echo "  [4] Reiniciar servicio"
-    echo "  [5] Ver logs"
-    echo "  [6] Editar configuración"
-    echo "  [0] Volver"
-    echo ""
-    echo -e "${AMARILLO}Opción: ${NC}"
-    read OPC
-    case $OPC in
-        1) ejecutar_sudo systemctl status turnstile --no-pager 2>/dev/null || echo "Servicio no encontrado" ;;
-        2) ejecutar_sudo systemctl start turnstile 2>/dev/null && echo -e "${VERDE}Iniciado.${NC}" || echo -e "${ROJO}Error.${NC}" ;;
-        3) ejecutar_sudo systemctl stop turnstile 2>/dev/null && echo -e "${VERDE}Detenido.${NC}" || echo -e "${ROJO}Error.${NC}" ;;
-        4) ejecutar_sudo systemctl restart turnstile 2>/dev/null && echo -e "${VERDE}Reiniciado.${NC}" || echo -e "${ROJO}Error.${NC}" ;;
-        5) ejecutar_sudo journalctl -u turnstile -n 50 --no-pager 2>/dev/null || echo "Sin logs" ;;
-        6) CONFIG="/home/manager/turnstile_controller/config.json"; [ -f "$CONFIG" ] && ejecutar_sudo nano "$CONFIG" || echo -e "${ROJO}Config no encontrada.${NC}" ;;
-        0) return ;;
-        *) echo -e "${ROJO}Opción inválida.${NC}" ;;
+
+    ENV_FILE="/home/manager/turnstile_controller/.env"
+
+    if [ ! -f "$ENV_FILE" ]; then
+        echo -e "${ROJO}Error: No existe $ENV_FILE${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    # Leer valores actuales (sin romper si faltan)
+    CUR_ENTRANCE_UUID_A=$(grep -E '^ENTRANCE_UUID_A=' "$ENV_FILE" | head -n1 | cut -d= -f2-)
+    CUR_USERNAME=$(grep -E '^USERNAME=' "$ENV_FILE" | head -n1 | cut -d= -f2-)
+    CUR_PASSWORD=$(grep -E '^PASSWORD=' "$ENV_FILE" | head -n1 | cut -d= -f2-)
+    CUR_HAS_CAMERA=$(grep -E '^HAS_CAMERA=' "$ENV_FILE" | head -n1 | cut -d= -f2-)
+
+    # Normalizar HAS_CAMERA a Python bool si viene en otros formatos
+    case "$CUR_HAS_CAMERA" in
+        True|False) : ;;
+        true|TRUE|1|yes|YES|y|Y|si|SI|s|S) CUR_HAS_CAMERA="True" ;;
+        false|FALSE|0|no|NO|n|N|"") CUR_HAS_CAMERA="False" ;;
+        *) CUR_HAS_CAMERA="False" ;;
     esac
+
+    echo -e "${VERDE}Valores actuales:${NC}"
+    echo "────────────────────────────────────────────────────"
+    echo "  ENTRANCE_UUID_A = ${CUR_ENTRANCE_UUID_A}"
+    echo "  USERNAME        = ${CUR_USERNAME}"
+    echo "  PASSWORD        = (oculto)"
+    echo "  HAS_CAMERA      = ${CUR_HAS_CAMERA}"
+    echo "────────────────────────────────────────────────────"
+    echo ""
+
+    # Pedir nuevos valores (Enter = mantener)
+    echo -e "${AMARILLO}ENTRANCE_UUID_A [Enter para mantener]:${NC}"
+    read NEW_ENTRANCE_UUID_A
+
+    echo -e "${AMARILLO}USERNAME [Enter para mantener]:${NC}"
+    read NEW_USERNAME
+
+    echo -e "${AMARILLO}PASSWORD [Enter para mantener]:${NC}"
+    read -s NEW_PASSWORD
+    echo ""
+
+    # s/n -> True/False
+    if [[ "$CUR_HAS_CAMERA" == "True" ]]; then
+        CUR_HAS_CAMERA_HUMAN="s"
+    else
+        CUR_HAS_CAMERA_HUMAN="n"
+    fi
+
+    echo -e "${AMARILLO}¿Tiene cámara? (s/n) [${CUR_HAS_CAMERA_HUMAN}] (Enter para mantener):${NC}"
+    read NEW_HAS_CAMERA
+
+    # Aplicar "mantener" si viene vacío
+    FINAL_ENTRANCE_UUID_A="${NEW_ENTRANCE_UUID_A:-$CUR_ENTRANCE_UUID_A}"
+    FINAL_USERNAME="${NEW_USERNAME:-$CUR_USERNAME}"
+    FINAL_PASSWORD="${NEW_PASSWORD:-$CUR_PASSWORD}"
+
+    # HAS_CAMERA: Enter mantiene, s/n convierte
+    if [ -z "$NEW_HAS_CAMERA" ]; then
+        FINAL_HAS_CAMERA="$CUR_HAS_CAMERA"
+    else
+        case "$NEW_HAS_CAMERA" in
+            s|S) FINAL_HAS_CAMERA="True" ;;
+            n|N) FINAL_HAS_CAMERA="False" ;;
+            *)
+                echo -e "${ROJO}Error: use 's' o 'n'.${NC}"
+                read -p "Presione Enter..."
+                return
+                ;;
+        esac
+    fi
+
+    # Default absoluto si sigue vacío
+    if [ -z "$FINAL_HAS_CAMERA" ]; then
+        FINAL_HAS_CAMERA="False"
+    fi
+
+    echo ""
+    echo -e "${VERDE}Resumen de cambios:${NC}"
+    echo "────────────────────────────────────────────────────"
+    echo "  ENTRANCE_UUID_A = ${FINAL_ENTRANCE_UUID_A}"
+    echo "  USERNAME        = ${FINAL_USERNAME}"
+    echo "  PASSWORD        = (oculto)"
+    echo "  HAS_CAMERA      = ${FINAL_HAS_CAMERA}"
+    echo "────────────────────────────────────────────────────"
+    echo ""
+    echo -e "${AMARILLO}¿Guardar en $ENV_FILE? (s/n):${NC}"
+    read CONFIRMAR
+
+    if [[ ! "$CONFIRMAR" =~ ^[sS]$ ]]; then
+        echo -e "${AMARILLO}Cancelado. No se guardó nada.${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    # Función interna: setear o agregar KEY=VALUE, sin tocar otras líneas
+    _set_or_append_env_kv() {
+        local key="$1"
+        local value="$2"
+        local file="$3"
+
+        # Escape básico para sed (/, &, \)
+        local esc
+        esc=$(printf '%s' "$value" | sed -e 's/[\/&\\]/\\&/g')
+
+        if grep -qE "^${key}=" "$file"; then
+            # Reemplaza solo la primera ocurrencia
+            sed -i "0,/^${key}=.*/s//${key}=${esc}/" "$file"
+        else
+            printf '\n%s=%s\n' "$key" "$value" >> "$file"
+        fi
+    }
+
+    # Backup antes de editar
+    TS=$(date +%Y%m%d-%H%M%S)
+    ejecutar_sudo cp "$ENV_FILE" "${ENV_FILE}.bak.${TS}"
+    if [ $? -ne 0 ]; then
+        echo -e "${ROJO}Error: no se pudo crear backup.${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    # Editar usando sudo de forma segura (tmp -> copy back)
+    TMP_ENV=$(mktemp)
+    ejecutar_sudo cp "$ENV_FILE" "$TMP_ENV" || {
+        echo -e "${ROJO}Error copiando .env a tmp.${NC}"
+        rm -f "$TMP_ENV"
+        read -p "Presione Enter..."
+        return
+    }
+
+    _set_or_append_env_kv "ENTRANCE_UUID_A" "$FINAL_ENTRANCE_UUID_A" "$TMP_ENV"
+    _set_or_append_env_kv "USERNAME" "$FINAL_USERNAME" "$TMP_ENV"
+    _set_or_append_env_kv "PASSWORD" "$FINAL_PASSWORD" "$TMP_ENV"
+    _set_or_append_env_kv "HAS_CAMERA" "$FINAL_HAS_CAMERA" "$TMP_ENV"
+
+    ejecutar_sudo cp "$TMP_ENV" "$ENV_FILE"
+    rm -f "$TMP_ENV"
+
+    if [ $? -ne 0 ]; then
+        echo -e "${ROJO}✗ Error guardando cambios en .env${NC}"
+        read -p "Presione Enter..."
+        return
+    fi
+
+    echo -e "${VERDE}✓ .env actualizado (backup: ${ENV_FILE}.bak.${TS}).${NC}"
+
+    # Opcional: reiniciar servicio turnstile si existe
+    echo ""
+    echo -e "${AMARILLO}¿Reiniciar servicio 'turnstile' para aplicar cambios? (s/n):${NC}"
+    read RESTART
+    if [[ "$RESTART" =~ ^[sS]$ ]]; then
+        ejecutar_sudo systemctl restart turnstile 2>/dev/null
+        if [ $? -eq 0 ]; then
+            echo -e "${VERDE}✓ Servicio turnstile reiniciado.${NC}"
+        else
+            echo -e "${AMARILLO}⚠ No se pudo reiniciar 'turnstile' (quizás no existe como servicio).${NC}"
+        fi
+    fi
+
     echo ""
     read -p "Presione Enter..."
-    configurar_control_acceso
 }
 
 # PROGRAMA PRINCIPAL
