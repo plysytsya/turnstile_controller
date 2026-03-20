@@ -12,10 +12,9 @@ import evdev
 from evdev import InputDevice, categorize, KeyEvent
 import requests
 from dotenv import load_dotenv
-import RPi.GPIO as GPIO
+import gpiod
 import serial
 
-from camera_trigger import queue_camera_trigger
 from configurator import apply_config
 from find_device import find_qr_devices
 try:
@@ -46,6 +45,58 @@ sentry_sdk.init(
 load_dotenv()
 
 
+# Odroid GPIO Compatibility Layer
+class OdroidGPIO:
+    """GPIO compatibility layer for Odroid using gpiod"""
+    HIGH = 1
+    LOW = 0
+    BCM = "BCM"
+    OUT = gpiod.LINE_REQ_DIR_OUT
+
+    def __init__(self):
+        self.chip = None
+        self.lines = {}
+
+    def setmode(self, mode):
+        if not self.chip:
+            self.chip = gpiod.Chip("gpiochip0")
+
+    def setup(self, pin, direction):
+        self.setmode(self.BCM)
+        try:
+            line = self.chip.get_line(pin)
+            line.request(consumer=f"relay_{pin}", type=direction)
+            self.lines[pin] = line
+            # Initialize relay to OFF state
+            relay_trigger = os.getenv("RELAY_TRIGGER", "HIGH")
+            off_state = self.LOW if relay_trigger == "HIGH" else self.HIGH
+            line.set_value(off_state)
+        except Exception as e:
+            logging.error(f"Failed to setup GPIO pin {pin}: {e}")
+
+    def output(self, pin, value):
+        if pin in self.lines:
+            try:
+                self.lines[pin].set_value(value)
+            except Exception as e:
+                logging.error(f"Failed to set GPIO {pin} to {value}: {e}")
+
+    def cleanup(self):
+        for pin, line in self.lines.items():
+            try:
+                # Turn off relay
+                relay_trigger = os.getenv("RELAY_TRIGGER", "HIGH")
+                off_state = self.LOW if relay_trigger == "HIGH" else self.HIGH
+                line.set_value(off_state)
+                line.release()
+            except:
+                pass
+        self.lines.clear()
+
+# Create GPIO instance
+GPIO = OdroidGPIO()
+
+
 class NoDeviceFoundError(Exception):
     pass
 
@@ -53,18 +104,12 @@ class NoDeviceFoundError(Exception):
 DIRECTION = os.getenv("DIRECTION")
 if DIRECTION == "A":
     os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
-    try:
-        if detect_i2c_device_not_27:
-            i2c_address_a = detect_i2c_device_not_27(1)
-            if i2c_address_a:
-                os.environ["LCD_I2C_ADDRESS"] = i2c_address_a
-        else:
-            os.environ["USE_LCD"] = "0"
-            logging.warning("i2c detection not available")
-    except Exception as e:
-        logging.warning(f"Failed to detect i2c device: {e}")
-    os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "24")
-    os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "21")
+    # Use Odroid I2C configuration
+    os.environ["LCD_I2C_ADDRESS"] = os.getenv("I2C_ADDRESS", "0x27")
+    os.environ["LCD_I2C_BUS"] = os.getenv("I2C_BUS", "0")
+    # Use Odroid GPIO pins
+    os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "62")  # Pin 7 -> GPIO line 62
+    os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "69")  # Pin 13 -> GPIO line 69
     os.environ["IS_SERIAL_DEVICE"] = "True"
     devices = find_serial_devices()
     if devices:
@@ -131,17 +176,7 @@ RELAY_OFF = GPIO.LOW if RELAY_TRIGGER == "HIGH" else GPIO.HIGH
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
-AS_HEX = os.getenv("AS_HEX", "false").lower() == "true"
-AS_HEX_A = os.getenv("AS_HEX_A", "false").lower() == "true"
-AS_HEX_B = os.getenv("AS_HEX_B", "false").lower() == "true"
-
-# Determine the as_hex setting based on direction
-if DIRECTION == "A" and AS_HEX_A:
-    as_hex_setting = True
-elif DIRECTION == "B" and AS_HEX_B:
-    as_hex_setting = True
-else:
-    as_hex_setting = AS_HEX
+AS_HEX = os.getenv("AS_HEX").lower() == "true"
 HAS_CAMERA = os.getenv("HAS_CAMERA").lower() == "true"
 USE_CAMERA = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
 if USE_CAMERA:
@@ -170,12 +205,14 @@ GPIO.setup(relay_pin, GPIO.OUT)  # Set pin as an output pin
 if USE_LCD and LCDController:
     # Initialize LCD
     try:
+        i2c_bus = int(os.getenv("LCD_I2C_BUS", "0"))
         lcd = LCDController(
             use_lcd=USE_LCD,
             lcd_address=LCD_I2C_ADDRESS,
             dark_mode=DARK_MODE,
             relay_pin=RELAY_PIN_DISPLAY,
             relay_trigger=RELAY_TRIGGER,
+            i2c_bus=i2c_bus,
         )
         lcd.display("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
@@ -383,7 +420,11 @@ async def verify_customer(customer_uuid, timestamp):
     payload["uuid"] = entrance_log_uuid
 
     if USE_CAMERA:
-        queue_camera_trigger(RECORDING_DIR, entrance_log_uuid)
+        filename1 = f"{RECORDING_DIR}/{entrance_log_uuid}.txt"
+        filename2 = f"{RECORDING_DIR}/record.txt"
+        for filename in [filename1, filename2]:
+            with open(filename, "w") as f:
+                f.write("")
         logger.info(f"sleeping for {CAMERA_SLEEP_DURATION} seconds.")
         await asyncio.sleep(CAMERA_SLEEP_DURATION)
 
@@ -544,7 +585,7 @@ async def keyboard_event_loop(device):
                     logger.info(f"Received raw data: {output_string}")
 
                     try:
-                        data = _process_ascii_data(output_string, as_hex_setting)
+                        data = _process_ascii_data(output_string, AS_HEX)
                     except Exception as e:
                         logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
                         output_string = ""
@@ -578,7 +619,7 @@ async def serial_device_event_loop():
             # Read data from the serial port
             if ser.in_waiting > 0:
                 try:
-                    data = _interpret_serial_data(ser, as_hex_setting)
+                    data = _interpret_serial_data(ser, AS_HEX)
                 except Exception as e:
                     logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
                     continue
