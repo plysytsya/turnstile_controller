@@ -1,0 +1,6 @@
+manager ALL=(root) NOPASSWD:/usr/bin/systemctl enable --now videorecorder
+manager ALL=(root) NOPASSWD:/usr/bin/systemctl disable --now videorecorder
+manager ALL=(root) NOPASSWD:/usr/bin/systemctl enable --now mqtt-receiver
+manager ALL=(root) NOPASSWD:/usr/bin/systemctl disable --now mqtt-receiver
+manager ALL=(root) NOPASSWD:/usr/bin/systemctl enable --now upload
+manager ALL=(root) NOPASSWD:/usr/bin/systemctl disable --now upload

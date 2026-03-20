@@ -1,6 +1,5 @@
-# install opencv like this:
-# first install the c++ binary: sudo apt-get install libopencv-dev
-# then install python bindings: sudo apt-get install python3-opencv
+# Install into the project venv.
+opencv-python-headless
 requests
 python-dotenv
 evdev

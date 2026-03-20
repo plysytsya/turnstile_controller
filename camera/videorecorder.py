@@ -12,7 +12,10 @@ import sentry_sdk
 
 # Add the global Python library path to sys.path
 sys.path.append("/usr/lib/python3/dist-packages")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import cv2
+
+from camera_device import open_camera_capture
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCamera")
@@ -31,7 +34,7 @@ class VideoCamera:
         self.FPS = settings.FPS
 
         # Video recording parameters
-        self.VIDEO_CODEC = "avc1"  # Codec used for recording video
+        self.VIDEO_CODEC = os.getenv("VIDEO_CODEC", "mp4v")  # Codec used for recording video
         self.VIDEO_FORMAT = "mp4"  # Final format of the recorded video files
 
         self.RECORDING_DURATION = 6  # Duration to record after trigger (in seconds)
@@ -42,6 +45,7 @@ class VideoCamera:
         self.recording_start_time = None
         self.out = None
         self.video = None
+        self.camera_device = None
         self.recording_file = None  # Temporary file path for recording
         self.current_qr_data = None  # Store QR data for filename
 
@@ -49,18 +53,15 @@ class VideoCamera:
         self.init_camera()
 
     def init_camera(self):
-        self.video = cv2.VideoCapture(0)
-        self.video.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
-        self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
-
-        self.fourcc = cv2.VideoWriter_fourcc(*self.VIDEO_CODEC)
+        self.cleanup()
+        self.video, self.camera_device, attempted_candidates = open_camera_capture(cv2, self.FRAME_WIDTH, self.FRAME_HEIGHT)
 
         timestamp = int(time.time())
         self.recording_file = f"{self.RECORDING_DIR}/temp_{timestamp}_.{self.VIDEO_FORMAT}"
 
         # Check if camera is opened successfully
-        if not self.video.isOpened():
-            logger.error("Failed to open camera.")
+        if self.video is None or not self.video.isOpened():
+            logger.error("Failed to open camera. Candidates tried: %s", attempted_candidates)
             return
 
         # Read the first frame to get frame dimensions
@@ -69,17 +70,29 @@ class VideoCamera:
         if not ret:
             logger.error("Failed to read frame from camera.")
             self.video.release()
+            self.video = None
             return
 
-        self.out = cv2.VideoWriter(
-            self.recording_file,
-            self.fourcc,
-            self.FPS,
-            (
-                int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-            ),
+        frame_size = (
+            int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)),
         )
+        codec_candidates = [self.VIDEO_CODEC, "mp4v", "avc1", "MJPG"]
+        self.out = None
+        for codec_name in codec_candidates:
+            fourcc = cv2.VideoWriter_fourcc(*codec_name)
+            writer = cv2.VideoWriter(self.recording_file, fourcc, self.FPS, frame_size)
+            if writer.isOpened():
+                self.out = writer
+                self.VIDEO_CODEC = codec_name
+                logger.info("Using video codec %s on device %s.", codec_name, self.camera_device)
+                break
+            writer.release()
+
+        if self.out is None:
+            logger.error("Failed to initialize VideoWriter for camera device %s.", self.camera_device)
+            self.video.release()
+            self.video = None
 
     async def find_trigger(self):
         """Check for the existence of the record.txt file to start processing."""
@@ -137,6 +150,11 @@ class VideoCamera:
     async def start_recording(self, qr_data):
         """Start video recording."""
         self.current_qr_data = qr_data  # Store QR data for later use
+        if self.video is None or self.out is None:
+            self.init_camera()
+        if self.video is None or self.out is None:
+            logger.error("Camera is not ready for recording.")
+            return
 
         start = time.time()
 
@@ -169,8 +187,10 @@ class VideoCamera:
     async def stop_recording(self):
         """Stop video recording."""
         if self.recording:
-            self.out.release()
-            self.video.release()
+            if self.out:
+                self.out.release()
+            if self.video:
+                self.video.release()
             self.out = None
             self.video = None
             self.recording = False
