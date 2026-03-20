@@ -132,6 +132,53 @@ def get_software_version():
     return os.getenv("DEVICE_SOFTWARE_VERSION", "dev")
 
 
+def _read_interface_mac(interface_name):
+    address_path = Path("/sys/class/net") / interface_name / "address"
+    try:
+        mac_address = address_path.read_text().strip().lower()
+    except OSError:
+        return ""
+
+    if mac_address in {"", "00:00:00:00:00:00"}:
+        return ""
+
+    return mac_address
+
+
+def get_hardware_mac_address():
+    preferred_interfaces = (
+        "eth0",
+        "enp0s3",
+        "enp1s0",
+        "end0",
+        "wlan0",
+        "wlp1s0",
+    )
+    seen_interfaces = set()
+
+    for interface_name in preferred_interfaces:
+        seen_interfaces.add(interface_name)
+        mac_address = _read_interface_mac(interface_name)
+        if mac_address:
+            return mac_address
+
+    net_class_dir = Path("/sys/class/net")
+    try:
+        interface_names = sorted(path.name for path in net_class_dir.iterdir())
+    except OSError:
+        return ""
+
+    for interface_name in interface_names:
+        if interface_name in seen_interfaces or interface_name == "lo":
+            continue
+
+        mac_address = _read_interface_mac(interface_name)
+        if mac_address:
+            return mac_address
+
+    return ""
+
+
 def auth_headers():
     return {
         "Authorization": f"DeviceBootstrap {get_device_bootstrap_token()}",
@@ -452,6 +499,7 @@ def device_payload():
         "hostname": socket.gethostname(),
         "device_type": get_device_type(),
         "hardware_model": get_hardware_model(),
+        "hardware_mac_address": get_hardware_mac_address(),
         "software_version": get_software_version(),
         "ip_address": get_ip_address(),
         "wifi_ssid": current_wifi_ssid(),
