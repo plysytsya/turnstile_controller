@@ -98,14 +98,13 @@ async def scan_and_send_once(recording_dir: str, mqtt_topic: str | None = None):
     mqtt_topic = mqtt_topic or os.getenv("MQTT_TOPIC", "home/raspberry")
     for filename in os.listdir(recording_dir):
         if filename.endswith('.txt') and filename != "record.txt":
-            logger.info(f"Found file: {filename}")
             file_path = os.path.join(recording_dir, filename)
             entrance_log_uuid = filename[:-4]
             try:
                 UUID(entrance_log_uuid)
             except ValueError:
-                logger.info(f"Skipping non-trigger text file: {filename}")
                 continue
+            logger.info(f"Found trigger file: {filename}")
             try:
                 file_contents = open(file_path, "r", encoding="utf-8").read().strip()
             except OSError as exc:
