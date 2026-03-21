@@ -3,6 +3,7 @@ import os
 import asyncio
 import json
 import time
+from uuid import UUID
 
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
@@ -99,6 +100,12 @@ async def scan_and_send_once(recording_dir: str, mqtt_topic: str | None = None):
         if filename.endswith('.txt') and filename != "record.txt":
             logger.info(f"Found file: {filename}")
             file_path = os.path.join(recording_dir, filename)
+            entrance_log_uuid = filename[:-4]
+            try:
+                UUID(entrance_log_uuid)
+            except ValueError:
+                logger.info(f"Skipping non-trigger text file: {filename}")
+                continue
             try:
                 file_contents = open(file_path, "r", encoding="utf-8").read().strip()
             except OSError as exc:
@@ -108,7 +115,6 @@ async def scan_and_send_once(recording_dir: str, mqtt_topic: str | None = None):
                 logger.info(f"Skipping non-empty trigger file: {filename}")
                 continue
             sending_file_path = f"{file_path}.sending"
-            entrance_log_uuid = filename[:-4]
             file_mtime = int(os.path.getmtime(file_path))
             now = int(time.time())
 
