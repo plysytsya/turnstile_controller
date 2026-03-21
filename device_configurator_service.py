@@ -24,7 +24,6 @@ ENV_PATH = CURRENT_DIR / ".env"
 FRPC_CONFIG_PATH = Path("/etc/frpc.ini")
 SYSTEMD_UNIT_DIR = Path("/etc/systemd/system")
 WIFI_SCAN_SETTLE_SECONDS = float(os.getenv("DEVICE_WIFI_SCAN_SETTLE_SECONDS", "2"))
-DEVICE_IDENTIFIER = os.getenv("DEVICE_IDENTIFIER") or socket.gethostname()
 INVALID_ENV_VALUES = {"", "none", "null", "undefined"}
 DEFAULT_SSH_USERNAME = os.getenv("FRP_SSH_USER", "manager")
 ACTIVE_CONTROL_API_BASE_URL = str(os.getenv("CONTROL_API_BASE_URL", "")).rstrip("/")
@@ -177,6 +176,18 @@ def get_hardware_mac_address():
             return mac_address
 
     return ""
+
+
+def get_device_identifier():
+    mac_address = get_hardware_mac_address()
+    if mac_address:
+        return mac_address
+
+    configured_identifier = str(os.getenv("DEVICE_IDENTIFIER", "")).strip()
+    if configured_identifier and configured_identifier.lower() not in INVALID_ENV_VALUES:
+        return configured_identifier
+
+    return socket.gethostname()
 
 
 def auth_headers():
@@ -494,7 +505,7 @@ def persist_env_values(payload):
 
 def device_payload():
     return {
-        "device_identifier": DEVICE_IDENTIFIER,
+        "device_identifier": get_device_identifier(),
         "name": get_device_name(),
         "hostname": socket.gethostname(),
         "device_type": get_device_type(),
@@ -1047,7 +1058,7 @@ def heartbeat():
 
 
 def fetch_next_command():
-    return get_json("/device/bootstrap/commands/next/", {"device_identifier": DEVICE_IDENTIFIER})
+    return get_json("/device/bootstrap/commands/next/", {"device_identifier": get_device_identifier()})
 
 
 def send_command_result(command_uuid, result_payload):
@@ -1055,7 +1066,7 @@ def send_command_result(command_uuid, result_payload):
 
 
 def main():
-    LOGGER.info("Starting device configurator service for %s", DEVICE_IDENTIFIER)
+    LOGGER.info("Starting device configurator service for %s", get_device_identifier())
     ensure_registered()
 
     while True:

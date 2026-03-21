@@ -152,3 +152,20 @@ def test_ensure_service_unit_installed_skips_copy_when_unit_matches(tmp_path, mo
     result = device_configurator_service.ensure_service_unit_installed("videorecorder")
 
     assert result is None
+def test_get_device_identifier_prefers_hardware_mac(monkeypatch):
+    monkeypatch.setattr(device_configurator_service, "get_hardware_mac_address", lambda: "e0:e1:a9:3d:41:43")
+    monkeypatch.setenv("DEVICE_IDENTIFIER", "from-env")
+    monkeypatch.setattr(device_configurator_service.socket, "gethostname", lambda: "odroid")
+
+    assert device_configurator_service.get_device_identifier() == "e0:e1:a9:3d:41:43"
+
+
+def test_get_device_identifier_falls_back_to_env_then_hostname(monkeypatch):
+    monkeypatch.setattr(device_configurator_service, "get_hardware_mac_address", lambda: "")
+    monkeypatch.setenv("DEVICE_IDENTIFIER", "from-env")
+    monkeypatch.setattr(device_configurator_service.socket, "gethostname", lambda: "odroid")
+
+    assert device_configurator_service.get_device_identifier() == "from-env"
+
+    monkeypatch.setenv("DEVICE_IDENTIFIER", " ")
+    assert device_configurator_service.get_device_identifier() == "odroid"
