@@ -102,9 +102,18 @@ class NoDeviceFoundError(Exception):
     pass
 
 
+def set_env_if_present(key, value):
+    if value is None:
+        os.environ.pop(key, None)
+        return
+
+    os.environ[key] = value
+
+
 DIRECTION = os.getenv("DIRECTION")
 if DIRECTION == "A":
-    os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_A")
+    entrance_uuid = str(os.getenv("ENTRANCE_UUID_A") or "").strip() or None
+    set_env_if_present("ENTRANCE_UUID", entrance_uuid)
     # Use Odroid I2C configuration
     os.environ["LCD_I2C_ADDRESS"] = os.getenv("I2C_ADDRESS", "0x27")
     os.environ["LCD_I2C_BUS"] = os.getenv("I2C_BUS", "0")
@@ -118,7 +127,8 @@ if DIRECTION == "A":
     else:
         raise NoDeviceFoundError("No serial device found.")
 elif DIRECTION == "B":
-    os.environ["ENTRANCE_UUID"] = os.getenv("ENTRANCE_UUID_B")
+    entrance_uuid = str(os.getenv("ENTRANCE_UUID_B") or "").strip() or None
+    set_env_if_present("ENTRANCE_UUID", entrance_uuid)
     os.environ["LCD_I2C_ADDRESS"] = "0x27"
     os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_B", "10")
     os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_B", "20")
@@ -188,11 +198,16 @@ elif DIRECTION == "B" and AS_HEX_B:
     as_hex_setting = True
 else:
     as_hex_setting = AS_HEX
-HAS_CAMERA = os.getenv("HAS_CAMERA").lower() == "true"
-USE_CAMERA = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
-if USE_CAMERA:
-    RECORDING_DIR = os.getenv("RECORDING_DIR")
+HAS_CAMERA = os.getenv("HAS_CAMERA", "false").lower() == "true"
+# HAS_CAMERA only means "emit a trigger for the remote camera flow" via RECORDING_DIR/MQTT.
+# CAMERA_ENABLED is handled by the dedicated camera services, not by qr.py directly.
+USE_CAMERA_TRIGGER = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
+if USE_CAMERA_TRIGGER:
+    RECORDING_DIR = os.getenv("RECORDING_DIR") or str(current_dir / "camera")
     CAMERA_SLEEP_DURATION = float(os.getenv("CAMERA_SLEEP_DURATION", 0.4))
+
+if not ENTRANCE_UUID:
+    logger.warning("No ENTRANCE_UUID configured for direction %s. Door verification will fail until a door is assigned.", DIRECTION)
 
 if USE_LCD:
     try:
@@ -430,7 +445,7 @@ async def verify_customer(customer_uuid, timestamp):
     entrance_log_uuid = generate_uuid_from_string(str(payload))
     payload["uuid"] = entrance_log_uuid
 
-    if USE_CAMERA:
+    if USE_CAMERA_TRIGGER:
         queue_camera_trigger(RECORDING_DIR, entrance_log_uuid)
         logger.info(f"sleeping for {CAMERA_SLEEP_DURATION} seconds.")
         await asyncio.sleep(CAMERA_SLEEP_DURATION)
