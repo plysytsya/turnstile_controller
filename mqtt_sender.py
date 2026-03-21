@@ -9,8 +9,13 @@ from dotenv import load_dotenv
 from tenacity import retry, stop_after_delay, wait_fixed, RetryError
 
 from utils import SentryLogger
-from systemd.journal import JournalHandler
 import sentry_sdk
+
+try:
+    from systemd.journal import JournalHandler
+except ImportError:  # pragma: no cover - only used on non-systemd dev machines
+    class JournalHandler(logging.NullHandler):
+        pass
 
 # Load environment variables
 load_dotenv()
@@ -84,36 +89,57 @@ async def scan_and_send(recording_dir: str):
     # Use MQTT topic from environment variable; default to "home/raspberry"
     mqtt_topic = os.getenv("MQTT_TOPIC", "home/raspberry")
     while True:
-        for filename in os.listdir(recording_dir):
-            if filename.endswith('.txt') and filename != "record.txt":
-                logger.info(f"Found file: {filename}")
-                file_path = os.path.join(recording_dir, filename)
-                entrance_log_uuid = filename[:-4]
-                file_mtime = int(os.path.getmtime(file_path))
-                now = int(time.time())
-
-                if now - file_mtime > 3:
-                    logger.warning(f"File {filename} is older than 3 seconds (age: {now - file_mtime}s), deleting.")
-                    os.remove(file_path)
-                    continue
-
-                payload = [entrance_log_uuid, file_mtime]
-                json_payload = json.dumps(payload)
-
-                try:
-                    start_time = time.time()
-                    await send_with_reconnect(mqtt_topic, json_payload)
-                    elapsed = time.time() - start_time
-                    if elapsed > MAX_TRANSMISSION_TIME:
-                        logger.error(f"Transmission took too long: {elapsed:.3f}s, exiting to force restart.")
-                        raise Exception("Transmission timeout")
-                except RetryError as retry_err:
-                    logger.error(f"Failed to send payload within 2 seconds: {retry_err}. Deleting file.")
-                    os.remove(file_path)
-                    raise retry_err
-                else:
-                    os.remove(file_path)
+        await scan_and_send_once(recording_dir, mqtt_topic=mqtt_topic)
         await asyncio.sleep(SCAN_INTERVAL_MS / 1000)
+
+
+async def scan_and_send_once(recording_dir: str, mqtt_topic: str | None = None):
+    mqtt_topic = mqtt_topic or os.getenv("MQTT_TOPIC", "home/raspberry")
+    for filename in os.listdir(recording_dir):
+        if filename.endswith('.txt') and filename != "record.txt":
+            logger.info(f"Found file: {filename}")
+            file_path = os.path.join(recording_dir, filename)
+            try:
+                file_contents = open(file_path, "r", encoding="utf-8").read().strip()
+            except OSError as exc:
+                logger.warning(f"Could not read file {filename}: {exc}")
+                continue
+            if file_contents:
+                logger.info(f"Skipping non-empty trigger file: {filename}")
+                continue
+            sending_file_path = f"{file_path}.sending"
+            entrance_log_uuid = filename[:-4]
+            file_mtime = int(os.path.getmtime(file_path))
+            now = int(time.time())
+
+            if now - file_mtime > 3:
+                logger.warning(f"File {filename} is older than 3 seconds (age: {now - file_mtime}s), deleting.")
+                os.remove(file_path)
+                continue
+
+            payload = [entrance_log_uuid, file_mtime]
+            json_payload = json.dumps(payload)
+
+            try:
+                os.replace(file_path, sending_file_path)
+                start_time = time.time()
+                await send_with_reconnect(mqtt_topic, json_payload)
+                elapsed = time.time() - start_time
+                if elapsed > MAX_TRANSMISSION_TIME:
+                    logger.error(f"Transmission took too long: {elapsed:.3f}s, exiting to force restart.")
+                    raise Exception("Transmission timeout")
+            except RetryError as retry_err:
+                logger.error(f"Failed to send payload within 2 seconds: {retry_err}. Deleting file.")
+                if os.path.exists(sending_file_path):
+                    os.replace(sending_file_path, file_path)
+                raise retry_err
+            except Exception:
+                if os.path.exists(sending_file_path):
+                    os.replace(sending_file_path, file_path)
+                raise
+            else:
+                if os.path.exists(sending_file_path):
+                    os.remove(sending_file_path)
 
 async def main():
     global client

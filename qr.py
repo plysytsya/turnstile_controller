@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 import RPi.GPIO as GPIO
 import serial
 
+from camera_trigger import queue_camera_trigger
 from configurator import apply_config
 from find_device import find_qr_devices
 try:
@@ -382,11 +383,7 @@ async def verify_customer(customer_uuid, timestamp):
     payload["uuid"] = entrance_log_uuid
 
     if USE_CAMERA:
-        filename1 = f"{RECORDING_DIR}/{entrance_log_uuid}.txt"
-        filename2 = f"{RECORDING_DIR}/record.txt"
-        for filename in [filename1, filename2]:
-            with open(filename, "w") as f:
-                f.write("")
+        queue_camera_trigger(RECORDING_DIR, entrance_log_uuid)
         logger.info(f"sleeping for {CAMERA_SLEEP_DURATION} seconds.")
         await asyncio.sleep(CAMERA_SLEEP_DURATION)
 

@@ -1,12 +1,18 @@
 import json
 import os
 import logging
+import tempfile
 from uuid import UUID
 
 import paho.mqtt.client as mqtt
-from systemd.journal import JournalHandler
 from dotenv import load_dotenv
 import sentry_sdk
+
+try:
+    from systemd.journal import JournalHandler
+except ImportError:  # pragma: no cover - only used on non-systemd dev machines
+    class JournalHandler(logging.NullHandler):
+        pass
 
 # Load environment variables and ensure RECORDING_DIR is set
 load_dotenv()
@@ -33,8 +39,11 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("home/raspberry")
 
 def on_message(client, userdata, msg):
+    process_message_payload(msg.payload.decode().strip())
+
+
+def process_message_payload(decoded):
     try:
-        decoded = msg.payload.decode().strip()
         payload = json.loads(decoded)
         # Expect payload in the format: [uuid, timestamp]
         if isinstance(payload, list) and len(payload) == 2:
@@ -48,8 +57,10 @@ def on_message(client, userdata, msg):
             timestamp_val = payload[1]
             # Write the timestamp to a file named {uuid}.txt in the RECORDING_DIR
             file_path = os.path.join(RECORDING_DIR, f"{uuid_val}.txt")
-            with open(file_path, "w") as f:
+            with tempfile.NamedTemporaryFile("w", dir=RECORDING_DIR, delete=False, encoding="utf-8") as f:
                 json.dump({"timestamp": timestamp_val}, f)
+                temp_path = f.name
+            os.replace(temp_path, file_path)
             # Touch record.txt in the same directory
             record_path = os.path.join(RECORDING_DIR, "record.txt")
             with open(record_path, "w") as f:
