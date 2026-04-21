@@ -677,6 +677,22 @@ def set_service_enabled(service_name, enabled):
     }
 
 
+def restart_managed_service(service_name):
+    install_result = ensure_service_unit_installed(service_name)
+    if install_result is not None and not install_result["ok"]:
+        return install_result
+
+    result = run_command(["sudo", "-n", "systemctl", "restart", service_name])
+    state = service_state(service_name)
+    return {
+        "service": service_name,
+        "managed": "restart",
+        "ok": result.returncode == 0,
+        "stderr": result.stderr.strip(),
+        **state,
+    }
+
+
 def reconcile_camera_services(enabled_override=None):
     service_results = []
     enabled = camera_services_enabled() if enabled_override is None else bool(enabled_override)
@@ -686,11 +702,17 @@ def reconcile_camera_services(enabled_override=None):
         return {"status": "succeeded", "error_message": "", "service_results": service_results}
 
     for service_name in CAMERA_MANDATORY_SERVICES:
-        service_results.append(set_service_enabled(service_name, True))
+        enable_result = set_service_enabled(service_name, True)
+        service_results.append(enable_result)
+        if enable_result.get("ok"):
+            service_results.append(restart_managed_service(service_name))
 
     upload_enabled = has_upload_configuration()
     for service_name in CAMERA_OPTIONAL_SERVICES:
-        service_results.append(set_service_enabled(service_name, upload_enabled))
+        enable_result = set_service_enabled(service_name, upload_enabled)
+        service_results.append(enable_result)
+        if upload_enabled and enable_result.get("ok"):
+            service_results.append(restart_managed_service(service_name))
 
     failed_services = [result["service"] for result in service_results if not result["ok"] and result["service"] in CAMERA_MANDATORY_SERVICES]
     if failed_services:

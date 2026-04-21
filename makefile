@@ -12,6 +12,7 @@
 	venv \
 	install-upload uninstall-upload restart-upload logs-upload \
 	install-videorecorder uninstall-videorecorder restart-videorecorder logs-videorecorder \
+	restart-camera \
 	restart-frp logs-frp install-frp \
 	install-mqtt-sender \
 	uninstall-mqtt-sender \
@@ -183,6 +184,11 @@ restart-videorecorder:
 
 logs-videorecorder:
 	journalctl -u videorecorder -f
+
+restart-camera:
+	sudo systemctl restart videorecorder.service
+	sudo systemctl restart mqtt-receiver.service
+	if systemctl list-unit-files upload.service >/dev/null 2>&1; then sudo systemctl restart upload.service || true; fi
 
 ############################
 # FRP Service Targets

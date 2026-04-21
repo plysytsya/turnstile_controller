@@ -24,13 +24,14 @@ SPEC.loader.exec_module(device_configurator_service)
 
 
 def test_reconcile_camera_services_enables_expected_services(monkeypatch):
-    calls = []
+    enable_calls = []
+    restart_calls = []
 
     monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: True)
     monkeypatch.setattr(device_configurator_service, "has_upload_configuration", lambda: True)
 
     def fake_set_service_enabled(service_name, enabled):
-        calls.append((service_name, enabled))
+        enable_calls.append((service_name, enabled))
         return {
             "service": service_name,
             "managed": "enable" if enabled else "disable",
@@ -38,21 +39,33 @@ def test_reconcile_camera_services_enables_expected_services(monkeypatch):
             "active": enabled,
         }
 
+    def fake_restart_managed_service(service_name):
+        restart_calls.append(service_name)
+        return {
+            "service": service_name,
+            "managed": "restart",
+            "ok": True,
+            "active": "active",
+        }
+
     monkeypatch.setattr(device_configurator_service, "set_service_enabled", fake_set_service_enabled)
+    monkeypatch.setattr(device_configurator_service, "restart_managed_service", fake_restart_managed_service)
 
     result = device_configurator_service.reconcile_camera_services()
 
     assert result["status"] == "succeeded"
     assert result["error_message"] == ""
-    assert calls == [
+    assert enable_calls == [
         ("videorecorder", True),
         ("mqtt-receiver", True),
         ("upload", True),
     ]
+    assert restart_calls == ["videorecorder", "mqtt-receiver", "upload"]
 
 
 def test_reconcile_camera_services_disables_all_when_camera_toggle_is_off(monkeypatch):
     calls = []
+    restart_calls = []
 
     monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: False)
 
@@ -65,7 +78,12 @@ def test_reconcile_camera_services_disables_all_when_camera_toggle_is_off(monkey
             "active": enabled,
         }
 
+    def fake_restart_managed_service(service_name):
+        restart_calls.append(service_name)
+        return {"service": service_name, "managed": "restart", "ok": True}
+
     monkeypatch.setattr(device_configurator_service, "set_service_enabled", fake_set_service_enabled)
+    monkeypatch.setattr(device_configurator_service, "restart_managed_service", fake_restart_managed_service)
 
     result = device_configurator_service.reconcile_camera_services()
 
@@ -76,16 +94,18 @@ def test_reconcile_camera_services_disables_all_when_camera_toggle_is_off(monkey
         ("mqtt-receiver", False),
         ("upload", False),
     ]
+    assert restart_calls == []
 
 
 def test_reconcile_camera_services_respects_runtime_override(monkeypatch):
-    calls = []
+    enable_calls = []
+    restart_calls = []
 
     monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: False)
     monkeypatch.setattr(device_configurator_service, "has_upload_configuration", lambda: True)
 
     def fake_set_service_enabled(service_name, enabled):
-        calls.append((service_name, enabled))
+        enable_calls.append((service_name, enabled))
         return {
             "service": service_name,
             "managed": "enable" if enabled else "disable",
@@ -93,16 +113,56 @@ def test_reconcile_camera_services_respects_runtime_override(monkeypatch):
             "active": enabled,
         }
 
+    def fake_restart_managed_service(service_name):
+        restart_calls.append(service_name)
+        return {"service": service_name, "managed": "restart", "ok": True, "active": "active"}
+
     monkeypatch.setattr(device_configurator_service, "set_service_enabled", fake_set_service_enabled)
+    monkeypatch.setattr(device_configurator_service, "restart_managed_service", fake_restart_managed_service)
 
     result = device_configurator_service.reconcile_camera_services(enabled_override=True)
 
     assert result["status"] == "succeeded"
-    assert calls == [
+    assert enable_calls == [
         ("videorecorder", True),
         ("mqtt-receiver", True),
         ("upload", True),
     ]
+    assert restart_calls == ["videorecorder", "mqtt-receiver", "upload"]
+
+
+def test_reconcile_camera_services_skips_restart_when_enable_fails(monkeypatch):
+    enable_calls = []
+    restart_calls = []
+
+    monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: True)
+    monkeypatch.setattr(device_configurator_service, "has_upload_configuration", lambda: False)
+
+    def fake_set_service_enabled(service_name, enabled):
+        enable_calls.append((service_name, enabled))
+        return {
+            "service": service_name,
+            "managed": "enable" if enabled else "disable",
+            "ok": service_name != "videorecorder",
+            "active": enabled,
+        }
+
+    def fake_restart_managed_service(service_name):
+        restart_calls.append(service_name)
+        return {"service": service_name, "managed": "restart", "ok": True, "active": "active"}
+
+    monkeypatch.setattr(device_configurator_service, "set_service_enabled", fake_set_service_enabled)
+    monkeypatch.setattr(device_configurator_service, "restart_managed_service", fake_restart_managed_service)
+
+    result = device_configurator_service.reconcile_camera_services()
+
+    assert result["status"] == "failed"
+    assert enable_calls == [
+        ("videorecorder", True),
+        ("mqtt-receiver", True),
+        ("upload", False),
+    ]
+    assert restart_calls == ["mqtt-receiver"]
 
 
 def test_persist_env_values_does_not_store_camera_enabled(tmp_path, monkeypatch):
