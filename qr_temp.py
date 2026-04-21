@@ -88,8 +88,6 @@ ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "
 DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
 MAGIC_TIMESTAMP = 1725628212
 current_dir = pathlib.Path(__file__).parent
-HEARTBEAT_FILE_PATH = current_dir / f"heartbeat-{DIRECTION}.json"
-HEARTBEAT_INTERVAL = 15
 
 
 class DirectionFilter(logging.Filter):
@@ -501,23 +499,6 @@ def handle_keyboard_interrupt(vs):
     exit()
 
 
-async def heartbeat():
-    while True:
-        try:
-            timestamp = int(time.time())
-            heartbeat_data = {"timestamp": timestamp, "direction": DIRECTION}
-
-            # Write to the file
-            heartbeat_file = pathlib.Path(HEARTBEAT_FILE_PATH)
-            with heartbeat_file.open("w") as f:
-                json.dump(heartbeat_data, f)
-
-        except Exception as e:
-            logger.error(f"Failed to write heartbeat: {e}")
-
-        await asyncio.sleep(HEARTBEAT_INTERVAL)
-
-
 async def keyboard_event_loop(device):
     global shared_list
     output_string = ""
@@ -678,8 +659,8 @@ if __name__ == "__main__":
     refresh_token()
     try:
         if IS_SERIAL_DEVICE:
-            loop.run_until_complete(asyncio.gather(serial_device_event_loop(), heartbeat()))
+            loop.run_until_complete(serial_device_event_loop())
         else:
-            loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop(), heartbeat()))
+            loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")

@@ -7,7 +7,6 @@
 	uninstall-qr-b \
 	restart-qr-b \
 	logs-qr-b \
-	install-heartbeat uninstall-heartbeat restart-heartbeat logs-heartbeat \
 	install-cronjob uninstall-cronjob watch-cronjob status-cronjob trigger-cronjob list-services \
 	venv \
 	install-upload uninstall-upload restart-upload logs-upload \
@@ -72,30 +71,6 @@ restart-qr-b:
 
 logs-qr-b:
 	journalctl -u qr_script_b -f
-
-############################
-# Heartbeat Monitor Targets
-############################
-
-install-heartbeat:
-	sudo cp /home/manager/turnstile_controller/heartbeat-monitor.service /etc/systemd/system/
-	sudo systemctl daemon-reload
-	sudo systemctl enable heartbeat-monitor
-	sudo systemctl start heartbeat-monitor
-	sudo systemctl status heartbeat-monitor
-
-uninstall-heartbeat:
-	sudo systemctl stop heartbeat-monitor
-	sudo systemctl disable heartbeat-monitor
-	sudo rm /etc/systemd/system/heartbeat-monitor.service
-	sudo systemctl daemon-reload
-	sudo systemctl reset-failed
-
-restart-heartbeat:
-	sudo systemctl restart heartbeat-monitor.service
-
-logs-heartbeat:
-	journalctl -u heartbeat-monitor -f
 
 ############################
 # Cronjob Targets (Download Customer DB)

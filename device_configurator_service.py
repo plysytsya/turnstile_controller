@@ -76,7 +76,6 @@ BASE_RUNTIME_SERVICES_TO_RESTART = (
     "qr_script_a",
     "qr_script_b",
     "mqtt-sender",
-    "heartbeat-monitor",
 )
 
 CAMERA_MANDATORY_SERVICES = (
@@ -93,7 +92,6 @@ SERVICE_UNIT_FILES = {
     "mqtt-receiver": "mqtt-receiver.service",
     "videorecorder": "videorecorder.service",
     "upload": "upload.service",
-    "heartbeat-monitor": "heartbeat-monitor.service",
 }
 
 
