@@ -177,13 +177,13 @@ def get_hardware_mac_address():
 
 
 def get_device_identifier():
-    mac_address = get_hardware_mac_address()
-    if mac_address:
-        return mac_address
-
     configured_identifier = str(os.getenv("DEVICE_IDENTIFIER", "")).strip()
     if configured_identifier and configured_identifier.lower() not in INVALID_ENV_VALUES:
         return configured_identifier
+
+    mac_address = get_hardware_mac_address()
+    if mac_address:
+        return mac_address
 
     return socket.gethostname()
 
