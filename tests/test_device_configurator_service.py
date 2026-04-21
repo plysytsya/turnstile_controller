@@ -197,6 +197,27 @@ def test_current_device_settings_reports_camera_enabled_from_service_state(monke
     assert settings["CAMERA_ENABLED"] is True
 
 
+def test_update_env_schedules_reboot_after_success(monkeypatch):
+    monkeypatch.setattr(device_configurator_service, "persist_env_values", lambda payload: None)
+    monkeypatch.setattr(
+        device_configurator_service,
+        "reconcile_camera_services",
+        lambda enabled_override=None: {"status": "succeeded", "error_message": "", "service_results": []},
+    )
+    monkeypatch.setattr(device_configurator_service, "configured_entrances", lambda: [])
+    monkeypatch.setattr(device_configurator_service, "current_wifi_ssid", lambda: "DIGIFIBRA")
+    monkeypatch.setattr(device_configurator_service, "parse_wifi_scan", lambda: [{"ssid": "DIGIFIBRA", "signal": "78"}])
+    monkeypatch.setattr(device_configurator_service, "current_ssh_tunnel", lambda: {"ssh_port": 6007})
+    monkeypatch.setattr(device_configurator_service, "current_device_settings", lambda: {"HOSTNAME": "https://admin.example.com"})
+    monkeypatch.setattr(device_configurator_service, "current_camera_services", lambda: [])
+
+    result = device_configurator_service.update_env({"HOSTNAME": "https://admin.example.com"})
+
+    assert result["status"] == "succeeded"
+    assert result["result"]["service_restarts"] == []
+    assert result["_post_result_action"] == {"type": "reboot", "delay_seconds": 3}
+
+
 def test_ensure_service_unit_installed_skips_copy_when_unit_matches(tmp_path, monkeypatch):
     source_path = tmp_path / "videorecorder.service"
     target_dir = tmp_path / "etc/systemd/system"

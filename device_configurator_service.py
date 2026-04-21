@@ -917,7 +917,6 @@ def activate_preview_fast_poll_window():
 def update_env(payload):
     camera_enabled_override = payload.get("CAMERA_ENABLED") if "CAMERA_ENABLED" in payload else None
     persist_env_values(payload)
-    restart_results = restart_base_runtime_services()
     camera_service_reconciliation = reconcile_camera_services(enabled_override=camera_enabled_override)
     result_payload = {
         "updated_keys": sorted(payload.keys()),
@@ -926,7 +925,7 @@ def update_env(payload):
         "wifi_networks": parse_wifi_scan(),
         "ssh_tunnel": current_ssh_tunnel(),
         "device_settings": current_device_settings(),
-        "service_restarts": restart_results,
+        "service_restarts": [],
         "camera_services": current_camera_services(),
         "camera_service_reconciliation": camera_service_reconciliation["service_results"],
     }
@@ -937,7 +936,14 @@ def update_env(payload):
             "error_message": camera_service_reconciliation["error_message"],
         }
 
-    return {"status": "succeeded", "result": result_payload}
+    return {
+        "status": "succeeded",
+        "result": result_payload,
+        "_post_result_action": {
+            "type": "reboot",
+            "delay_seconds": 3,
+        },
+    }
 
 
 def configure_remote_ssh(payload):
