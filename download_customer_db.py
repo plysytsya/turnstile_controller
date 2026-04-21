@@ -11,6 +11,7 @@ load_dotenv(override=True)
 HOSTNAME = os.getenv("HOSTNAME")
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
+DEVICE_API_TOKEN = os.getenv("DEVICE_API_TOKEN")
 jwt_token = None  # Initializing the jwt_token variable
 
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +19,8 @@ logging.basicConfig(level=logging.INFO)
 
 def login():
     global jwt_token
+    if DEVICE_API_TOKEN:
+        return DEVICE_API_TOKEN
     if jwt_token:
         return jwt_token
 
@@ -34,19 +37,28 @@ def login():
     return jwt_token
 
 
+def get_auth_header():
+    if DEVICE_API_TOKEN:
+        return f"Token {DEVICE_API_TOKEN}"
+
+    token = login()
+    if not token:
+        return None
+    return f"Bearer {token}"
+
+
 def get_customers():
     global jwt_token
 
-    if jwt_token is None:
-        jwt_token = login()
-        if jwt_token is None:
-            logging.error("Could not get JWT token.")
-            return None
+    authorization = get_auth_header()
+    if authorization is None:
+        logging.error("Could not get authentication token.")
+        return None
 
     url = f"{HOSTNAME}/customers/"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {jwt_token}",
+        "Authorization": authorization,
     }
 
     response = make_request("GET", url, headers=headers)

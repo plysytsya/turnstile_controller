@@ -177,6 +177,7 @@ ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
 HOSTNAME = os.getenv("HOSTNAME")
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
+DEVICE_API_TOKEN = os.getenv("DEVICE_API_TOKEN")
 USE_LCD = int(os.getenv("USE_LCD", 1))
 RELAY_PIN_DOOR = int(os.getenv("RELAY_PIN_DOOR", 10))
 RELAY_PIN_DISPLAY = int(os.getenv("RELAY_PIN_DISPLAY")) if os.getenv("RELAY_PIN_DISPLAY") else None
@@ -414,6 +415,8 @@ def generate_uuid_from_string(input_string):
 
 def login():
     global jwt_token
+    if DEVICE_API_TOKEN:
+        return DEVICE_API_TOKEN
     if jwt_token:
         return jwt_token
 
@@ -430,6 +433,16 @@ def login():
 
     jwt_token = response.json().get("access", None)
     return jwt_token
+
+
+def get_auth_header():
+    if DEVICE_API_TOKEN:
+        return f"Token {DEVICE_API_TOKEN}"
+
+    token = login()
+    if not token:
+        return None
+    return f"Bearer {token}"
 
 
 async def verify_customer(customer_uuid, timestamp):
@@ -452,10 +465,12 @@ async def verify_customer(customer_uuid, timestamp):
 
     url = f"{HOSTNAME}/verify_customer/"
 
-    headers = {
-        "Authorization": f"Bearer {jwt_token}",
-        "Content-Type": "application/json",
-    }
+    authorization = get_auth_header()
+    if not authorization:
+        display_on_lcd("Login", "Failed", timeout=2)
+        return
+
+    headers = {"Authorization": authorization, "Content-Type": "application/json"}
 
     if not is_valid_timestamp(timestamp):
         display_on_lcd("Error", "QR vencido", timeout=2)
@@ -472,7 +487,7 @@ async def verify_customer(customer_uuid, timestamp):
     if response is None:
         return
 
-    if response.status_code in (401, 403):  # Token expired or invalid
+    if not DEVICE_API_TOKEN and response.status_code in (401, 403):  # Token expired or invalid
         headers["Authorization"] = refresh_token()
         response = get_valid_response(url, headers, payload, customer_uuid)
         if response is None:
@@ -560,6 +575,8 @@ def is_in_schedule(customer):
 
 def refresh_token():
     global jwt_token
+    if DEVICE_API_TOKEN:
+        return f"Token {DEVICE_API_TOKEN}"
     jwt_token = login()
     return f"Bearer {jwt_token}"
 
@@ -731,7 +748,8 @@ def _hash_uuid(input_string) -> str:
 async def main_loop():
     global shared_list
 
-    login()
+    if not DEVICE_API_TOKEN:
+        login()
 
     while True:
         if shared_list:
@@ -745,7 +763,10 @@ async def main_loop():
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     dev = init_qr_device()
-    refresh_token()
+    if DEVICE_API_TOKEN:
+        logger.info("Using device API token authentication for controller requests.")
+    else:
+        refresh_token()
     try:
         if IS_SERIAL_DEVICE:
             loop.run_until_complete(asyncio.gather(serial_device_event_loop(), heartbeat()))
