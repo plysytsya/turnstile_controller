@@ -23,6 +23,8 @@ CURRENT_DIR = Path(__file__).resolve().parent
 ENV_PATH = CURRENT_DIR / ".env"
 FRPC_CONFIG_PATH = Path("/etc/frpc.ini")
 SYSTEMD_UNIT_DIR = Path("/etc/systemd/system")
+MOSQUITTO_LAN_LISTENER_SOURCE_PATH = CURRENT_DIR / "mosquitto-lan-listener.conf"
+MOSQUITTO_LAN_LISTENER_TARGET_PATH = Path("/etc/mosquitto/conf.d/lan-listener.conf")
 WIFI_SCAN_SETTLE_SECONDS = float(os.getenv("DEVICE_WIFI_SCAN_SETTLE_SECONDS", "2"))
 INVALID_ENV_VALUES = {"", "none", "null", "undefined"}
 DEFAULT_SSH_USERNAME = os.getenv("FRP_SSH_USER", "manager")
@@ -691,9 +693,86 @@ def restart_managed_service(service_name):
     }
 
 
+def ensure_camera_mosquitto_listener(enabled):
+    listener_changed = False
+
+    if enabled:
+        if not MOSQUITTO_LAN_LISTENER_SOURCE_PATH.exists():
+            return {
+                "service": "mosquitto-lan-listener",
+                "managed": "configure",
+                "ok": False,
+                "stderr": f"No existe {MOSQUITTO_LAN_LISTENER_SOURCE_PATH}.",
+            }
+
+        try:
+            target_matches = (
+                MOSQUITTO_LAN_LISTENER_TARGET_PATH.exists()
+                and MOSQUITTO_LAN_LISTENER_TARGET_PATH.read_bytes() == MOSQUITTO_LAN_LISTENER_SOURCE_PATH.read_bytes()
+            )
+        except OSError:
+            target_matches = False
+
+        if not target_matches:
+            copy_result = run_command(
+                [
+                    "sudo",
+                    "-n",
+                    "cp",
+                    str(MOSQUITTO_LAN_LISTENER_SOURCE_PATH),
+                    str(MOSQUITTO_LAN_LISTENER_TARGET_PATH),
+                ]
+            )
+            if copy_result.returncode != 0:
+                return {
+                    "service": "mosquitto-lan-listener",
+                    "managed": "configure",
+                    "ok": False,
+                    "stderr": copy_result.stderr.strip() or "No se pudo configurar el listener LAN de Mosquitto.",
+                }
+            listener_changed = True
+    else:
+        if MOSQUITTO_LAN_LISTENER_TARGET_PATH.exists():
+            remove_result = run_command(["sudo", "-n", "rm", "-f", str(MOSQUITTO_LAN_LISTENER_TARGET_PATH)])
+            if remove_result.returncode != 0:
+                return {
+                    "service": "mosquitto-lan-listener",
+                    "managed": "remove",
+                    "ok": False,
+                    "stderr": remove_result.stderr.strip() or "No se pudo eliminar el listener LAN de Mosquitto.",
+                }
+            listener_changed = True
+
+    if listener_changed:
+        restart_result = run_command(["sudo", "-n", "systemctl", "restart", "mosquitto"])
+        if restart_result.returncode != 0:
+            return {
+                "service": "mosquitto-lan-listener",
+                "managed": "restart",
+                "ok": False,
+                "stderr": restart_result.stderr.strip() or "No se pudo reiniciar Mosquitto.",
+            }
+
+    return {
+        "service": "mosquitto-lan-listener",
+        "managed": "configure" if enabled else "remove",
+        "ok": True,
+        "stderr": "",
+    }
+
+
 def reconcile_camera_services(enabled_override=None):
     service_results = []
     enabled = camera_services_enabled() if enabled_override is None else bool(enabled_override)
+    mosquitto_result = ensure_camera_mosquitto_listener(enabled)
+    service_results.append(mosquitto_result)
+    if not mosquitto_result.get("ok"):
+        return {
+            "status": "failed",
+            "error_message": "No se pudo preparar el broker MQTT de la camara.",
+            "service_results": service_results,
+        }
+
     if not enabled:
         for service_name in CAMERA_MANDATORY_SERVICES + CAMERA_OPTIONAL_SERVICES:
             service_results.append(set_service_enabled(service_name, False))
