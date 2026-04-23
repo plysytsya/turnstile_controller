@@ -58,6 +58,9 @@ DEVICE_SETTINGS_SCHEMA = [
     ("I2C_ADDRESS", "str", "0x27"),
     ("MQTT_BROKER", "str", ""),
     ("PASSWORD", "str", ""),
+    ("QR_ACTIVE_DIRECTIONS", "str", ""),
+    ("QR_READER_MODE_A", "str", ""),
+    ("QR_READER_MODE_B", "str", ""),
     ("RECORDING_DIR", "str", ""),
     ("RELAY_PIN_A", "int", 62),
     ("RELAY_PIN_B", "int", 26),
@@ -71,14 +74,13 @@ DEVICE_SETTINGS_SCHEMA = [
     ("S3_SECRET_ACCESS_KEY", "str", ""),
     ("SENTRY_DSN", "str", ""),
     ("USERNAME", "str", ""),
+    ("USE_2_QR_READERS", "bool", False),
     ("USE_LCD", "int", 1),
 ]
 
-BASE_RUNTIME_SERVICES_TO_RESTART = (
-    "qr_script_a",
-    "qr_script_b",
-    "mqtt-sender",
-)
+QR_RUNTIME_SERVICES = ("qr_script_a", "qr_script_b")
+
+BASE_RUNTIME_SERVICES_TO_RESTART = (*QR_RUNTIME_SERVICES, "mqtt-sender")
 
 CAMERA_MANDATORY_SERVICES = (
     "videorecorder",
@@ -806,6 +808,56 @@ def current_camera_services():
     return [service_state(service_name) for service_name in CAMERA_MANDATORY_SERVICES + CAMERA_OPTIONAL_SERVICES]
 
 
+def current_qr_services():
+    return [service_state(service_name) for service_name in QR_RUNTIME_SERVICES]
+
+
+def configured_qr_directions():
+    if str(os.getenv("DEVICE_TYPE", "")).strip().lower() == "camera":
+        return []
+
+    active_directions = str(os.getenv("QR_ACTIVE_DIRECTIONS", "") or "").strip()
+    if active_directions:
+        directions = []
+        for raw_direction in active_directions.split(","):
+            direction = raw_direction.strip().upper()
+            if direction in {"A", "B"} and direction not in directions:
+                directions.append(direction)
+        return directions
+
+    directions = [entry["slot"] for entry in configured_entrances() if entry.get("slot") in {"A", "B"}]
+    if directions:
+        return directions
+
+    return ["A", "B"] if parse_bool(os.getenv("USE_2_QR_READERS"), False) else []
+
+
+def reconcile_qr_services():
+    service_results = []
+    active_directions = set(configured_qr_directions())
+    service_by_direction = {
+        "A": "qr_script_a",
+        "B": "qr_script_b",
+    }
+
+    for direction, service_name in service_by_direction.items():
+        enabled = direction in active_directions
+        enable_result = set_service_enabled(service_name, enabled)
+        service_results.append(enable_result)
+        if enabled and enable_result.get("ok"):
+            service_results.append(restart_managed_service(service_name))
+
+    failed_services = [result["service"] for result in service_results if not result.get("ok")]
+    if failed_services:
+        return {
+            "status": "failed",
+            "error_message": f"No se pudieron reconciliar los servicios QR: {', '.join(failed_services)}.",
+            "service_results": service_results,
+        }
+
+    return {"status": "succeeded", "error_message": "", "service_results": service_results}
+
+
 def resolve_requested_wifi_ssid(requested_ssid, available_networks):
     requested_ssid = str(requested_ssid or "")
     if not requested_ssid:
@@ -997,6 +1049,7 @@ def update_env(payload):
     camera_enabled_override = payload.get("CAMERA_ENABLED") if "CAMERA_ENABLED" in payload else None
     persist_env_values(payload)
     camera_service_reconciliation = reconcile_camera_services(enabled_override=camera_enabled_override)
+    qr_service_reconciliation = reconcile_qr_services()
     result_payload = {
         "updated_keys": sorted(payload.keys()),
         "configured_entrances": configured_entrances(),
@@ -1006,13 +1059,22 @@ def update_env(payload):
         "device_settings": current_device_settings(),
         "service_restarts": [],
         "camera_services": current_camera_services(),
+        "qr_services": current_qr_services(),
         "camera_service_reconciliation": camera_service_reconciliation["service_results"],
+        "qr_service_reconciliation": qr_service_reconciliation["service_results"],
     }
     if camera_service_reconciliation["status"] != "succeeded":
         return {
             "status": "failed",
             "result": result_payload,
             "error_message": camera_service_reconciliation["error_message"],
+        }
+
+    if qr_service_reconciliation["status"] != "succeeded":
+        return {
+            "status": "failed",
+            "result": result_payload,
+            "error_message": qr_service_reconciliation["error_message"],
         }
 
     return {

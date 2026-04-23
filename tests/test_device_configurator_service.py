@@ -248,6 +248,69 @@ def test_current_device_settings_reports_camera_enabled_from_service_state(monke
     assert settings["CAMERA_ENABLED"] is True
 
 
+def test_reconcile_qr_services_enables_only_configured_direction(monkeypatch):
+    calls = []
+    restart_calls = []
+
+    monkeypatch.setenv("DEVICE_TYPE", "odroid")
+    monkeypatch.setenv("QR_ACTIVE_DIRECTIONS", "A")
+
+    def fake_set_service_enabled(service_name, enabled):
+        calls.append((service_name, enabled))
+        return {"service": service_name, "managed": "enable" if enabled else "disable", "ok": True}
+
+    def fake_restart_managed_service(service_name):
+        restart_calls.append(service_name)
+        return {"service": service_name, "managed": "restart", "ok": True}
+
+    monkeypatch.setattr(device_configurator_service, "set_service_enabled", fake_set_service_enabled)
+    monkeypatch.setattr(device_configurator_service, "restart_managed_service", fake_restart_managed_service)
+
+    result = device_configurator_service.reconcile_qr_services()
+
+    assert result["status"] == "succeeded"
+    assert calls == [("qr_script_a", True), ("qr_script_b", False)]
+    assert restart_calls == ["qr_script_a"]
+
+
+def test_reconcile_qr_services_disables_all_for_camera(monkeypatch):
+    calls = []
+    restart_calls = []
+
+    monkeypatch.setenv("DEVICE_TYPE", "camera")
+    monkeypatch.setenv("QR_ACTIVE_DIRECTIONS", "A,B")
+
+    def fake_set_service_enabled(service_name, enabled):
+        calls.append((service_name, enabled))
+        return {"service": service_name, "managed": "enable" if enabled else "disable", "ok": True}
+
+    monkeypatch.setattr(device_configurator_service, "set_service_enabled", fake_set_service_enabled)
+    monkeypatch.setattr(
+        device_configurator_service,
+        "restart_managed_service",
+        lambda service_name: restart_calls.append(service_name) or {"service": service_name, "managed": "restart", "ok": True},
+    )
+
+    result = device_configurator_service.reconcile_qr_services()
+
+    assert result["status"] == "succeeded"
+    assert calls == [("qr_script_a", False), ("qr_script_b", False)]
+    assert restart_calls == []
+
+
+def test_configured_qr_directions_falls_back_to_entrances(monkeypatch):
+    monkeypatch.setenv("DEVICE_TYPE", "odroid")
+    monkeypatch.delenv("QR_ACTIVE_DIRECTIONS", raising=False)
+    monkeypatch.delenv("USE_2_QR_READERS", raising=False)
+    monkeypatch.setattr(
+        device_configurator_service,
+        "configured_entrances",
+        lambda: [{"slot": "A", "uuid": "entrada"}, {"slot": "B", "uuid": "salida"}],
+    )
+
+    assert device_configurator_service.configured_qr_directions() == ["A", "B"]
+
+
 def test_update_env_schedules_reboot_after_success(monkeypatch):
     monkeypatch.setattr(device_configurator_service, "persist_env_values", lambda payload: None)
     monkeypatch.setattr(
@@ -255,12 +318,18 @@ def test_update_env_schedules_reboot_after_success(monkeypatch):
         "reconcile_camera_services",
         lambda enabled_override=None: {"status": "succeeded", "error_message": "", "service_results": []},
     )
+    monkeypatch.setattr(
+        device_configurator_service,
+        "reconcile_qr_services",
+        lambda: {"status": "succeeded", "error_message": "", "service_results": []},
+    )
     monkeypatch.setattr(device_configurator_service, "configured_entrances", lambda: [])
     monkeypatch.setattr(device_configurator_service, "current_wifi_ssid", lambda: "DIGIFIBRA")
     monkeypatch.setattr(device_configurator_service, "parse_wifi_scan", lambda: [{"ssid": "DIGIFIBRA", "signal": "78"}])
     monkeypatch.setattr(device_configurator_service, "current_ssh_tunnel", lambda: {"ssh_port": 6007})
     monkeypatch.setattr(device_configurator_service, "current_device_settings", lambda: {"HOSTNAME": "https://admin.example.com"})
     monkeypatch.setattr(device_configurator_service, "current_camera_services", lambda: [])
+    monkeypatch.setattr(device_configurator_service, "current_qr_services", lambda: [])
 
     result = device_configurator_service.update_env({"HOSTNAME": "https://admin.example.com"})
 
