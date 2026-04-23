@@ -1,14 +1,12 @@
 [Unit]
 Description=My qr.py script B
 After=network.target
-StartLimitIntervalSec=3600
-StartLimitBurst=50
 
 [Service]
 Environment="DIRECTION=B"
 TimeoutStopSec=3
-RestartSec=1
-Restart=on-failure
+RestartSec=0
+Restart=always
 ExecStart=/home/manager/turnstile_controller/venv/bin/python /home/manager/turnstile_controller/qr.py
 User=manager
 WorkingDirectory=/home/manager/turnstile_controller/
