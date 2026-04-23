@@ -62,6 +62,18 @@ def is_usb_extended_device(device: InputDevice) -> bool:
 
 
 if __name__ == "__main__":
+    all_devices = [InputDevice(path) for path in list_devices()]
+    if all_devices:
+        print("Input devices:")
+        for device in all_devices:
+            print(f"  {device.path}: {device.name!r} phys={device.phys!r}")
+    else:
+        print("No input devices found.")
+
     found_devices = find_qr_devices()
     if found_devices:
-        logger.info(f"Device paths: {[device.path for device in found_devices]}")
+        print("Matched QR devices:")
+        for device in found_devices:
+            print(f"  {device.path}: {device.name!r} extended={device.is_extended}")
+    else:
+        print("No matching keyboard QR devices found.")

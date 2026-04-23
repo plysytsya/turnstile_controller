@@ -257,7 +257,7 @@ if USE_LCD and LCDController:
             relay_trigger=RELAY_TRIGGER,
             i2c_bus=i2c_bus,
         )
-        lcd.display("Inicializando...", "")
+        lcd.display_text_on_lcd("Inicializando...", "")
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:
         logger.exception(
@@ -275,7 +275,7 @@ def display_on_lcd(line1, line2, timeout=None):
         logger.info(line1)
         logger.info(line2)
     else:
-        lcd.display(line1, line2, timeout)
+        lcd.display_text_on_lcd(line1, line2, timeout)
 
 
 def init_qr_device():
