@@ -35,6 +35,12 @@ from systemd.journal import JournalHandler
 import sentry_sdk
 
 from serial_reader import find_serial_devices
+from qr_reader_assignment import (
+    MODE_SERIAL,
+    ReaderAssignmentError,
+    env_value_is_set,
+    select_reader_for_direction,
+)
 from utils import SentryLogger
 
 sentry_sdk.init(
@@ -102,42 +108,53 @@ class NoDeviceFoundError(Exception):
     pass
 
 
-def set_env_if_present(key, value):
+def set_env_default(key, value):
     if value is None:
-        os.environ.pop(key, None)
+        return
+    if not env_value_is_set(os.getenv(key)):
+        os.environ[key] = value
+
+
+def configure_direction_environment(direction):
+    if direction == "A":
+        entrance_uuid = str(os.getenv("ENTRANCE_UUID_A") or "").strip() or None
+        if entrance_uuid:
+            os.environ["ENTRANCE_UUID"] = entrance_uuid
+        # Use Odroid I2C configuration
+        set_env_default("LCD_I2C_ADDRESS", os.getenv("I2C_ADDRESS", "0x27"))
+        set_env_default("LCD_I2C_BUS", os.getenv("I2C_BUS", "0"))
+        # Use Odroid GPIO pins
+        set_env_default("RELAY_PIN_DOOR", os.getenv("RELAY_PIN_A", "62"))  # Pin 7 -> GPIO line 62
+        set_env_default("RELAY_PIN_DISPLAY", os.getenv("RELAY_PIN_DISPLAY_A", "69"))  # Pin 13 -> GPIO line 69
+    elif direction == "B":
+        entrance_uuid = str(os.getenv("ENTRANCE_UUID_B") or "").strip() or None
+        if entrance_uuid:
+            os.environ["ENTRANCE_UUID"] = entrance_uuid
+        set_env_default("LCD_I2C_ADDRESS", "0x27")
+        set_env_default("RELAY_PIN_DOOR", os.getenv("RELAY_PIN_B", "10"))
+        set_env_default("RELAY_PIN_DISPLAY", os.getenv("RELAY_PIN_DISPLAY_B", "20"))
+    else:
         return
 
-    os.environ[key] = value
+    if env_value_is_set(os.getenv("QR_USB_DEVICE_PATH")) and env_value_is_set(os.getenv("IS_SERIAL_DEVICE")):
+        return
+
+    try:
+        reader = select_reader_for_direction(
+            direction,
+            keyboard_devices=find_qr_devices(),
+            serial_devices=find_serial_devices(),
+            env=os.environ,
+        )
+    except ReaderAssignmentError as exc:
+        raise NoDeviceFoundError(str(exc)) from exc
+
+    os.environ["QR_USB_DEVICE_PATH"] = reader.path
+    os.environ["IS_SERIAL_DEVICE"] = str(reader.mode == MODE_SERIAL)
 
 
 DIRECTION = os.getenv("DIRECTION")
-if DIRECTION == "A":
-    entrance_uuid = str(os.getenv("ENTRANCE_UUID_A") or "").strip() or None
-    set_env_if_present("ENTRANCE_UUID", entrance_uuid)
-    # Use Odroid I2C configuration
-    os.environ["LCD_I2C_ADDRESS"] = os.getenv("I2C_ADDRESS", "0x27")
-    os.environ["LCD_I2C_BUS"] = os.getenv("I2C_BUS", "0")
-    # Use Odroid GPIO pins
-    os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "62")  # Pin 7 -> GPIO line 62
-    os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_A", "69")  # Pin 13 -> GPIO line 69
-    os.environ["IS_SERIAL_DEVICE"] = "True"
-    devices = find_serial_devices()
-    if devices:
-        os.environ["QR_USB_DEVICE_PATH"] = devices[0].path
-    else:
-        raise NoDeviceFoundError("No serial device found.")
-elif DIRECTION == "B":
-    entrance_uuid = str(os.getenv("ENTRANCE_UUID_B") or "").strip() or None
-    set_env_if_present("ENTRANCE_UUID", entrance_uuid)
-    os.environ["LCD_I2C_ADDRESS"] = "0x27"
-    os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_B", "10")
-    os.environ["RELAY_PIN_DISPLAY"] = os.getenv("RELAY_PIN_DISPLAY_B", "20")
-    os.environ["IS_SERIAL_DEVICE"] = "False"
-    devices = find_qr_devices()
-    if devices:
-        os.environ["QR_USB_DEVICE_PATH"] = devices[0].path
-    else:
-        raise NoDeviceFoundError("No keyboard-QR device found.")
+configure_direction_environment(DIRECTION)
 
 
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")

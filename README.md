@@ -63,3 +63,32 @@ make install-qr
 ```bash
 make install-cronjob
 ```
+
+## QR reader direction mapping
+
+By default, the controller keeps the legacy two-reader mapping:
+
+- direction `A` prefers a serial-mode QR reader, then falls back to keyboard/HID mode
+- direction `B` prefers a keyboard/HID QR reader, then falls back to serial mode
+
+This means a single active `A` door works with either one serial reader or one keyboard reader. With
+`USE_2_QR_READERS=true` or `QR_ACTIVE_DIRECTIONS=A,B` and one reader in each mode, serial is assigned to `A` and
+keyboard/HID is assigned to `B`.
+
+Optional `.env` overrides:
+
+```bash
+QR_ACTIVE_DIRECTIONS=A,B
+QR_READER_MODE_A=serial
+QR_READER_MODE_B=keyboard
+```
+
+`QR_READER_MODE_A` and `QR_READER_MODE_B` accept `auto`, `serial`, `keyboard`, or `disabled`. To flip the default
+two-reader assignment, use:
+
+```bash
+QR_READER_MODE_A=keyboard
+QR_READER_MODE_B=serial
+```
+
+For fixed device paths, use `QR_USB_DEVICE_PATH_A` / `QR_USB_DEVICE_PATH_B` with the matching reader mode.

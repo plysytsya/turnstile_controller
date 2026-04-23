@@ -1,103 +1,140 @@
-# Step 1: Install the systemd-python package
-# You can install it using pip:
-# pip install systemd-python
-
-# Step 2: Import the necessary modules
 import logging
 import os
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import dotenv
-from pathlib import Path
 from systemd.journal import JournalHandler
 
 from find_device import find_qr_devices
-from serial_reader import find_serial_devices, SerialDevice
 from i2cdetect import detect_i2c_device_not_27
+from qr_reader_assignment import (
+    MODE_SERIAL,
+    ReaderAssignmentError,
+    assign_readers_to_directions,
+    configured_active_directions,
+    env_value_is_set,
+)
+from serial_reader import find_serial_devices
 
-# Step 3: Configure logging to use JournalHandler
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 logger.addHandler(JournalHandler())
 
-EXTENDED_USB_DEVICE_DIRECTION = "B"
 DISPLAY_X27_DIRECTION = "0x27"
-
-UNEXTENDED_USB_DEVICE_DIRECTION = "A"
-
-# Get the directory of the current file
 current_dir = Path(__file__).parent
 
-keyboard_devices = find_qr_devices()
-serial_devices = find_serial_devices()
-devices = keyboard_devices + serial_devices
 
-load_dotenv = dotenv.load_dotenv(Path(__file__).parent / ".env")
-USE_USB_HUB = os.getenv("USE_USB_HUB", "True").lower() == "true"
+def direction_env_value(direction, key, fallback=None):
+    value = os.getenv(f"{key}_{direction}")
+    if env_value_is_set(value):
+        return value
+    return fallback
 
 
-processes = []
+def lcd_address_for_direction(direction):
+    configured = (
+        os.getenv(f"LCD_I2C_ADDRESS_{direction}")
+        or os.getenv(f"LCD_ADDRESS_{direction}")
+    )
+    if env_value_is_set(configured):
+        return configured
 
-for qr_reader in devices:
-    if qr_reader.is_extended and USE_USB_HUB or (
-            len(keyboard_devices) == 1 and len(serial_devices) == 1 and not isinstance(qr_reader, SerialDevice)
-    ):
-        if isinstance(qr_reader, SerialDevice):
-            logger.info(f"Found extended device: {qr_reader}")
-        else:
-            logger.info(f"Found keyboard device: {qr_reader}")
-        direction = EXTENDED_USB_DEVICE_DIRECTION
-        lcd_address = DISPLAY_X27_DIRECTION
-        entrance_uuid = os.getenv("ENTRANCE_UUID_B")
-        relay_pin = os.getenv("RELAY_PIN_B", "10")
-        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_B", "20")
-    else:
-        direction = UNEXTENDED_USB_DEVICE_DIRECTION
-        lcd_address = detect_i2c_device_not_27(1)
-        entrance_uuid = os.getenv("ENTRANCE_UUID_A")
-        relay_pin = os.getenv("RELAY_PIN_A", "24")
-        display_relay_pin = os.getenv("RELAY_PIN_DISPLAY_A", "21")
+    if direction == "B":
+        return DISPLAY_X27_DIRECTION
 
+    try:
+        detected = detect_i2c_device_not_27(1)
+    except Exception as exc:
+        logger.warning("Failed to detect LCD address for direction %s: %s", direction, exc)
+        detected = None
+
+    return detected or os.getenv("I2C_ADDRESS")
+
+
+def build_subprocess_env(assignment):
+    direction = assignment.direction
+    reader = assignment.reader
     env = os.environ.copy()
 
+    entrance_uuid = direction_env_value(direction, "ENTRANCE_UUID")
+    relay_pin = direction_env_value(direction, "RELAY_PIN")
+    display_relay_pin = direction_env_value(direction, "RELAY_PIN_DISPLAY")
+    lcd_address = lcd_address_for_direction(direction)
+
+    if entrance_uuid:
+        env["ENTRANCE_UUID"] = entrance_uuid
+    if relay_pin:
+        env["RELAY_PIN_DOOR"] = relay_pin
+    if display_relay_pin:
+        env["RELAY_PIN_DISPLAY"] = display_relay_pin
     if lcd_address:
         env["LCD_I2C_ADDRESS"] = lcd_address
-    else:
-        logger.warning("LCD address is None. Skipping this device.")
-
-    # Define the environment variables
-    env["RELAY_PIN_DOOR"] = relay_pin
-    env["ENTRANCE_UUID"] = entrance_uuid
-    env["QR_USB_DEVICE_PATH"] = qr_reader.path
-    env["IS_SERIAL_DEVICE"] = str(isinstance(qr_reader, SerialDevice))
-    env["DIRECTION"] = direction
-    env["RELAY_PIN_DISPLAY"] = display_relay_pin
     if os.getenv("RELAY_TOGGLE_DURATION"):
         env["RELAY_TOGGLE_DURATION"] = os.getenv("RELAY_TOGGLE_DURATION")
 
-    # Define the command
+    env["QR_USB_DEVICE_PATH"] = reader.path
+    env["IS_SERIAL_DEVICE"] = str(reader.mode == MODE_SERIAL)
+    env["DIRECTION"] = direction
+
+    return {key: value for key, value in env.items() if value is not None}
+
+
+def launch_qr_process(assignment):
+    env = build_subprocess_env(assignment)
     cmd = [sys.executable, str(current_dir / "qr.py")]
+    logger.warning(
+        "Starting QR subprocess direction=%s mode=%s path=%s",
+        assignment.direction,
+        assignment.reader.mode,
+        assignment.reader.path,
+    )
+    return subprocess.Popen(cmd, env=env)
 
-    # Run the command in a subprocess
 
-    logging.warning(f"Starging subprocess {direction} with env-vars: {env}")
-    env_without_none_values = {k: v for k, v in env.items() if v is not None}
-    p = subprocess.Popen(cmd, env=env_without_none_values)
-    processes.append(p)
-    time.sleep(1)
+def main():
+    dotenv.load_dotenv(current_dir / ".env")
 
-try:
-    for p in processes:
-        ret_code = p.wait()  # Wait for each subprocess to finish and get the return code
-        if ret_code != 0:
-            # If any subprocess exits with a non-zero code, exit the main process with the same code
-            logger.error(f"Subprocess {p.pid} exited with code {ret_code}. Exiting main process.")
-            sys.exit(ret_code)
+    keyboard_devices = find_qr_devices()
+    serial_devices = find_serial_devices()
+    active_directions = configured_active_directions(os.environ)
 
-except KeyboardInterrupt:
-    # On keyboard interrupt, terminate all subprocesses
-    logger.warning("Keyboard interrupt detected. Terminating all subprocesses.")
-    for p in processes:
-        p.terminate()
+    logger.info("Active QR directions: %s", active_directions)
+    logger.info("Detected keyboard QR devices: %s", keyboard_devices)
+    logger.info("Detected serial QR devices: %s", serial_devices)
+
+    try:
+        assignments = assign_readers_to_directions(
+            active_directions=active_directions,
+            keyboard_devices=keyboard_devices,
+            serial_devices=serial_devices,
+            env=os.environ,
+        )
+    except ReaderAssignmentError as exc:
+        logger.error("Could not assign QR readers: %s", exc)
+        return 1
+
+    processes = []
+    for assignment in assignments:
+        processes.append(launch_qr_process(assignment))
+        time.sleep(1)
+
+    try:
+        for process in processes:
+            ret_code = process.wait()
+            if ret_code != 0:
+                logger.error("Subprocess %s exited with code %s. Exiting main process.", process.pid, ret_code)
+                return ret_code
+    except KeyboardInterrupt:
+        logger.warning("Keyboard interrupt detected. Terminating all subprocesses.")
+        for process in processes:
+            process.terminate()
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
