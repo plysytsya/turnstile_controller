@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import re
+import sys
 import threading
 import time
 import uuid
@@ -603,48 +604,62 @@ def handle_keyboard_interrupt(vs):
     exit()
 
 
+def _mapped_keycode(keycode):
+    if isinstance(keycode, list):
+        for candidate in keycode:
+            if candidate in KEYMAP:
+                return candidate
+        return keycode[0] if keycode else ""
+    return keycode
+
+
 async def keyboard_event_loop(device):
     global shared_list
     output_string = ""
     display_on_lcd("Escanea", "codigo QR...")
 
-    async for event in device.async_read_loop():
-        if event.type == evdev.ecodes.EV_KEY:
-            categorized_event = categorize(event)
-            if categorized_event.keystate == KeyEvent.key_up:
-                keycode = categorized_event.keycode
-                character = KEYMAP.get(keycode, "")
+    try:
+        async for event in device.async_read_loop():
+            if event.type == evdev.ecodes.EV_KEY:
+                categorized_event = categorize(event)
+                if categorized_event.keystate == KeyEvent.key_up:
+                    keycode = _mapped_keycode(categorized_event.keycode)
+                    character = KEYMAP.get(keycode, "")
 
-                if character:
-                    output_string += character
+                    if character:
+                        output_string += character
 
-                if keycode == "KEY_ENTER":
-                    logger.info(f"Received raw data: {output_string}")
+                    if keycode == "KEY_ENTER":
+                        logger.info(f"Received raw data: {output_string}")
 
-                    try:
-                        data = _process_ascii_data(output_string, as_hex_setting)
-                    except Exception as e:
-                        logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
-                        output_string = ""
-                        continue
-                    logger.info(f"Interpreted data: {data}")
-                    if "config" in data:
-                        display_on_lcd("aplicando", "configuracion", timeout=2)
-                        response = apply_config(data)
-                        logger.info(f"Config response: {response}")
-                        if USE_LCD:
-                            display_on_lcd("ajuste", "aplicado", timeout=2)
-                        output_string = ""
-                        continue
+                        try:
+                            data = _process_ascii_data(output_string, as_hex_setting)
+                        except Exception as e:
+                            logger.error(f"Error interpreting ascii data: {e}.. data: {output_string}")
+                            output_string = ""
+                            continue
+                        logger.info(f"Interpreted data: {data}")
+                        if "config" in data:
+                            display_on_lcd("aplicando", "configuracion", timeout=2)
+                            response = apply_config(data)
+                            logger.info(f"Config response: {response}")
+                            if USE_LCD:
+                                display_on_lcd("ajuste", "aplicado", timeout=2)
+                            output_string = ""
+                            continue
 
-                    try:
-                        qr_dict = _load_json_data(data)
-                        customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
-                        await verify_customer(customer, qr_dict["timestamp"])
-                    except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
-                        await verify_customer(data, int(time.time()))
-                    finally:
-                        output_string = ""
+                        try:
+                            qr_dict = _load_json_data(data)
+                            customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
+                            await verify_customer(customer, qr_dict["timestamp"])
+                        except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
+                            await verify_customer(data, int(time.time()))
+                        finally:
+                            output_string = ""
+    except OSError as e:
+        display_on_lcd("No coneccion con", "lector, reinicio")
+        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
+        sys.exit(1)
 
 
 async def serial_device_event_loop():
