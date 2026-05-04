@@ -89,3 +89,12 @@ def test_sender_ignores_receiver_metadata_files(monkeypatch, tmp_path):
 
     assert sent == []
     assert metadata_file.exists()
+
+
+def test_filesystem_camera_trigger_touches_record_file(tmp_path):
+    entrance_log_uuid = str(uuid.uuid4())
+
+    queue_camera_trigger(tmp_path, entrance_log_uuid, mode="filesystem")
+
+    assert (tmp_path / f"{entrance_log_uuid}.txt").exists()
+    assert (tmp_path / "record.txt").exists()

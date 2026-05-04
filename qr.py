@@ -216,9 +216,27 @@ elif DIRECTION == "B" and AS_HEX_B:
 else:
     as_hex_setting = AS_HEX
 HAS_CAMERA = os.getenv("HAS_CAMERA", "false").lower() == "true"
-# HAS_CAMERA only means "emit a trigger for the remote camera flow" via RECORDING_DIR/MQTT.
+# HAS_CAMERA means this QR service emits a trigger for the camera flow.
 # CAMERA_ENABLED is handled by the dedicated camera services, not by qr.py directly.
-USE_CAMERA_TRIGGER = HAS_CAMERA and ENTRANCE_DIRECTION == DIRECTION
+CAMERA_TRIGGER_MODE = os.getenv("CAMERA_TRIGGER_MODE", "mqtt").strip().lower() or "mqtt"
+
+
+def configured_camera_trigger_directions():
+    configured_value = os.getenv("CAMERA_TRIGGER_DIRECTIONS", "")
+    directions = []
+    for raw_direction in configured_value.split(","):
+        direction = raw_direction.strip().upper()
+        if direction in {"A", "B"} and direction not in directions:
+            directions.append(direction)
+    if directions:
+        return directions
+
+    legacy_direction = str(ENTRANCE_DIRECTION or "").strip().upper()
+    return [legacy_direction] if legacy_direction in {"A", "B"} else []
+
+
+CAMERA_TRIGGER_DIRECTIONS = configured_camera_trigger_directions()
+USE_CAMERA_TRIGGER = HAS_CAMERA and DIRECTION in CAMERA_TRIGGER_DIRECTIONS
 if USE_CAMERA_TRIGGER:
     RECORDING_DIR = os.getenv("RECORDING_DIR") or str(current_dir / "camera")
     CAMERA_SLEEP_DURATION = float(os.getenv("CAMERA_SLEEP_DURATION", 0.4))
@@ -355,6 +373,22 @@ def handle_server_response(status_code, first_name=None):
     return False
 
 
+async def queue_camera_trigger_after_success(entrance_log_uuid):
+    if not USE_CAMERA_TRIGGER:
+        return
+
+    queue_camera_trigger(RECORDING_DIR, entrance_log_uuid, mode=CAMERA_TRIGGER_MODE)
+    logger.info(
+        "Queued camera trigger %s via %s mode for direction %s.",
+        entrance_log_uuid,
+        CAMERA_TRIGGER_MODE,
+        DIRECTION,
+    )
+    if CAMERA_SLEEP_DURATION > 0:
+        logger.info(f"sleeping for {CAMERA_SLEEP_DURATION} seconds.")
+        await asyncio.sleep(CAMERA_SLEEP_DURATION)
+
+
 def open_door_and_greet(first_name):
     if ENTRANCE_DIRECTION == DIRECTION:
         greet_word = "Hola"
@@ -474,11 +508,6 @@ async def verify_customer(customer_uuid, timestamp):
     entrance_log_uuid = generate_uuid_from_string(str(payload))
     payload["uuid"] = entrance_log_uuid
 
-    if USE_CAMERA_TRIGGER:
-        queue_camera_trigger(RECORDING_DIR, entrance_log_uuid)
-        logger.info(f"sleeping for {CAMERA_SLEEP_DURATION} seconds.")
-        await asyncio.sleep(CAMERA_SLEEP_DURATION)
-
     url = f"{HOSTNAME}/verify_customer/"
 
     authorization = get_auth_header()
@@ -498,20 +527,23 @@ async def verify_customer(customer_uuid, timestamp):
     if timestamp == MAGIC_TIMESTAMP:  # update the magic timestamp after check to create a proper entrance-log
         payload["timestamp"] = int(time.time())
 
-    response = get_valid_response(url, headers, payload, customer_uuid)
+    response = await get_valid_response(url, headers, payload, customer_uuid, entrance_log_uuid)
 
     if response is None:
         return
 
     if not DEVICE_API_TOKEN and response.status_code in (401, 403):  # Token expired or invalid
         headers["Authorization"] = refresh_token()
-        response = get_valid_response(url, headers, payload, customer_uuid)
+        response = await get_valid_response(url, headers, payload, customer_uuid, entrance_log_uuid)
         if response is None:
             return
 
     json_response = response.json()
     status_code = json_response.get("status_code")
     first_name = json_response.get("first_name")
+
+    if status_code == "UserExists":
+        await queue_camera_trigger_after_success(entrance_log_uuid)
 
     return handle_server_response(status_code, first_name)
 
@@ -527,9 +559,10 @@ def is_valid_timestamp(timestamp: int):
     return True
 
 
-def get_valid_response(url, headers, payload, customer_uuid):
+async def get_valid_response(url, headers, payload, customer_uuid, entrance_log_uuid):
     status_code, customer = _find_customer_in_cache(customer_uuid)
     if status_code == "UserExists":
+        await queue_camera_trigger_after_success(entrance_log_uuid)
         open_door_and_greet(customer["first_name"])
         payload["response_code"] = status_code
         send_entrance_log(url, headers, payload, retries=15)
@@ -769,7 +802,7 @@ async def main_loop():
             qr_data = shared_list.pop(0)
             logger.info(f"Received QR data: {qr_data}")
             customer = qr_data.get("customer-uuid", qr_data.get("customer_uuid"))
-            verify_customer(customer, qr_data["timestamp"])
+            await verify_customer(customer, qr_data["timestamp"])
         await asyncio.sleep(0.1)  # 1-second delay to avoid busy-waiting
 
 

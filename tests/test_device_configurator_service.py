@@ -28,6 +28,9 @@ def test_reconcile_camera_services_enables_expected_services(monkeypatch):
     restart_calls = []
     mosquitto_calls = []
 
+    monkeypatch.setenv("DEVICE_TYPE", "camera")
+    monkeypatch.delenv("HAS_CAMERA", raising=False)
+    monkeypatch.delenv("CAMERA_TRIGGER_MODE", raising=False)
     monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: True)
     monkeypatch.setattr(device_configurator_service, "has_upload_configuration", lambda: True)
     monkeypatch.setattr(
@@ -64,6 +67,7 @@ def test_reconcile_camera_services_enables_expected_services(monkeypatch):
     assert result["error_message"] == ""
     assert mosquitto_calls == [True]
     assert enable_calls == [
+        ("mqtt-sender", False),
         ("videorecorder", True),
         ("mqtt-receiver", True),
         ("upload", True),
@@ -106,6 +110,7 @@ def test_reconcile_camera_services_disables_all_when_camera_toggle_is_off(monkey
     assert result["error_message"] == ""
     assert mosquitto_calls == [False]
     assert calls == [
+        ("mqtt-sender", False),
         ("videorecorder", False),
         ("mqtt-receiver", False),
         ("upload", False),
@@ -118,6 +123,9 @@ def test_reconcile_camera_services_respects_runtime_override(monkeypatch):
     restart_calls = []
     mosquitto_calls = []
 
+    monkeypatch.setenv("DEVICE_TYPE", "camera")
+    monkeypatch.delenv("HAS_CAMERA", raising=False)
+    monkeypatch.delenv("CAMERA_TRIGGER_MODE", raising=False)
     monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: False)
     monkeypatch.setattr(device_configurator_service, "has_upload_configuration", lambda: True)
     monkeypatch.setattr(
@@ -148,6 +156,7 @@ def test_reconcile_camera_services_respects_runtime_override(monkeypatch):
     assert result["status"] == "succeeded"
     assert mosquitto_calls == [True]
     assert enable_calls == [
+        ("mqtt-sender", False),
         ("videorecorder", True),
         ("mqtt-receiver", True),
         ("upload", True),
@@ -155,11 +164,55 @@ def test_reconcile_camera_services_respects_runtime_override(monkeypatch):
     assert restart_calls == ["videorecorder", "mqtt-receiver", "upload"]
 
 
+def test_reconcile_camera_services_uses_filesystem_mode_without_mqtt(monkeypatch):
+    enable_calls = []
+    restart_calls = []
+    mosquitto_calls = []
+
+    monkeypatch.setenv("DEVICE_TYPE", "odroid")
+    monkeypatch.setenv("HAS_CAMERA", "True")
+    monkeypatch.setenv("CAMERA_TRIGGER_MODE", "filesystem")
+    monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: False)
+    monkeypatch.setattr(device_configurator_service, "has_upload_configuration", lambda: False)
+    monkeypatch.setattr(
+        device_configurator_service,
+        "ensure_camera_mosquitto_listener",
+        lambda enabled: mosquitto_calls.append(enabled)
+        or {"service": "mosquitto-lan-listener", "managed": "remove", "ok": True},
+    )
+
+    def fake_set_service_enabled(service_name, enabled):
+        enable_calls.append((service_name, enabled))
+        return {"service": service_name, "managed": "enable" if enabled else "disable", "ok": True}
+
+    def fake_restart_managed_service(service_name):
+        restart_calls.append(service_name)
+        return {"service": service_name, "managed": "restart", "ok": True}
+
+    monkeypatch.setattr(device_configurator_service, "set_service_enabled", fake_set_service_enabled)
+    monkeypatch.setattr(device_configurator_service, "restart_managed_service", fake_restart_managed_service)
+
+    result = device_configurator_service.reconcile_camera_services(enabled_override=True)
+
+    assert result["status"] == "succeeded"
+    assert mosquitto_calls == [False]
+    assert enable_calls == [
+        ("mqtt-sender", False),
+        ("videorecorder", True),
+        ("mqtt-receiver", False),
+        ("upload", False),
+    ]
+    assert restart_calls == ["videorecorder"]
+
+
 def test_reconcile_camera_services_skips_restart_when_enable_fails(monkeypatch):
     enable_calls = []
     restart_calls = []
     mosquitto_calls = []
 
+    monkeypatch.setenv("DEVICE_TYPE", "camera")
+    monkeypatch.delenv("HAS_CAMERA", raising=False)
+    monkeypatch.delenv("CAMERA_TRIGGER_MODE", raising=False)
     monkeypatch.setattr(device_configurator_service, "camera_services_enabled", lambda: True)
     monkeypatch.setattr(device_configurator_service, "has_upload_configuration", lambda: False)
     monkeypatch.setattr(
@@ -190,6 +243,7 @@ def test_reconcile_camera_services_skips_restart_when_enable_fails(monkeypatch):
     assert result["status"] == "failed"
     assert mosquitto_calls == [True]
     assert enable_calls == [
+        ("mqtt-sender", False),
         ("videorecorder", True),
         ("mqtt-receiver", True),
         ("upload", False),

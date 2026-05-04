@@ -37,6 +37,8 @@ PREVIEW_FAST_POLL_UNTIL = 0.0
 DEVICE_SETTINGS_SCHEMA = [
     ("AS_HEX", "bool", False),
     ("CAMERA_ENABLED", "bool", False),
+    ("CAMERA_TRIGGER_DIRECTIONS", "str", ""),
+    ("CAMERA_TRIGGER_MODE", "str", ""),
     ("CONTROL_API_BASE_URL", "str", ""),
     ("DARK_MODE", "bool", False),
     ("DEVICE_BOOTSTRAP_TOKEN", "str", ""),
@@ -87,6 +89,7 @@ CAMERA_MANDATORY_SERVICES = (
     "mqtt-receiver",
 )
 
+CAMERA_TRIGGER_SERVICES = ("mqtt-sender",)
 CAMERA_OPTIONAL_SERVICES = ("upload",)
 
 SERVICE_UNIT_FILES = {
@@ -328,8 +331,39 @@ def parse_bool(value, default=False):
 
 
 def camera_services_enabled():
-    mandatory_states = current_camera_services()[: len(CAMERA_MANDATORY_SERVICES)]
+    mandatory_service_names = required_camera_services(True)
+    service_states_by_name = {service.get("service"): service for service in current_camera_services()}
+    mandatory_states = [service_states_by_name.get(service_name, {}) for service_name in mandatory_service_names]
     return bool(mandatory_states) and all(service.get("active") == "active" for service in mandatory_states)
+
+
+def camera_trigger_mode():
+    return str(os.getenv("CAMERA_TRIGGER_MODE", "") or "").strip().lower()
+
+
+def local_filesystem_camera_trigger_enabled():
+    return parse_bool(os.getenv("HAS_CAMERA"), False) and camera_trigger_mode() == "filesystem"
+
+
+def mqtt_camera_trigger_enabled():
+    return parse_bool(os.getenv("HAS_CAMERA"), False) and not local_filesystem_camera_trigger_enabled()
+
+
+def camera_mqtt_receiver_enabled(camera_enabled):
+    if not camera_enabled:
+        return False
+    if local_filesystem_camera_trigger_enabled():
+        return False
+    return str(os.getenv("DEVICE_TYPE", "")).strip().lower() == "camera"
+
+
+def required_camera_services(camera_enabled):
+    if not camera_enabled:
+        return []
+    services = ["videorecorder"]
+    if camera_mqtt_receiver_enabled(camera_enabled):
+        services.append("mqtt-receiver")
+    return services
 
 
 def reload_runtime_control_settings():
@@ -766,7 +800,9 @@ def ensure_camera_mosquitto_listener(enabled):
 def reconcile_camera_services(enabled_override=None):
     service_results = []
     enabled = camera_services_enabled() if enabled_override is None else bool(enabled_override)
-    mosquitto_result = ensure_camera_mosquitto_listener(enabled)
+    required_services = tuple(required_camera_services(enabled))
+    mqtt_receiver_required = "mqtt-receiver" in required_services
+    mosquitto_result = ensure_camera_mosquitto_listener(mqtt_receiver_required)
     service_results.append(mosquitto_result)
     if not mosquitto_result.get("ok"):
         return {
@@ -775,15 +811,23 @@ def reconcile_camera_services(enabled_override=None):
             "service_results": service_results,
         }
 
+    mqtt_sender_enabled = mqtt_camera_trigger_enabled()
+    for service_name in CAMERA_TRIGGER_SERVICES:
+        enable_result = set_service_enabled(service_name, mqtt_sender_enabled)
+        service_results.append(enable_result)
+        if mqtt_sender_enabled and enable_result.get("ok"):
+            service_results.append(restart_managed_service(service_name))
+
     if not enabled:
         for service_name in CAMERA_MANDATORY_SERVICES + CAMERA_OPTIONAL_SERVICES:
             service_results.append(set_service_enabled(service_name, False))
         return {"status": "succeeded", "error_message": "", "service_results": service_results}
 
     for service_name in CAMERA_MANDATORY_SERVICES:
-        enable_result = set_service_enabled(service_name, True)
+        service_enabled = service_name in required_services
+        enable_result = set_service_enabled(service_name, service_enabled)
         service_results.append(enable_result)
-        if enable_result.get("ok"):
+        if service_enabled and enable_result.get("ok"):
             service_results.append(restart_managed_service(service_name))
 
     upload_enabled = has_upload_configuration()
@@ -793,7 +837,7 @@ def reconcile_camera_services(enabled_override=None):
         if upload_enabled and enable_result.get("ok"):
             service_results.append(restart_managed_service(service_name))
 
-    failed_services = [result["service"] for result in service_results if not result["ok"] and result["service"] in CAMERA_MANDATORY_SERVICES]
+    failed_services = [result["service"] for result in service_results if not result["ok"] and result["service"] in required_services]
     if failed_services:
         return {
             "status": "failed",
@@ -805,7 +849,7 @@ def reconcile_camera_services(enabled_override=None):
 
 
 def current_camera_services():
-    return [service_state(service_name) for service_name in CAMERA_MANDATORY_SERVICES + CAMERA_OPTIONAL_SERVICES]
+    return [service_state(service_name) for service_name in CAMERA_MANDATORY_SERVICES + CAMERA_TRIGGER_SERVICES + CAMERA_OPTIONAL_SERVICES]
 
 
 def current_qr_services():
