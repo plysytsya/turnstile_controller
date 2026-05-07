@@ -275,7 +275,7 @@ if USE_LCD and LCDController:
             relay_trigger=RELAY_TRIGGER,
             i2c_bus=i2c_bus,
         )
-        lcd.display_text_on_lcd("Inicializando...", "")
+        lcd.clear()
         logger.info("LCD initialized successfully for direction %s.", DIRECTION)
     except Exception as e:
         logger.exception(
@@ -288,7 +288,10 @@ elif USE_LCD and not LCDController:
     USE_LCD = False
 
 
-def display_on_lcd(line1, line2, timeout=None):
+DEFAULT_LCD_MESSAGE_TIMEOUT = 3
+
+
+def display_on_lcd(line1, line2, timeout=DEFAULT_LCD_MESSAGE_TIMEOUT):
     if not USE_LCD:
         logger.info(line1)
         logger.info(line2)
@@ -308,7 +311,6 @@ def init_qr_device():
                 else InputDevice(QR_USB_DEVICE_PATH)
             )
             logger.info("Successfully connected to the QR code scanner.")
-            display_on_lcd("Conectado al", "escaneador QR")
 
             if IS_SERIAL_DEVICE:
                 # we were just testing the serial connection
@@ -352,7 +354,6 @@ def unpack_barcode(barcode_data):
     except Exception as e:
         display_on_lcd("codigo", "QR invalido", timeout=2)  # Displays "Invalid QR Code" in Spanish
         logger.error(f"Error unpacking barcode: {e}")
-        display_on_lcd("Escanea", "codigo QR")
         return None, None
 
 
@@ -369,7 +370,6 @@ def handle_server_response(status_code, first_name=None):
     else:
         display_on_lcd("Error", "Intenta de nuevo", timeout=2)
 
-    display_on_lcd("Escanea", "codigo QR")
     return False
 
 
@@ -399,7 +399,6 @@ def open_door_and_greet(first_name):
 
     def display_greeting():
         display_on_lcd(f"{greet_word}", first_name, timeout=3)
-        display_on_lcd("Escanea", "codigo QR")
 
     # Start a new thread to toggle the relay
     relay_thread = threading.Thread(target=toggle_relay, daemon=True)
@@ -521,7 +520,6 @@ async def verify_customer(customer_uuid, timestamp):
         display_on_lcd("Error", "QR vencido", timeout=2)
         payload["response_code"] = "TimestampExpired"
         send_entrance_log(url, headers, payload)
-        display_on_lcd("Escanea", "codigo QR")
         return
 
     if timestamp == MAGIC_TIMESTAMP:  # update the magic timestamp after check to create a proper entrance-log
@@ -649,7 +647,6 @@ def _mapped_keycode(keycode):
 async def keyboard_event_loop(device):
     global shared_list
     output_string = ""
-    display_on_lcd("Escanea", "codigo QR...")
 
     try:
         async for event in device.async_read_loop():
@@ -697,7 +694,6 @@ async def keyboard_event_loop(device):
 
 async def serial_device_event_loop():
     global shared_list
-    display_on_lcd("Escanea", "codigo QR...")
 
     with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
         while True:
