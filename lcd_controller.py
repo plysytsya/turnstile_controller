@@ -174,27 +174,27 @@ class LCDController:
                 self.lcd = None
                 
         self.dark_mode = dark_mode
+        self.relay_chip = None
         self.relay_line = None
+        self.relay_on_state = 0 if relay_trigger == "LOW" else 1
+        self.relay_off_state = 1 if relay_trigger == "LOW" else 0
         
         # Setup GPIO for display relay using gpiod
         if dark_mode and relay_pin:
             try:
-                chip = gpiod.Chip("gpiochip0")
-                self.relay_line = chip.get_line(relay_pin)
+                self.relay_chip = gpiod.Chip("gpiochip0")
+                self.relay_line = self.relay_chip.get_line(relay_pin)
                 self.relay_line.request(consumer="lcd_backlight", type=gpiod.LINE_REQ_DIR_OUT)
-                
-                # Set relay state based on trigger type
-                on_state = 0 if relay_trigger == "LOW" else 1
-                off_state = 1 if relay_trigger == "LOW" else 0
-                
-                # Toggle relay to turn on display
-                self.relay_line.set_value(on_state)
-                time.sleep(0.5)
-                self.relay_line.set_value(off_state)
-                
+                self._set_display_relay(False)
                 logging.info(f"Display relay initialized on GPIO line {relay_pin}")
             except Exception as e:
                 logging.error(f"Failed to setup display relay: {e}")
+
+    def _set_display_relay(self, enabled):
+        if not self.dark_mode or not self.relay_line:
+            return
+
+        self.relay_line.set_value(self.relay_on_state if enabled else self.relay_off_state)
     
     def clear(self):
         if self.use_lcd and self.lcd:
@@ -216,6 +216,7 @@ class LCDController:
             return
 
         try:
+            self._set_display_relay(True)
             lines_to_scroll1 = self.scroll_text(line1)
             lines_to_scroll2 = self.scroll_text(line2)
 
@@ -226,10 +227,14 @@ class LCDController:
                 time.sleep(self.scroll_delay)
 
             if timeout is not None:
-                time.sleep(timeout - self.scroll_delay)
+                time.sleep(max(0, timeout - self.scroll_delay))
                 self.lcd.clear()
+                self._set_display_relay(False)
         except Exception as e:
             logging.error(f"LCD display error: {e}")
+
+    def display(self, line1, line2, timeout=2):
+        self.display_text_on_lcd(line1, line2, timeout)
 
     def display_text_on_lcd_async(self, line1, line2, timeout=3):
         thread = threading.Thread(
@@ -243,6 +248,7 @@ class LCDController:
         """Clean up GPIO resources"""
         if self.relay_line:
             try:
+                self._set_display_relay(False)
                 self.relay_line.release()
             except:
                 pass
