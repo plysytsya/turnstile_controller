@@ -7,7 +7,6 @@ from uuid import UUID
 
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
-from tenacity import retry, stop_after_delay, wait_fixed, RetryError
 
 from utils import SentryLogger
 import sentry_sdk
@@ -28,9 +27,11 @@ sentry_sdk.init(
 )
 
 # === Constants ===
-SCAN_INTERVAL_MS = 30          # Interval between scan cycles
-PING_INTERVAL_SECONDS = 20     # Unused with MQTT, kept here for reference
-MAX_TRANSMISSION_TIME = 1.0    # Max allowed time (in seconds) for a send operation
+SCAN_INTERVAL_MS = 250
+MQTT_PUBLISH_RETRY_SECONDS = float(os.getenv("MQTT_PUBLISH_RETRY_SECONDS", 120))
+MQTT_INITIAL_RETRY_DELAY_SECONDS = float(os.getenv("MQTT_INITIAL_RETRY_DELAY_SECONDS", 1))
+MQTT_MAX_RETRY_DELAY_SECONDS = float(os.getenv("MQTT_MAX_RETRY_DELAY_SECONDS", 15))
+MQTT_PUBLISH_TIMEOUT_SECONDS = float(os.getenv("MQTT_PUBLISH_TIMEOUT_SECONDS", 10))
 
 # Set up our special logger
 logging.setLoggerClass(SentryLogger)
@@ -43,43 +44,98 @@ logger.addHandler(journal_handler)
 client = None
 client_lock = asyncio.Lock()
 
-@retry(stop=stop_after_delay(2), wait=wait_fixed(0.1))
+def _mqtt_target():
+    mqtt_broker = os.getenv("MQTT_BROKER")
+    if not mqtt_broker:
+        raise RuntimeError("MQTT_BROKER environment variable is not set.")
+    return mqtt_broker, int(os.getenv("MQTT_PORT", 1883))
+
+
+def _create_mqtt_client():
+    mqtt_client = mqtt.Client()
+    username = os.getenv("MQTT_USERNAME")
+    password = os.getenv("MQTT_PASSWORD")
+    if username and password:
+        mqtt_client.username_pw_set(username, password)
+    return mqtt_client
+
+
+async def _disconnect_client():
+    global client
+    if client is None:
+        return
+    old_client = client
+    client = None
+    try:
+        await asyncio.to_thread(old_client.loop_stop)
+    except Exception as loop_stop_err:
+        logger.warning(f"Error stopping MQTT loop: {loop_stop_err}")
+    try:
+        await asyncio.to_thread(old_client.disconnect)
+    except Exception as disconnect_err:
+        logger.warning(f"Error disconnecting MQTT client: {disconnect_err}")
+
+
+async def _connect_client():
+    global client
+    mqtt_broker, port = _mqtt_target()
+    mqtt_client = _create_mqtt_client()
+    await asyncio.to_thread(mqtt_client.connect, mqtt_broker, port, 60)
+    mqtt_client.loop_start()
+    client = mqtt_client
+    logger.info(f"Connected to MQTT broker at {mqtt_broker}:{port}")
+    return client
+
+
+async def _ensure_connected():
+    global client
+    if client is not None and client.is_connected():
+        return client
+    await _disconnect_client()
+    return await _connect_client()
+
+
+async def _publish_once(topic: str, payload: str):
+    mqtt_client = await _ensure_connected()
+    info = await asyncio.to_thread(mqtt_client.publish, topic, payload, qos=1)
+    await asyncio.wait_for(
+        asyncio.to_thread(info.wait_for_publish),
+        timeout=MQTT_PUBLISH_TIMEOUT_SECONDS,
+    )
+    if info.rc != mqtt.MQTT_ERR_SUCCESS:
+        raise RuntimeError(f"Publish returned error code: {info.rc}")
+
+
 async def send_with_reconnect(topic: str, payload: str):
     """
     Attempts to publish the payload to the specified MQTT topic.
-    On failure, it will try to reconnect the client and then re-raise the error.
+    Returns False if the retry window expires so the trigger can be kept for a later scan.
     """
-    global client
+    deadline = time.monotonic() + MQTT_PUBLISH_RETRY_SECONDS
+    retry_delay = MQTT_INITIAL_RETRY_DELAY_SECONDS
+
     async with client_lock:
-        try:
-            # Publish asynchronously by offloading to a thread
-            info = await asyncio.to_thread(client.publish, topic, payload)
-            # Wait for the publish to complete
-            await asyncio.to_thread(info.wait_for_publish)
-            if info.rc != mqtt.MQTT_ERR_SUCCESS:
-                raise Exception(f"Publish returned error code: {info.rc}")
-            logger.info(f"Sent payload: {payload} to topic: {topic}")
-        except Exception as send_err:
-            logger.error(f"Publish failed: {send_err}. Attempting reconnect...")
+        while True:
             try:
-                await asyncio.to_thread(client.disconnect)
-                await asyncio.to_thread(client.loop_stop)
-            except Exception as disconnect_err:
-                logger.error(f"Error disconnecting client: {disconnect_err}")
-            mqtt_broker = os.getenv("MQTT_BROKER")
-            if not mqtt_broker:
-                logger.error("Error: MQTT_BROKER environment variable is not set.")
-                return
-            port = int(os.getenv("MQTT_PORT", 1883))
-            # Create a new client instance and reconnect
-            client = mqtt.Client()
-            try:
-                await asyncio.to_thread(client.connect, mqtt_broker, port, 60)
-                client.loop_start()  # Start the network loop in a background thread
-                logger.info(f"Reconnected to MQTT broker at {mqtt_broker}:{port}")
-            except Exception as conn_err:
-                logger.error(f"Failed to connect via MQTT: {conn_err}")
-            raise send_err
+                await _publish_once(topic, payload)
+                logger.info(f"Sent payload: {payload} to topic: {topic}")
+                return True
+            except Exception as send_err:
+                await _disconnect_client()
+                if time.monotonic() >= deadline:
+                    logger.error(
+                        "MQTT publish still failing after %.1f seconds: %s. Keeping trigger for retry.",
+                        MQTT_PUBLISH_RETRY_SECONDS,
+                        send_err,
+                    )
+                    return False
+                logger.warning(
+                    "MQTT publish failed: %s. Reconnecting in %.1f seconds...",
+                    send_err,
+                    retry_delay,
+                )
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, MQTT_MAX_RETRY_DELAY_SECONDS)
 
 async def scan_and_send(recording_dir: str):
     """
@@ -94,8 +150,26 @@ async def scan_and_send(recording_dir: str):
         await asyncio.sleep(SCAN_INTERVAL_MS / 1000)
 
 
+def restore_incomplete_sends(recording_dir: str):
+    for filename in os.listdir(recording_dir):
+        if not filename.endswith(".txt.sending"):
+            continue
+        entrance_log_uuid = filename[:-12]
+        try:
+            UUID(entrance_log_uuid)
+        except ValueError:
+            continue
+        sending_file_path = os.path.join(recording_dir, filename)
+        file_path = os.path.join(recording_dir, f"{entrance_log_uuid}.txt")
+        if os.path.exists(file_path):
+            continue
+        logger.warning(f"Restoring incomplete MQTT send for trigger file: {filename}")
+        os.replace(sending_file_path, file_path)
+
+
 async def scan_and_send_once(recording_dir: str, mqtt_topic: str | None = None):
     mqtt_topic = mqtt_topic or os.getenv("MQTT_TOPIC", "home/raspberry")
+    restore_incomplete_sends(recording_dir)
     for filename in os.listdir(recording_dir):
         if filename.endswith('.txt') and filename != "record.txt":
             file_path = os.path.join(recording_dir, filename)
@@ -115,33 +189,22 @@ async def scan_and_send_once(recording_dir: str, mqtt_topic: str | None = None):
                 continue
             sending_file_path = f"{file_path}.sending"
             file_mtime = int(os.path.getmtime(file_path))
-            now = int(time.time())
-
-            if now - file_mtime > 3:
-                logger.warning(f"File {filename} is older than 3 seconds (age: {now - file_mtime}s), deleting.")
-                os.remove(file_path)
-                continue
 
             payload = [entrance_log_uuid, file_mtime]
             json_payload = json.dumps(payload)
 
             try:
                 os.replace(file_path, sending_file_path)
-                start_time = time.time()
-                await send_with_reconnect(mqtt_topic, json_payload)
-                elapsed = time.time() - start_time
-                if elapsed > MAX_TRANSMISSION_TIME:
-                    logger.error(f"Transmission took too long: {elapsed:.3f}s, exiting to force restart.")
-                    raise Exception("Transmission timeout")
-            except RetryError as retry_err:
-                logger.error(f"Failed to send payload within 2 seconds: {retry_err}. Deleting file.")
+                sent = await send_with_reconnect(mqtt_topic, json_payload)
+                if sent is False:
+                    logger.warning(f"Keeping trigger file {filename} for the next MQTT retry.")
+                    if os.path.exists(sending_file_path):
+                        os.replace(sending_file_path, file_path)
+                    continue
+            except Exception as exc:
+                logger.exception(f"Unexpected MQTT sender error for {filename}: {exc}. Keeping trigger for retry.")
                 if os.path.exists(sending_file_path):
                     os.replace(sending_file_path, file_path)
-                raise retry_err
-            except Exception:
-                if os.path.exists(sending_file_path):
-                    os.replace(sending_file_path, file_path)
-                raise
             else:
                 if os.path.exists(sending_file_path):
                     os.remove(sending_file_path)
@@ -153,20 +216,16 @@ async def main():
         logger.error("Error: RECORDING_DIR environment variable is not set.")
         return
 
-    mqtt_broker = os.getenv("MQTT_BROKER")
-    if not mqtt_broker:
-        logger.error("Error: MQTT_BROKER environment variable is not set.")
+    try:
+        _mqtt_target()
+    except RuntimeError as config_err:
+        logger.error(f"Error: {config_err}")
         return
-    port = int(os.getenv("MQTT_PORT", 1883))
 
     try:
-        client = mqtt.Client()
-        client.connect(mqtt_broker, port, 60)
-        client.loop_start()  # Start MQTT network loop in a background thread
-        logger.info(f"Connected to MQTT broker at {mqtt_broker}:{port}")
+        await _connect_client()
     except Exception as conn_err:
-        logger.error(f"Failed to connect via MQTT: {conn_err}")
-        raise conn_err
+        logger.warning(f"Initial MQTT connection failed: {conn_err}. Will retry when a trigger is queued.")
 
     try:
         # Since MQTT manages keep-alives internally, we no longer need to send pings manually.
@@ -174,8 +233,7 @@ async def main():
     except asyncio.CancelledError as e:
         logger.error(f"Task cancelled: {e}")
     finally:
-        client.loop_stop()
-        client.disconnect()
+        await _disconnect_client()
         logger.info("MQTT client disconnected.")
 
 if __name__ == "__main__":

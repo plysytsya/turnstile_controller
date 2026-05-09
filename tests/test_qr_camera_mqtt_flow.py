@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+import time
 import types
 import uuid
 
@@ -89,6 +90,62 @@ def test_sender_ignores_receiver_metadata_files(monkeypatch, tmp_path):
 
     assert sent == []
     assert metadata_file.exists()
+
+
+def test_sender_keeps_old_trigger_files_until_published(monkeypatch, tmp_path):
+    entrance_log_uuid = str(uuid.uuid4())
+    trigger_file = tmp_path / f"{entrance_log_uuid}.txt"
+    trigger_file.write_text("")
+    old_time = int(time.time()) - 60
+    os.utime(trigger_file, (old_time, old_time))
+
+    sent = []
+
+    async def fake_send_with_reconnect(topic, payload):
+        sent.append((topic, payload))
+        return True
+
+    monkeypatch.setattr(mqtt_sender, "send_with_reconnect", fake_send_with_reconnect)
+
+    asyncio.run(mqtt_sender.scan_and_send_once(str(tmp_path), mqtt_topic="home/raspberry"))
+
+    assert sent, "Expected old trigger files to be published instead of deleted."
+    assert not trigger_file.exists()
+
+
+def test_sender_restores_trigger_file_when_publish_fails(monkeypatch, tmp_path):
+    entrance_log_uuid = str(uuid.uuid4())
+    trigger_file = tmp_path / f"{entrance_log_uuid}.txt"
+    trigger_file.write_text("")
+
+    async def fake_send_with_reconnect(topic, payload):
+        return False
+
+    monkeypatch.setattr(mqtt_sender, "send_with_reconnect", fake_send_with_reconnect)
+
+    asyncio.run(mqtt_sender.scan_and_send_once(str(tmp_path), mqtt_topic="home/raspberry"))
+
+    assert trigger_file.exists()
+    assert not (tmp_path / f"{entrance_log_uuid}.txt.sending").exists()
+
+
+def test_sender_recovers_incomplete_sending_file_after_restart(monkeypatch, tmp_path):
+    entrance_log_uuid = str(uuid.uuid4())
+    sending_file = tmp_path / f"{entrance_log_uuid}.txt.sending"
+    sending_file.write_text("")
+
+    sent = []
+
+    async def fake_send_with_reconnect(topic, payload):
+        sent.append((topic, payload))
+        return True
+
+    monkeypatch.setattr(mqtt_sender, "send_with_reconnect", fake_send_with_reconnect)
+
+    asyncio.run(mqtt_sender.scan_and_send_once(str(tmp_path), mqtt_topic="home/raspberry"))
+
+    assert sent
+    assert not sending_file.exists()
 
 
 def test_filesystem_camera_trigger_touches_record_file(tmp_path):
