@@ -8,6 +8,8 @@ import sys
 import threading
 import time
 import uuid
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import evdev
 from evdev import InputDevice, categorize, KeyEvent
@@ -162,6 +164,7 @@ ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
 ENABLE_STREAM_HANDLER = os.getenv("ENABLE_STREAM_HANDLER", "False").lower() == "true"
 DARK_MODE = os.getenv("DARK_MODE", "False").lower() == "true"
 MAGIC_TIMESTAMP = 1725628212
+SCHEDULE_TIMEZONE = ZoneInfo("Europe/Madrid")
 current_dir = pathlib.Path(__file__).parent
 
 
@@ -256,6 +259,11 @@ if USE_LCD:
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 
 logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
+
+
+def _get_current_local_time():
+    return datetime.now(SCHEDULE_TIMEZONE).timetuple()
+
 
 # Initialize Relay
 relay_pin = RELAY_PIN_DOOR
@@ -599,7 +607,7 @@ def _find_customer_in_cache(customer_uuid):
 
 
 def is_in_schedule(customer):
-    current_time = time.localtime()
+    current_time = _get_current_local_time()
     current_day = current_time.tm_wday
     current_hour = current_time.tm_hour
     current_minute = current_time.tm_min
