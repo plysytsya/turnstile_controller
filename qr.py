@@ -165,7 +165,10 @@ def configure_direction_environment(direction, force_reader_refresh=False):
 
 
 DIRECTION = os.getenv("DIRECTION")
-configure_direction_environment(DIRECTION)
+try:
+    configure_direction_environment(DIRECTION)
+except NoDeviceFoundError as exc:
+    logging.warning("Initial QR reader assignment failed. The service will keep retrying: %s", exc)
 
 
 ENTRANCE_DIRECTION = os.getenv("ENTRANCE_DIRECTION")
@@ -213,7 +216,7 @@ RELAY_TRIGGER = os.getenv("RELAY_TRIGGER", "HIGH")
 RELAY_ON = GPIO.HIGH if RELAY_TRIGGER == "HIGH" else GPIO.LOW
 RELAY_OFF = GPIO.LOW if RELAY_TRIGGER == "HIGH" else GPIO.HIGH
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
-IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
+IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE", "false").lower() == "true"
 QR_RECONNECT_SLEEP_SECONDS = float(os.getenv("QR_RECONNECT_SLEEP_SECONDS", 5))
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
 AS_HEX = os.getenv("AS_HEX", "false").lower() == "true"
