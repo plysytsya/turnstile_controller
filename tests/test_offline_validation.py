@@ -155,6 +155,60 @@ def test_get_current_local_time_returns_localtime_compatible_struct():
     assert hasattr(current_time, "tm_min")
 
 
+def test_refresh_runtime_reader_assignment_updates_globals(monkeypatch):
+    monkeypatch.setattr(
+        qr,
+        "configure_direction_environment",
+        lambda direction, force_reader_refresh=False: os.environ.update(
+            {
+                "ENTRANCE_UUID": "entrance-1",
+                "IS_SERIAL_DEVICE": "True",
+                "QR_USB_DEVICE_PATH": "/dev/input/test-reader",
+            }
+        ),
+    )
+
+    qr.refresh_runtime_reader_assignment(force_reader_refresh=True)
+
+    assert qr.ENTRANCE_UUID == "entrance-1"
+    assert qr.IS_SERIAL_DEVICE is True
+    assert qr.QR_USB_DEVICE_PATH == "/dev/input/test-reader"
+
+
+def test_init_qr_device_retries_until_reconnected(monkeypatch):
+    attempts = {"count": 0}
+    sleep_calls = []
+    state_calls = []
+    fake_device = MagicMock()
+
+    monkeypatch.setattr(qr, "USB_COMPONENT", "qr_a")
+    monkeypatch.setattr(qr, "QR_RECONNECT_SLEEP_SECONDS", 0)
+    monkeypatch.setattr(qr, "display_on_lcd", lambda *args, **kwargs: None)
+    monkeypatch.setattr(qr, "record_component_state", lambda component, connected: state_calls.append((component, connected)))
+
+    def fake_refresh(force_reader_refresh=False):
+        qr.IS_SERIAL_DEVICE = False
+        qr.QR_USB_DEVICE_PATH = "/dev/input/test-reader"
+
+    monkeypatch.setattr(qr, "refresh_runtime_reader_assignment", fake_refresh)
+
+    def fake_input_device(path):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise FileNotFoundError("missing")
+        return fake_device
+
+    monkeypatch.setattr(qr, "InputDevice", fake_input_device)
+    monkeypatch.setattr(qr.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+
+    device = qr.init_qr_device()
+
+    assert device is fake_device
+    assert attempts["count"] == 2
+    assert sleep_calls == [0]
+    assert state_calls[-2:] == [("qr_a", False), ("qr_a", True)]
+
+
 def test_find_customer_in_customers_json_inside_schedule(tmp_path, monkeypatch):
     write_customers_cache(
         tmp_path,

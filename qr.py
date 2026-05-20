@@ -4,7 +4,6 @@ import logging
 import os
 import pathlib
 import re
-import sys
 import threading
 import time
 import uuid
@@ -112,6 +111,10 @@ class NoDeviceFoundError(Exception):
     pass
 
 
+class QrDeviceDisconnectedError(Exception):
+    pass
+
+
 def set_env_default(key, value):
     if value is None:
         return
@@ -119,7 +122,7 @@ def set_env_default(key, value):
         os.environ[key] = value
 
 
-def configure_direction_environment(direction):
+def configure_direction_environment(direction, force_reader_refresh=False):
     if direction == "A":
         entrance_uuid = str(os.getenv("ENTRANCE_UUID_A") or "").strip() or None
         if entrance_uuid:
@@ -140,7 +143,11 @@ def configure_direction_environment(direction):
     else:
         return
 
-    if env_value_is_set(os.getenv("QR_USB_DEVICE_PATH")) and env_value_is_set(os.getenv("IS_SERIAL_DEVICE")):
+    if (
+        not force_reader_refresh
+        and env_value_is_set(os.getenv("QR_USB_DEVICE_PATH"))
+        and env_value_is_set(os.getenv("IS_SERIAL_DEVICE"))
+    ):
         return
 
     try:
@@ -207,6 +214,7 @@ RELAY_ON = GPIO.HIGH if RELAY_TRIGGER == "HIGH" else GPIO.LOW
 RELAY_OFF = GPIO.LOW if RELAY_TRIGGER == "HIGH" else GPIO.HIGH
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE").lower() == "true"
+QR_RECONNECT_SLEEP_SECONDS = float(os.getenv("QR_RECONNECT_SLEEP_SECONDS", 5))
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
 AS_HEX = os.getenv("AS_HEX", "false").lower() == "true"
 AS_HEX_A = os.getenv("AS_HEX_A", "false").lower() == "true"
@@ -260,6 +268,12 @@ if USE_LCD:
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
 USB_COMPONENT = f"qr_{str(DIRECTION or '').strip().lower()}" if DIRECTION in {"A", "B"} else None
 
+_serial_exception = getattr(serial, "SerialException", None)
+if isinstance(_serial_exception, type) and issubclass(_serial_exception, BaseException):
+    SERIAL_CONNECTION_ERRORS = (FileNotFoundError, OSError, _serial_exception, NoDeviceFoundError)
+else:
+    SERIAL_CONNECTION_ERRORS = (FileNotFoundError, OSError, NoDeviceFoundError)
+
 logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
 
@@ -309,12 +323,23 @@ def display_on_lcd(line1, line2, timeout=DEFAULT_LCD_MESSAGE_TIMEOUT):
         lcd.display_text_on_lcd(line1, line2, timeout)
 
 
+def refresh_runtime_reader_assignment(force_reader_refresh=False):
+    global ENTRANCE_UUID, IS_SERIAL_DEVICE, QR_USB_DEVICE_PATH
+
+    configure_direction_environment(DIRECTION, force_reader_refresh=force_reader_refresh)
+    ENTRANCE_UUID = os.getenv("ENTRANCE_UUID")
+    IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE", "false").lower() == "true"
+    QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
+
+    if not QR_USB_DEVICE_PATH:
+        raise NoDeviceFoundError("No QR reader path configured.")
+
+
 def init_qr_device():
     global dev
-    # Initialize the InputDevice
-    timeout_end_time = time.time() + 300  # 5 minutes from now
-    while time.time() < timeout_end_time:
+    while True:
         try:
+            refresh_runtime_reader_assignment(force_reader_refresh=True)
             dev = (
                 serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.1)
                 if IS_SERIAL_DEVICE
@@ -323,24 +348,22 @@ def init_qr_device():
             logger.info("Successfully connected to the QR code scanner.")
             if USB_COMPONENT:
                 record_component_state(USB_COMPONENT, True)
+            display_on_lcd("Escanea", "codigo QR...")
 
             if IS_SERIAL_DEVICE:
                 # we were just testing the serial connection
                 dev.close()
             return dev
-        except FileNotFoundError:
+        except SERIAL_CONNECTION_ERRORS as exc:
             if USB_COMPONENT:
                 record_component_state(USB_COMPONENT, False)
-            logger.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
-            display_on_lcd("Fallo al conectar", "Cambia USB en 15s")
-            time.sleep(15)  # Wait for 15 seconds before retrying
-    # If we get to this point and `dev` is not defined, we've exhausted our retries
-    if "dev" not in locals():
-        if USB_COMPONENT:
-            record_component_state(USB_COMPONENT, False)
-        logger.error("Failed to connect to the QR code scanner after multiple attempts.")
-        display_on_lcd("No se pudo conectar", "Verifica USB")
-    return dev
+            logger.warning(
+                "Failed to connect to the QR code scanner (%s). Retrying in %s seconds...",
+                exc,
+                QR_RECONNECT_SLEEP_SECONDS,
+            )
+            display_on_lcd("Fallo lector USB", "Reintentando")
+            time.sleep(QR_RECONNECT_SLEEP_SECONDS)
 
 
 # List to hold decoded QR data
@@ -702,12 +725,12 @@ async def keyboard_event_loop(device):
                             await verify_customer(data, int(time.time()))
                         finally:
                             output_string = ""
-    except OSError as e:
+    except (OSError, FileNotFoundError) as e:
         if USB_COMPONENT:
             record_component_state(USB_COMPONENT, False)
-        display_on_lcd("No coneccion con", "lector, reinicio")
-        logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
-        sys.exit(1)
+        display_on_lcd("Sin coneccion con", "lector QR")
+        logger.error("QR keyboard reader disconnected: %s", e)
+        raise QrDeviceDisconnectedError(str(e)) from e
 
 
 async def serial_device_event_loop():
@@ -740,12 +763,12 @@ async def serial_device_event_loop():
                         await verify_customer(data, int(time.time()))
                         cleanup_serial_queue(ser)
                 await asyncio.sleep(0.2)
-    except (OSError, serial.SerialException) as e:
+    except SERIAL_CONNECTION_ERRORS as e:
         if USB_COMPONENT:
             record_component_state(USB_COMPONENT, False)
-        display_on_lcd("No coneccion con", "lector, reinicio")
-        logger.error(f"Serial reader disconnected: {e}. Exiting the script to trigger systemd restart...")
-        sys.exit(1)
+        display_on_lcd("Sin coneccion con", "lector QR")
+        logger.error("Serial reader disconnected: %s", e)
+        raise QrDeviceDisconnectedError(str(e)) from e
 
 
 def cleanup_serial_queue(ser):
@@ -828,17 +851,35 @@ async def main_loop():
         await asyncio.sleep(0.1)  # 1-second delay to avoid busy-waiting
 
 
+async def run_qr_service_forever():
+    while True:
+        dev = init_qr_device()
+        try:
+            if IS_SERIAL_DEVICE:
+                await serial_device_event_loop()
+            else:
+                main_task = asyncio.create_task(main_loop())
+                try:
+                    await keyboard_event_loop(dev)
+                finally:
+                    main_task.cancel()
+                    await asyncio.gather(main_task, return_exceptions=True)
+        except QrDeviceDisconnectedError:
+            logger.warning(
+                "QR reader disconnected for direction %s. Waiting %s seconds before rediscovery.",
+                DIRECTION,
+                QR_RECONNECT_SLEEP_SECONDS,
+            )
+            await asyncio.sleep(QR_RECONNECT_SLEEP_SECONDS)
+
+
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    dev = init_qr_device()
     if DEVICE_API_TOKEN:
         logger.info("Using device API token authentication for controller requests.")
     else:
         refresh_token()
     try:
-        if IS_SERIAL_DEVICE:
-            loop.run_until_complete(serial_device_event_loop())
-        else:
-            loop.run_until_complete(asyncio.gather(keyboard_event_loop(dev), main_loop()))
+        loop.run_until_complete(run_qr_service_forever())
     except KeyboardInterrupt:
         logger.warning("Received exit signal.")
