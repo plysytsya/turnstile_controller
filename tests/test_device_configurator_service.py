@@ -429,3 +429,28 @@ def test_get_device_identifier_falls_back_to_mac_then_hostname(monkeypatch):
     monkeypatch.setenv("DEVICE_IDENTIFIER", " ")
     monkeypatch.setattr(device_configurator_service, "get_hardware_mac_address", lambda: "")
     assert device_configurator_service.get_device_identifier() == "odroid"
+
+
+def test_device_payload_includes_usb_snapshot_and_pending_events(monkeypatch):
+    monkeypatch.setattr(device_configurator_service, "get_device_identifier", lambda: "odroid-1")
+    monkeypatch.setattr(device_configurator_service, "get_device_name", lambda: "Front door")
+    monkeypatch.setattr(device_configurator_service.socket, "gethostname", lambda: "odroid-host")
+    monkeypatch.setattr(device_configurator_service, "get_device_type", lambda: "odroid")
+    monkeypatch.setattr(device_configurator_service, "get_hardware_model", lambda: "odroid-m1")
+    monkeypatch.setattr(device_configurator_service, "get_hardware_mac_address", lambda: "00:11")
+    monkeypatch.setattr(device_configurator_service, "get_software_version", lambda: "1.2.3")
+    monkeypatch.setattr(device_configurator_service, "get_ip_address", lambda: "10.0.0.9")
+    monkeypatch.setattr(device_configurator_service, "current_wifi_ssid", lambda: "DIGI")
+    monkeypatch.setattr(device_configurator_service, "ethernet_connected", lambda: True)
+    monkeypatch.setattr(device_configurator_service, "parse_wifi_scan", lambda: [{"ssid": "DIGI"}])
+    monkeypatch.setattr(device_configurator_service, "configured_entrances", lambda: [{"slot": "A", "uuid": "door-a"}])
+    monkeypatch.setattr(device_configurator_service, "current_ssh_tunnel", lambda: {"ssh_port": 6015})
+    monkeypatch.setattr(device_configurator_service, "current_device_settings", lambda: {"CAMERA_ENABLED": True})
+    monkeypatch.setattr(device_configurator_service, "current_camera_services", lambda: [{"service": "videorecorder"}])
+    monkeypatch.setattr(device_configurator_service, "get_usb_status_snapshot", lambda: {"components": {"qr_a": {"connected": True}}})
+    monkeypatch.setattr(device_configurator_service, "get_pending_events", lambda: [{"event_uuid": "123", "component": "qr_a"}])
+
+    payload = device_configurator_service.device_payload()
+
+    assert payload["usb_status"] == {"components": {"qr_a": {"connected": True}}}
+    assert payload["usb_events"] == [{"event_uuid": "123", "component": "qr_a"}]

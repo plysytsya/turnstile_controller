@@ -16,6 +16,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import cv2
 
 from camera_device import open_camera_capture
+from usb_diagnostics import record_component_state
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoCamera")
@@ -61,6 +62,7 @@ class VideoCamera:
 
         # Check if camera is opened successfully
         if self.video is None or not self.video.isOpened():
+            record_component_state("camera", False)
             logger.error("Failed to open camera. Candidates tried: %s", attempted_candidates)
             return
 
@@ -68,10 +70,13 @@ class VideoCamera:
         ret, frame = self.video.read()
 
         if not ret:
+            record_component_state("camera", False)
             logger.error("Failed to read frame from camera.")
             self.video.release()
             self.video = None
             return
+
+        record_component_state("camera", True)
 
         frame_size = (
             int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)),
@@ -90,6 +95,7 @@ class VideoCamera:
             writer.release()
 
         if self.out is None:
+            record_component_state("camera", False)
             logger.error("Failed to initialize VideoWriter for camera device %s.", self.camera_device)
             self.video.release()
             self.video = None
@@ -173,6 +179,7 @@ class VideoCamera:
 
             ret, frame = self.video.read()
             if not ret:
+                record_component_state("camera", False)
                 logger.error("Failed to read frame from camera.")
                 break
             self.out.write(frame)

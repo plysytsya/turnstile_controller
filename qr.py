@@ -44,6 +44,7 @@ from qr_reader_assignment import (
     env_value_is_set,
     select_reader_for_direction,
 )
+from usb_diagnostics import record_component_state
 from utils import SentryLogger
 
 sentry_sdk.init(
@@ -257,6 +258,7 @@ if USE_LCD:
         USE_LCD = False
 
 QR_USB_DEVICE_PATH = os.getenv("QR_USB_DEVICE_PATH")
+USB_COMPONENT = f"qr_{str(DIRECTION or '').strip().lower()}" if DIRECTION in {"A", "B"} else None
 
 logger.info("using relay pin %s for the door. My direction is %s", RELAY_PIN_DOOR, DIRECTION)
 
@@ -319,17 +321,23 @@ def init_qr_device():
                 else InputDevice(QR_USB_DEVICE_PATH)
             )
             logger.info("Successfully connected to the QR code scanner.")
+            if USB_COMPONENT:
+                record_component_state(USB_COMPONENT, True)
 
             if IS_SERIAL_DEVICE:
                 # we were just testing the serial connection
                 dev.close()
             return dev
         except FileNotFoundError:
+            if USB_COMPONENT:
+                record_component_state(USB_COMPONENT, False)
             logger.warning("Failed to connect to the QR code scanner. Retrying in 15 seconds...")
             display_on_lcd("Fallo al conectar", "Cambia USB en 15s")
             time.sleep(15)  # Wait for 15 seconds before retrying
     # If we get to this point and `dev` is not defined, we've exhausted our retries
     if "dev" not in locals():
+        if USB_COMPONENT:
+            record_component_state(USB_COMPONENT, False)
         logger.error("Failed to connect to the QR code scanner after multiple attempts.")
         display_on_lcd("No se pudo conectar", "Verifica USB")
     return dev
@@ -695,6 +703,8 @@ async def keyboard_event_loop(device):
                         finally:
                             output_string = ""
     except OSError as e:
+        if USB_COMPONENT:
+            record_component_state(USB_COMPONENT, False)
         display_on_lcd("No coneccion con", "lector, reinicio")
         logger.error(f"OSError detected: {e}. Exiting the script to trigger systemd restart...")
         sys.exit(1)
@@ -702,32 +712,40 @@ async def keyboard_event_loop(device):
 
 async def serial_device_event_loop():
     global shared_list
-
-    with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
-        while True:
-            # Read data from the serial port
-            if ser.in_waiting > 0:
-                try:
-                    data = _interpret_serial_data(ser, as_hex_setting)
-                except Exception as e:
-                    logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
-                    continue
-                logger.info(f"Interpreted data: {data}")
-                if "config" in data:
-                    display_on_lcd("aplicando", "configuracion", timeout=2)
-                    response = apply_config(data)
-                    logger.info(f"Config response: {response}")
-                    if USE_LCD:
-                        display_on_lcd("ajuste", "aplicado", timeout=2)
-                    continue
-                try:
-                    qr_dict = _load_json_data(data)
-                    customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
-                    await verify_customer(customer, qr_dict["timestamp"])
-                except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
-                    await verify_customer(data, int(time.time()))
-                    cleanup_serial_queue(ser)
-            await asyncio.sleep(0.2)
+    try:
+        with serial.Serial(QR_USB_DEVICE_PATH, baudrate=9600, timeout=0.2) as ser:
+            if USB_COMPONENT:
+                record_component_state(USB_COMPONENT, True)
+            while True:
+                # Read data from the serial port
+                if ser.in_waiting > 0:
+                    try:
+                        data = _interpret_serial_data(ser, as_hex_setting)
+                    except Exception as e:
+                        logger.error(f"Error interpreting serial data: {e}.. data: {ser.readline()}")
+                        continue
+                    logger.info(f"Interpreted data: {data}")
+                    if "config" in data:
+                        display_on_lcd("aplicando", "configuracion", timeout=2)
+                        response = apply_config(data)
+                        logger.info(f"Config response: {response}")
+                        if USE_LCD:
+                            display_on_lcd("ajuste", "aplicado", timeout=2)
+                        continue
+                    try:
+                        qr_dict = _load_json_data(data)
+                        customer = qr_dict.get("customer-uuid", qr_dict.get("customer_uuid"))
+                        await verify_customer(customer, qr_dict["timestamp"])
+                    except (json.JSONDecodeError, TypeError, AttributeError, KeyError):
+                        await verify_customer(data, int(time.time()))
+                        cleanup_serial_queue(ser)
+                await asyncio.sleep(0.2)
+    except (OSError, serial.SerialException) as e:
+        if USB_COMPONENT:
+            record_component_state(USB_COMPONENT, False)
+        display_on_lcd("No coneccion con", "lector, reinicio")
+        logger.error(f"Serial reader disconnected: {e}. Exiting the script to trigger systemd restart...")
+        sys.exit(1)
 
 
 def cleanup_serial_queue(ser):

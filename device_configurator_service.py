@@ -11,6 +11,7 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 from systemd.journal import JournalHandler
+from usb_diagnostics import get_pending_events, get_usb_status_snapshot, initialize_database, mark_events_sent, prune_events
 
 
 load_dotenv()
@@ -556,6 +557,8 @@ def device_payload():
         "ssh_tunnel": current_ssh_tunnel(),
         "device_settings": current_device_settings(),
         "camera_services": current_camera_services(),
+        "usb_status": get_usb_status_snapshot(),
+        "usb_events": get_pending_events(),
     }
 
 
@@ -1259,12 +1262,18 @@ def execute_command(command):
 
 
 def ensure_registered():
-    response = post_json("/device/bootstrap/register/", device_payload())
+    payload = device_payload()
+    response = post_json("/device/bootstrap/register/", payload)
+    mark_events_sent([event["event_uuid"] for event in payload.get("usb_events") or []])
+    prune_events()
     LOGGER.info("Device registered: %s", response.status_code)
 
 
 def heartbeat():
-    response = post_json("/device/bootstrap/heartbeat/", device_payload())
+    payload = device_payload()
+    response = post_json("/device/bootstrap/heartbeat/", payload)
+    mark_events_sent([event["event_uuid"] for event in payload.get("usb_events") or []])
+    prune_events()
     return response.json()
 
 
@@ -1278,6 +1287,7 @@ def send_command_result(command_uuid, result_payload):
 
 def main():
     LOGGER.info("Starting device configurator service for %s", get_device_identifier())
+    initialize_database()
     ensure_registered()
 
     while True:
