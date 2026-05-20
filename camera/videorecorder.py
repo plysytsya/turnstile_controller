@@ -40,10 +40,12 @@ class VideoCamera:
 
         self.RECORDING_DURATION = 6  # Duration to record after trigger (in seconds)
         self.QR_DATA_CHECK_INTERVAL = 0.2  # Interval to check for QR data (in seconds)
+        self.CAMERA_HEALTH_CHECK_INTERVAL = float(os.getenv("CAMERA_HEALTH_CHECK_INTERVAL", 5))
 
         # Recording variables
         self.recording = False
         self.recording_start_time = None
+        self.last_camera_health_check = 0
         self.out = None
         self.video = None
         self.camera_device = None
@@ -99,6 +101,41 @@ class VideoCamera:
             logger.error("Failed to initialize VideoWriter for camera device %s.", self.camera_device)
             self.video.release()
             self.video = None
+            self.out = None
+
+    def check_camera_health(self):
+        if self.recording:
+            return
+
+        now = time.time()
+        if now - self.last_camera_health_check < self.CAMERA_HEALTH_CHECK_INTERVAL:
+            return
+        self.last_camera_health_check = now
+
+        if self.video is None or self.out is None or not self.video.isOpened():
+            logger.warning("Camera is not ready. Reinitializing camera capture.")
+            self.init_camera()
+            return
+
+        try:
+            ret, _frame = self.video.read()
+        except Exception as e:
+            record_component_state("camera", False)
+            logger.exception("Failed to read camera health-check frame: %s", e)
+            self.cleanup()
+            self.video = None
+            self.out = None
+            return
+
+        if ret:
+            record_component_state("camera", True)
+            return
+
+        record_component_state("camera", False)
+        logger.error("Camera health check failed. Reinitializing camera capture.")
+        self.cleanup()
+        self.video = None
+        self.out = None
 
     async def find_trigger(self):
         """Check for the existence of the record.txt file to start processing."""
@@ -139,6 +176,7 @@ class VideoCamera:
         """Asynchronous method to check for QR data and start recording."""
         try:
             while True:
+                self.check_camera_health()
                 filenames = await self.find_trigger()
                 if filenames:
                     data = {"uuid": filenames[0], "additional_uuids": filenames[1:]}
