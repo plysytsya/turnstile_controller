@@ -3,6 +3,7 @@ import time
 import asyncio
 import os
 import signal
+import uuid
 
 import sys
 import logging
@@ -155,16 +156,25 @@ class VideoCamera:
 
         # record.txt exists; proceed with listing and deleting files
         filenames = os.listdir(self.RECORDING_DIR)  # Synchronous call here
-        txt_files = [filename[:-4] for filename in filenames if filename.endswith(".txt")]
-
-        # Remove all .txt files asynchronously
+        txt_files = []
         for filename in filenames:
-            if filename.endswith(".txt"):
-                file_path = os.path.join(self.RECORDING_DIR, filename)
-                try:
-                    await aiofiles.os.remove(file_path)  # Asynchronous delete
-                except FileNotFoundError:
-                    logger.warning(f"File {file_path} already deleted.")
+            if not filename.endswith(".txt"):
+                continue
+            trigger_name = filename[:-4]
+            try:
+                uuid.UUID(trigger_name)
+            except ValueError:
+                logger.warning("Ignoring non-UUID camera trigger file: %s", filename)
+                continue
+            txt_files.append(trigger_name)
+
+        # Remove only valid trigger files asynchronously.
+        for trigger_name in txt_files:
+            file_path = os.path.join(self.RECORDING_DIR, f"{trigger_name}.txt")
+            try:
+                await aiofiles.os.remove(file_path)  # Asynchronous delete
+            except FileNotFoundError:
+                logger.warning(f"File {file_path} already deleted.")
 
         return txt_files
 
