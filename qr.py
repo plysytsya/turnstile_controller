@@ -138,7 +138,7 @@ def configure_direction_environment(direction, force_reader_refresh=False):
         if entrance_uuid:
             os.environ["ENTRANCE_UUID"] = entrance_uuid
         set_env_default("LCD_I2C_ADDRESS", "0x27")
-        set_env_default("RELAY_PIN_DOOR", os.getenv("RELAY_PIN_B", "10"))
+        set_env_default("RELAY_PIN_DOOR", os.getenv("RELAY_PIN_B", "65"))  # Pin 16 -> GPIO line 65
         set_env_default("RELAY_PIN_DISPLAY", os.getenv("RELAY_PIN_DISPLAY_B", "20"))
     else:
         return

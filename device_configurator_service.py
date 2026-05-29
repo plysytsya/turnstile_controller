@@ -66,7 +66,7 @@ DEVICE_SETTINGS_SCHEMA = [
     ("QR_READER_MODE_B", "str", ""),
     ("RECORDING_DIR", "str", ""),
     ("RELAY_PIN_A", "int", 62),
-    ("RELAY_PIN_B", "int", 26),
+    ("RELAY_PIN_B", "int", 65),
     ("RELAY_PIN_DISPLAY", "int", 69),
     ("RELAY_PIN_DISPLAY_A", "int", 69),
     ("RELAY_TOGGLE_DURATION", "str", "1"),
