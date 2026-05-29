@@ -217,7 +217,7 @@ RELAY_ON = GPIO.HIGH if RELAY_TRIGGER == "HIGH" else GPIO.LOW
 RELAY_OFF = GPIO.LOW if RELAY_TRIGGER == "HIGH" else GPIO.HIGH
 OPEN_N_TIMES = int(os.getenv("OPEN_N_TIMES", 1))
 IS_SERIAL_DEVICE = os.getenv("IS_SERIAL_DEVICE", "false").lower() == "true"
-QR_RECONNECT_SLEEP_SECONDS = float(os.getenv("QR_RECONNECT_SLEEP_SECONDS", 5))
+QR_RECONNECT_SLEEP_SECONDS = float(os.getenv("QR_RECONNECT_SLEEP_SECONDS", 1))
 OUTPUT_ENDIAN = os.getenv("OUTPUT_ENDIAN", "big")
 AS_HEX = os.getenv("AS_HEX", "false").lower() == "true"
 AS_HEX_A = os.getenv("AS_HEX_A", "false").lower() == "true"
