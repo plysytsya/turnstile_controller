@@ -10,9 +10,12 @@ from systemd.journal import JournalHandler
 import aiofiles.os
 import sentry_sdk
 
-# Add the global Python library path to sys.path
+# Add the global Python library path and project paths used by systemd.
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append("/usr/lib/python3/dist-packages")
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(SCRIPT_DIR)
+sys.path.append(PROJECT_DIR)
 import cv2
 
 from camera_device import open_camera_capture
