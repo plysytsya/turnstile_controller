@@ -131,14 +131,14 @@ def configure_direction_environment(direction, force_reader_refresh=False):
         set_env_default("LCD_I2C_ADDRESS", os.getenv("I2C_ADDRESS", "0x27"))
         set_env_default("LCD_I2C_BUS", os.getenv("I2C_BUS", "0"))
         # Use Odroid GPIO pins
-        set_env_default("RELAY_PIN_DOOR", os.getenv("RELAY_PIN_A", "62"))  # Pin 7 -> GPIO line 62
+        os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_A", "62")  # Pin 7 -> GPIO line 62
         set_env_default("RELAY_PIN_DISPLAY", os.getenv("RELAY_PIN_DISPLAY_A", "69"))  # Pin 13 -> GPIO line 69
     elif direction == "B":
         entrance_uuid = str(os.getenv("ENTRANCE_UUID_B") or "").strip() or None
         if entrance_uuid:
             os.environ["ENTRANCE_UUID"] = entrance_uuid
         set_env_default("LCD_I2C_ADDRESS", "0x27")
-        set_env_default("RELAY_PIN_DOOR", os.getenv("RELAY_PIN_B", "65"))  # Pin 16 -> GPIO line 65
+        os.environ["RELAY_PIN_DOOR"] = os.getenv("RELAY_PIN_B", "65")  # Pin 16 -> GPIO line 65
         set_env_default("RELAY_PIN_DISPLAY", os.getenv("RELAY_PIN_DISPLAY_B", "20"))
     else:
         return
